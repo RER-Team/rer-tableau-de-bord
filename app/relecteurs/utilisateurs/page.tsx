@@ -159,7 +159,7 @@ export default function AdminUsersPage() {
 
   const getAuteur = (id: string | null) => {
     if (!id) return null;
-    return data.auteurs.find((a) => a.id === id) ?? null;
+    return data?.auteurs.find((a) => a.id === id) ?? null;
   };
 
   const updateAuteur = async (
