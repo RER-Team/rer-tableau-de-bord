@@ -31,6 +31,8 @@ type PageProps = {
 
 export default async function ArticlesPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {};
+  const currentUser = await getSessionUser();
+  const isAdmin = currentUser?.role === "admin";
   const mineParam = params.mine === "1" ? "1" : "";
   const effectiveEtatSlug = mineParam === "1" ? params.etat || "" : params.etat || "publie";
   const lastArticle = await prisma.article.findFirst({
@@ -53,7 +55,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   const toParam = params.to || "";
   const selectedArticleId = params.article || "";
   const backParam = params.back || "";
-  const sessionUser = mineParam === "1" ? await getSessionUser() : null;
+  const sessionUser = mineParam === "1" ? currentUser : null;
   const rawView = params.view;
   const view: "cards" | "explorer" | "table" =
     rawView === "table" || rawView === "cards" || rawView === "explorer"
@@ -230,6 +232,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               since={sinceParam}
               from={fromParam}
               to={toParam}
+              canOpenAdminEdit={isAdmin}
             />
           ) : view === "explorer" ? (
             <ArticlesExplorerView
@@ -248,6 +251,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               from={fromParam}
               to={toParam}
               showEtat={false}
+              canOpenAdminEdit={isAdmin}
               initialSelectedId={selectedArticleId || undefined}
             />
           ) : (
@@ -265,6 +269,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               since={sinceParam}
               from={fromParam}
               to={toParam}
+              canOpenAdminEdit={isAdmin}
             />
           )}
         </section>

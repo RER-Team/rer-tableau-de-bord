@@ -96,6 +96,7 @@ type ArticleReadSidePanelProps = {
   onClose: () => void;
   /** Lien "Ouvrir en pleine page" : back param pour le retour (ex: articles, mes-articles). */
   backParam?: string;
+  canOpenAdminEdit?: boolean;
 };
 
 export function ArticleReadSidePanel({
@@ -103,6 +104,7 @@ export function ArticleReadSidePanel({
   open,
   onClose,
   backParam = "articles",
+  canOpenAdminEdit = false,
 }: ArticleReadSidePanelProps) {
   const statusContext = backParam === "mes-articles" ? "author" : "public";
   const [article, setArticle] = useState<ArticleDetail | null>(null);
@@ -301,12 +303,14 @@ export function ArticleReadSidePanel({
               )}
 
               <div className="flex flex-wrap items-center gap-2 pt-2">
-                <Link
-                  href={`/articles/${article.id}?back=${backParam}`}
-                  className="inline-flex items-center rounded-lg border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-text hover:bg-rer-app"
-                >
-                  Ouvrir en pleine page
-                </Link>
+                {canOpenAdminEdit && (
+                  <Link
+                    href={`/admin/articles?article=${article.id}`}
+                    className="inline-flex items-center rounded-lg border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-text hover:bg-rer-app"
+                  >
+                    Modifier (admin)
+                  </Link>
+                )}
                 <a
                   href={`/api/articles/${article.id}/export?format=word`}
                   className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"

@@ -131,6 +131,7 @@ type ArticlesExplorerViewProps = {
   mine?: string;
   back?: string;
   showEtat: boolean;
+  canOpenAdminEdit?: boolean;
 };
 
 export function getEtatBadgeClasses(slug?: string, active?: boolean): string {
@@ -318,6 +319,7 @@ type ArticleDetailContentProps = {
   showEtat: boolean;
   back?: string;
   mine?: string;
+  canOpenAdminEdit?: boolean;
 };
 
 function ArticleDetailContent({
@@ -329,6 +331,7 @@ function ArticleDetailContent({
   showEtat,
   back,
   mine,
+  canOpenAdminEdit = false,
 }: ArticleDetailContentProps) {
   const [copyState, setCopyState] = useState<
     "idle" | "html" | "text" | "error"
@@ -448,15 +451,14 @@ function ArticleDetailContent({
           >
             Exporter Word
           </a>
-          <Link
-            href={`/articles/${selectedId}${back || mine ? `?${new URLSearchParams({
-              ...(back && { back }),
-              ...(mine === "1" && { mine: "1" }),
-            }).toString()}` : ""}`}
-            className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
-          >
-            Ouvrir en pleine page
-          </Link>
+          {canOpenAdminEdit && (
+            <Link
+              href={`/admin/articles?article=${selectedId}`}
+              className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
+            >
+              Modifier (admin)
+            </Link>
+          )}
         </div>
       </div>
 
@@ -598,6 +600,7 @@ export function ArticlesExplorerView({
   mine = "",
   back = "",
   showEtat,
+  canOpenAdminEdit = false,
 }: ArticlesExplorerViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -931,6 +934,7 @@ export function ArticlesExplorerView({
               showEtat={showEtat}
               back={back}
               mine={mine}
+              canOpenAdminEdit={canOpenAdminEdit}
             />
           )}
         </div>
@@ -967,6 +971,7 @@ export function ArticlesExplorerView({
                 showEtat={showEtat}
                 back={back}
                 mine={mine}
+                canOpenAdminEdit={canOpenAdminEdit}
               />
             </div>
           </div>

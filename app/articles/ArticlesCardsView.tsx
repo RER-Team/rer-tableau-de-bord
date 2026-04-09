@@ -31,6 +31,7 @@ type ArticlesCardsViewProps = {
   from?: string;
   to?: string;
   mine?: string;
+  canOpenAdminEdit?: boolean;
 };
 
 export function ArticlesCardsView({
@@ -47,6 +48,7 @@ export function ArticlesCardsView({
   from = "",
   to = "",
   mine = "",
+  canOpenAdminEdit = false,
 }: ArticlesCardsViewProps) {
   const [articles, setArticles] = useState<ArticleSummary[]>(initialArticles);
   const [hasMore, setHasMore] = useState(initialArticles.length < total);
@@ -235,6 +237,7 @@ export function ArticlesCardsView({
         open={panelOpen}
         onClose={closeArticlePanel}
         backParam="articles"
+        canOpenAdminEdit={canOpenAdminEdit}
       />
     </>
   );

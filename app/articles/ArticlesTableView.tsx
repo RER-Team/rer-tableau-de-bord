@@ -39,6 +39,7 @@ type ArticlesTableViewProps = {
   from?: string;
   to?: string;
   mine?: string;
+  canOpenAdminEdit?: boolean;
 };
 
 export function ArticlesTableView({
@@ -55,6 +56,7 @@ export function ArticlesTableView({
   from = "",
   to = "",
   mine = "",
+  canOpenAdminEdit = false,
 }: ArticlesTableViewProps) {
   const [articles, setArticles] = useState<ArticleSummary[]>(initialArticles);
   const [hasMore, setHasMore] = useState(initialArticles.length < total);
@@ -322,6 +324,7 @@ export function ArticlesTableView({
         open={panelOpen}
         onClose={closeArticlePanel}
         backParam="articles"
+        canOpenAdminEdit={canOpenAdminEdit}
       />
     </>
   );
