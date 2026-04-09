@@ -175,10 +175,14 @@ export function RichArticleEditor({
               .filter(Boolean);
             const isChapo = classes.includes("chapo");
 
-            if (isChapo && firstParagraphPos === pos) {
-              firstParagraphHasChapo = true;
-            } else if (isChapo && firstParagraphPos !== pos) {
-              chapoRemovals.push({ pos, node });
+            if (isChapo) {
+              if (!hasChapoRef.current) {
+                chapoRemovals.push({ pos, node });
+              } else if (firstParagraphPos === pos) {
+                firstParagraphHasChapo = true;
+              } else {
+                chapoRemovals.push({ pos, node });
+              }
             }
           }
         });
@@ -216,7 +220,7 @@ export function RichArticleEditor({
             }
           }
 
-          // On retire "chapo" des autres paragraphes
+          // On retire "chapo" des paragraphes non conformes (ou de tous si chapô désactivé)
           for (const { pos, node } of chapoRemovals) {
             const classAttr = (node.attrs as any)?.class as string | null | undefined;
             const classes = (classAttr ?? "")

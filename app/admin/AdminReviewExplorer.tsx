@@ -360,10 +360,23 @@ function AdminArticlePanel({
     return `${chapoHtml}${detail.contenu ?? ""}`;
   }, [detail]);
 
-  const extractChapoAndBody = (html: string): { chapo: string | null; body: string } => {
+  const extractChapoAndBody = (
+    html: string,
+    allowChapo: boolean
+  ): { chapo: string | null; body: string } => {
     try {
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, "text/html");
+      if (!allowChapo) {
+        doc.querySelectorAll("p.chapo").forEach((node) => {
+          node.classList.remove("chapo");
+          if (!node.getAttribute("class")?.trim()) {
+            node.removeAttribute("class");
+          }
+        });
+        const bodyHtml = doc.body.innerHTML.trim();
+        return { chapo: null, body: bodyHtml };
+      }
       let chapoText: string | null = null;
       const chapoEl =
         doc.querySelector("p.chapo") ?? doc.querySelector("p");
@@ -639,7 +652,10 @@ function AdminArticlePanel({
                 patch.contenuJson !== undefined
               ) {
                 const html = patch.contenuHtml ?? buildInitialHtml;
-                const { chapo, body } = extractChapoAndBody(html);
+                const effectiveFormatId = patch.formatId ?? detail.formatId ?? "";
+                const allowChapo =
+                  ref.formats.find((f) => f.id === effectiveFormatId)?.hasChapo ?? true;
+                const { chapo, body } = extractChapoAndBody(html, allowChapo);
                 payload.chapo = chapo;
                 payload.contenuHtml = body;
                 payload.contenuJson = patch.contenuJson ?? detail.contenuJson;
