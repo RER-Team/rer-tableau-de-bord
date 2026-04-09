@@ -13,9 +13,10 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { libelle, signesReference } = body as {
+  const { libelle, signesReference, hasChapo } = body as {
     libelle?: string;
     signesReference?: number | null;
+    hasChapo?: boolean;
   };
 
   const data: Record<string, unknown> = {};
@@ -25,6 +26,15 @@ export async function PATCH(
   if (signesReference !== undefined) {
     data.signesReference =
       typeof signesReference === "number" ? signesReference : null;
+  }
+  if (hasChapo !== undefined) {
+    if (typeof hasChapo !== "boolean") {
+      return NextResponse.json(
+        { error: "Le champ hasChapo doit être un booléen" },
+        { status: 400 }
+      );
+    }
+    data.hasChapo = hasChapo;
   }
 
   const format = await prisma.format.update({

@@ -5,7 +5,12 @@ import { useEffect, useState } from "react";
 
 type Mutuelle = { id: string; nom: string };
 type Rubrique = { id: string; libelle: string };
-type Format = { id: string; libelle: string; signesReference: number | null };
+type Format = {
+  id: string;
+  libelle: string;
+  signesReference: number | null;
+  hasChapo: boolean;
+};
 type SiteLogoPayload = {
   logoUrl: string;
   hasCustomLogo: boolean;
@@ -32,6 +37,7 @@ export default function AdminReferentielsPage() {
   const [newRubriqueLibelle, setNewRubriqueLibelle] = useState("");
   const [newFormatLibelle, setNewFormatLibelle] = useState("");
   const [newFormatSignes, setNewFormatSignes] = useState("");
+  const [newFormatHasChapo, setNewFormatHasChapo] = useState(true);
 
   useEffect(() => {
     const run = async () => {
@@ -238,6 +244,7 @@ export default function AdminReferentielsPage() {
         body: JSON.stringify({
           libelle: newFormatLibelle.trim(),
           signesReference: signes,
+          hasChapo: newFormatHasChapo,
         }),
       });
       if (!res.ok) {
@@ -246,6 +253,7 @@ export default function AdminReferentielsPage() {
       }
       setNewFormatLibelle("");
       setNewFormatSignes("");
+      setNewFormatHasChapo(true);
       await refreshFormats();
     } catch (e) {
       handleError(e, "Erreur création format");
@@ -256,7 +264,7 @@ export default function AdminReferentielsPage() {
 
   const updateFormat = async (
     f: Format,
-    patch: Partial<{ libelle: string; signesReference: number | null }>
+    patch: Partial<{ libelle: string; signesReference: number | null; hasChapo: boolean }>
   ) => {
     setSavingKey(`format-${f.id}`);
     setError(null);
@@ -559,6 +567,15 @@ export default function AdminReferentielsPage() {
             >
               Ajouter
             </button>
+            <label className="inline-flex items-center gap-1.5 text-xs text-rer-text">
+              <input
+                type="checkbox"
+                checked={newFormatHasChapo}
+                onChange={(e) => setNewFormatHasChapo(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-rer-border text-rer-blue focus:ring-rer-blue"
+              />
+              Chapô
+            </label>
           </div>
           <div className="max-h-72 space-y-1 overflow-y-auto rounded border border-rer-border bg-white p-1 text-sm">
             {formats.map((f) => (
@@ -589,6 +606,15 @@ export default function AdminReferentielsPage() {
                   }}
                   className="w-24 rounded border border-rer-border bg-white px-1 py-0.5 text-xs"
                 />
+                <label className="inline-flex items-center gap-1 text-[11px] text-rer-text">
+                  <input
+                    type="checkbox"
+                    checked={f.hasChapo}
+                    onChange={(e) => updateFormat(f, { hasChapo: e.target.checked })}
+                    className="h-3.5 w-3.5 rounded border-rer-border text-rer-blue focus:ring-rer-blue"
+                  />
+                  Chapô
+                </label>
                 <button
                   type="button"
                   onClick={() => deleteFormat(f)}

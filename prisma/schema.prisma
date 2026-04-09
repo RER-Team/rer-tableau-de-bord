@@ -27,6 +27,7 @@ model Format {
   id              String    @id @default(cuid())
   libelle         String    @unique
   signesReference Int? // nombre de signes cible pour guidage rédacteur
+  hasChapo        Boolean   @default(true)
   articles        Article[]
 }
 

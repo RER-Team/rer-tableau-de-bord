@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getFormatBadgeClasses,
   getRubriqueBadgeClasses,
@@ -25,7 +25,7 @@ export type ArticleEditorReferentiels = {
   auteurs: { id: string; prenom: string; nom: string; mutuelleId?: string | null }[];
   mutuelles: { id: string; nom: string }[];
   rubriques: { id: string; libelle: string }[];
-  formats: { id: string; libelle: string; signesReference: number | null }[];
+  formats: { id: string; libelle: string; signesReference: number | null; hasChapo?: boolean }[];
 };
 
 type ArticleEditorCardProps = {
@@ -93,11 +93,8 @@ export function ArticleEditorCard({
   const [creditDraft, setCreditDraft] = useState(creditPhoto || "");
 
   const hasMissingMeta = !formatId || !rubriqueId || !auteurId;
-  const hasChapo = useMemo(() => {
-    const formatLabel =
-      referentiels.formats.find((fmt) => fmt.id === formatId)?.libelle?.toLowerCase() ?? "";
-    return !(formatLabel.includes("brève") || formatLabel.includes("breve") || formatLabel.includes("actu"));
-  }, [formatId, referentiels.formats]);
+  const selectedFormat = referentiels.formats.find((fmt) => fmt.id === formatId);
+  const hasChapo = selectedFormat?.hasChapo ?? true;
 
   useEffect(() => {
     if (openDropdown === null) return;
