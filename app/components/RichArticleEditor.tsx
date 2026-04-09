@@ -281,6 +281,71 @@ export function RichArticleEditor({
     editor.setEditable(!readOnly);
   }, [editor, readOnly]);
 
+  useEffect(() => {
+    if (!editor || readOnly) return;
+
+    const { doc } = editor.state;
+    let firstParagraphPos: number | null = null;
+    let firstParagraphNode: any = null;
+    const chapoRemovals: { pos: number; node: any }[] = [];
+    let firstParagraphHasChapo = false;
+
+    doc.descendants((node, pos) => {
+      if (node.type.name !== "paragraph") return;
+      if (firstParagraphPos === null) {
+        firstParagraphPos = pos;
+        firstParagraphNode = node;
+      }
+      const classAttr = (node.attrs as any)?.class as string | null | undefined;
+      const classes = (classAttr ?? "")
+        .split(" ")
+        .map((c) => c.trim())
+        .filter(Boolean);
+      const isChapo = classes.includes("chapo");
+      if (!isChapo) return;
+
+      if (!hasChapo) {
+        chapoRemovals.push({ pos, node });
+      } else if (firstParagraphPos === pos) {
+        firstParagraphHasChapo = true;
+      } else {
+        chapoRemovals.push({ pos, node });
+      }
+    });
+
+    const tr = editor.state.tr;
+
+    if (hasChapo && firstParagraphPos !== null && firstParagraphNode && !firstParagraphHasChapo) {
+      const existingClass: string =
+        ((firstParagraphNode.attrs as any)?.class as string | null | undefined) || "";
+      const classes = existingClass
+        .split(" ")
+        .map((c) => c.trim())
+        .filter(Boolean);
+      tr.setNodeMarkup(firstParagraphPos, undefined, {
+        ...(firstParagraphNode.attrs as any),
+        class: [...classes, "chapo"].join(" "),
+      });
+    }
+
+    for (const { pos, node } of chapoRemovals) {
+      const classAttr = (node.attrs as any)?.class as string | null | undefined;
+      const classes = (classAttr ?? "")
+        .split(" ")
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .filter((c) => c !== "chapo");
+      tr.setNodeMarkup(pos, undefined, {
+        ...(node.attrs as any),
+        class: classes.join(" "),
+      });
+    }
+
+    if (tr.steps.length > 0) {
+      editor.view.dispatch(tr);
+    }
+  }, [editor, hasChapo, readOnly]);
+
   if (!editor || (editor as any).isDestroyed) return null;
 
   const baseButtonClasses =
