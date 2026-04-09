@@ -72,6 +72,7 @@ type ArticleDetail = {
   contenu: string | null;
   lienPhoto: string | null;
   legendePhoto: string | null;
+  creditPhoto: string | null;
   postRs: string | null;
   auteur: { prenom: string; nom: string } | null;
   mutuelle: { nom: string } | null;
@@ -80,6 +81,14 @@ type ArticleDetail = {
   etat: { libelle: string; slug: string } | null;
   lienGoogleDoc?: string | null;
 };
+
+function getFormatLabelWithIcon(libelle?: string | null): string {
+  if (!libelle) return "";
+  const key = libelle.toLowerCase();
+  if (key.includes("podcast")) return `🎙 ${libelle}`;
+  if (key.includes("vidéo") || key.includes("video")) return `🎬 ${libelle}`;
+  return libelle;
+}
 
 type ArticleReadSidePanelProps = {
   articleId: string | null;
@@ -197,7 +206,7 @@ export function ArticleReadSidePanel({
                           article.format.libelle
                         )}
                       >
-                        {article.format.libelle}
+                        {getFormatLabelWithIcon(article.format.libelle)}
                       </span>
                     )}
                     {!article.rubrique?.libelle &&
@@ -233,11 +242,14 @@ export function ArticleReadSidePanel({
                       width={1200}
                       height={700}
                       unoptimized
-                      className="h-auto w-full max-h-80 object-cover"
+                      className="h-auto w-full max-h-80 object-cover object-top"
                     />
                   </div>
                   {article.legendePhoto && (
                     <p className="text-xs text-rer-muted">{article.legendePhoto}</p>
+                  )}
+                  {article.creditPhoto && (
+                    <p className="photo-credit">{article.creditPhoto}</p>
                   )}
                 </div>
               )}

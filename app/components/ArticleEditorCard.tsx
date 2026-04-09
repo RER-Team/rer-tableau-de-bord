@@ -1,6 +1,6 @@
  "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getFormatBadgeClasses,
   getRubriqueBadgeClasses,
@@ -14,6 +14,7 @@ export type ArticleEditorValue = {
   mutuelleId?: string;
   lienPhoto?: string | null;
   legendePhoto?: string;
+  creditPhoto?: string;
   titre: string;
   contenuHtml: string;
   contenuJson?: unknown | null;
@@ -55,6 +56,7 @@ export function ArticleEditorCard({
     mutuelleId,
     lienPhoto,
     legendePhoto,
+    creditPhoto,
     titre,
     contenuHtml,
     contenuJson,
@@ -77,8 +79,23 @@ export function ArticleEditorCard({
   })();
 
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
+  const titleFocusedRef = useRef(false);
+  const postRsFocusedRef = useRef(false);
+  const legendeFocusedRef = useRef(false);
+  const creditFocusedRef = useRef(false);
   const [openDropdown, setOpenDropdown] = useState<"format" | "rubrique" | "auteur" | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const [titleDraft, setTitleDraft] = useState(titre);
+  const [postRsDraft, setPostRsDraft] = useState(postRs || "");
+  const [legendeDraft, setLegendeDraft] = useState(legendePhoto || "");
+  const [creditDraft, setCreditDraft] = useState(creditPhoto || "");
+
+  const hasMissingMeta = !formatId || !rubriqueId || !auteurId;
+  const hasChapo = useMemo(() => {
+    const formatLabel =
+      referentiels.formats.find((fmt) => fmt.id === formatId)?.libelle?.toLowerCase() ?? "";
+    return !(formatLabel.includes("brève") || formatLabel.includes("breve") || formatLabel.includes("actu"));
+  }, [formatId, referentiels.formats]);
 
   useEffect(() => {
     if (openDropdown === null) return;
@@ -96,10 +113,34 @@ export function ArticleEditorCard({
     if (!el) return;
     el.style.height = "0px";
     el.style.height = `${el.scrollHeight}px`;
+  }, [titleDraft]);
+
+  useEffect(() => {
+    if (!titleFocusedRef.current) {
+      setTitleDraft(titre);
+    }
   }, [titre]);
 
+  useEffect(() => {
+    if (!postRsFocusedRef.current) {
+      setPostRsDraft(postRs || "");
+    }
+  }, [postRs]);
+
+  useEffect(() => {
+    if (!legendeFocusedRef.current) {
+      setLegendeDraft(legendePhoto || "");
+    }
+  }, [legendePhoto]);
+
+  useEffect(() => {
+    if (!creditFocusedRef.current) {
+      setCreditDraft(creditPhoto || "");
+    }
+  }, [creditPhoto]);
+
   const handleClearMainImage = () => {
-    onChange({ lienPhoto: null, legendePhoto: "" });
+    onChange({ lienPhoto: null, legendePhoto: "", creditPhoto: "" });
   };
 
   const handleChooseMainImage = () => {
@@ -157,7 +198,7 @@ export function ArticleEditorCard({
               <img
                 src={lienPhoto}
                 alt={legendePhoto || ""}
-                className="h-64 w-full object-cover"
+                className="h-auto max-h-80 w-full object-contain"
               />
             </div>
           ) : (
@@ -173,10 +214,35 @@ export function ArticleEditorCard({
           <div className="mt-3">
             <input
               type="text"
-              value={legendePhoto || ""}
-              onChange={(e) => onChange({ legendePhoto: e.target.value })}
+              value={legendeDraft}
+              onFocus={() => {
+                legendeFocusedRef.current = true;
+              }}
+              onBlur={() => {
+                legendeFocusedRef.current = false;
+                if ((legendePhoto || "") !== legendeDraft) {
+                  onChange({ legendePhoto: legendeDraft });
+                }
+              }}
+              onChange={(e) => setLegendeDraft(e.target.value)}
               placeholder="Légende de l’image principale…"
               className="w-full rounded-lg border border-rer-border px-2 py-1 text-xs text-rer-text placeholder:text-rer-muted focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
+            />
+            <input
+              type="text"
+              value={creditDraft}
+              onFocus={() => {
+                creditFocusedRef.current = true;
+              }}
+              onBlur={() => {
+                creditFocusedRef.current = false;
+                if ((creditPhoto || "") !== creditDraft) {
+                  onChange({ creditPhoto: creditDraft });
+                }
+              }}
+              onChange={(e) => setCreditDraft(e.target.value)}
+              placeholder="Crédit photo (ex: © Prénom Nom)…"
+              className="mt-2 w-full rounded-lg border border-rer-border px-2 py-1 text-xs italic text-rer-muted placeholder:text-rer-muted focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
             />
           </div>
         )}
@@ -185,7 +251,18 @@ export function ArticleEditorCard({
       {/* Carte principale : méta + titre + contenu */}
       <section className="rounded-2xl border border-rer-border bg-white p-5 shadow-sm">
         <div className="space-y-5">
-          <div ref={dropdownRef} className="flex flex-wrap items-center gap-3 text-xs text-rer-muted">
+          <div
+            ref={dropdownRef}
+            className={`rounded-xl border px-3 py-3 text-xs ${
+              hasMissingMeta
+                ? "border-amber-200 bg-amber-50/80"
+                : "border-rer-border bg-rer-app/40"
+            }`}
+          >
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-rer-muted">
+              Paramètres de l’article
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
             {/* Format — style outline, flèche à l’intérieur, fermeture après sélection */}
             <div className="relative inline-flex">
               <button
@@ -194,7 +271,7 @@ export function ArticleEditorCard({
                   e.stopPropagation();
                   setOpenDropdown(openDropdown === "format" ? null : "format");
                 }}
-                className={`inline-flex min-w-0 max-w-[220px] cursor-pointer list-none items-center rounded-lg px-2 py-1 text-[11px] font-medium ${
+                className={`inline-flex min-w-0 max-w-[240px] cursor-pointer list-none items-center rounded-lg px-3 py-1.5 text-[12px] font-medium ${
                   formatId
                     ? (() => {
                         const f = referentiels.formats.find((fmt) => fmt.id === formatId);
@@ -202,6 +279,8 @@ export function ArticleEditorCard({
                           ? getFormatBadgeClasses(f.libelle)
                           : "border border-rer-border bg-rer-app text-rer-muted";
                       })()
+                    : hasMissingMeta
+                    ? "border border-amber-300 bg-white text-rer-muted"
                     : "border border-rer-border bg-rer-app text-rer-muted"
                 }`}
               >
@@ -250,12 +329,14 @@ export function ArticleEditorCard({
                   e.stopPropagation();
                   setOpenDropdown(openDropdown === "rubrique" ? null : "rubrique");
                 }}
-                className={`inline-flex min-w-0 max-w-[200px] cursor-pointer list-none items-center rounded-lg px-2 py-1 text-[11px] font-medium ${
+                className={`inline-flex min-w-0 max-w-[220px] cursor-pointer list-none items-center rounded-lg px-3 py-1.5 text-[12px] font-medium ${
                   rubriqueId
                     ? (() => {
                         const r = referentiels.rubriques.find((rb) => rb.id === rubriqueId);
                         return r ? getRubriqueBadgeClasses(r.libelle) : "border border-rer-border bg-rer-app text-rer-muted";
                       })()
+                    : hasMissingMeta
+                    ? "border border-amber-300 bg-white text-rer-muted"
                     : "border border-rer-border bg-rer-app text-rer-muted"
                 }`}
               >
@@ -296,7 +377,13 @@ export function ArticleEditorCard({
                   e.stopPropagation();
                   setOpenDropdown(openDropdown === "auteur" ? null : "auteur");
                 }}
-                className="inline-flex min-w-0 max-w-[240px] cursor-pointer list-none items-center rounded-lg border border-rer-border bg-rer-app px-3 py-1.5 text-[11px] font-medium text-rer-text"
+                className={`inline-flex min-w-0 max-w-[260px] cursor-pointer list-none items-center rounded-lg border px-3 py-1.5 text-[12px] font-medium text-rer-text ${
+                  auteurId
+                    ? "border-rer-border bg-rer-app"
+                    : hasMissingMeta
+                    ? "border-amber-300 bg-white"
+                    : "border-rer-border bg-rer-app"
+                }`}
               >
                 <span className="truncate">
                   {auteurId
@@ -335,13 +422,28 @@ export function ArticleEditorCard({
                 </div>
               )}
             </div>
+            </div>
+            {hasMissingMeta && (
+              <p className="mt-2 text-[11px] text-amber-800">
+                Commencez par choisir un format, une rubrique et une signature.
+              </p>
+            )}
           </div>
 
           <div className="space-y-3">
             <textarea
               ref={titleRef}
-              value={titre}
-              onChange={(e) => onChange({ titre: e.target.value })}
+              value={titleDraft}
+              onFocus={() => {
+                titleFocusedRef.current = true;
+              }}
+              onBlur={() => {
+                titleFocusedRef.current = false;
+                if (titre !== titleDraft) {
+                  onChange({ titre: titleDraft });
+                }
+              }}
+              onChange={(e) => setTitleDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -368,6 +470,7 @@ export function ArticleEditorCard({
                 onChange({ contenuJson: json, contenuHtml: html });
               }}
               className="min-h-[420px]"
+              hasChapo={hasChapo}
             />
           </div>
 
@@ -396,8 +499,17 @@ export function ArticleEditorCard({
             Post réseaux sociaux
           </p>
           <textarea
-            value={postRs || ""}
-            onChange={(e) => onChange({ postRs: e.target.value })}
+            value={postRsDraft}
+            onFocus={() => {
+              postRsFocusedRef.current = true;
+            }}
+            onBlur={() => {
+              postRsFocusedRef.current = false;
+              if ((postRs || "") !== postRsDraft) {
+                onChange({ postRs: postRsDraft });
+              }
+            }}
+            onChange={(e) => setPostRsDraft(e.target.value)}
             rows={4}
             placeholder="Proposition de texte pour les réseaux sociaux…"
             className="w-full resize-none rounded-lg border border-rer-border bg-white px-2 py-1 text-sm text-rer-text placeholder:text-rer-muted focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"

@@ -217,7 +217,7 @@ export function ArticlesTableView({
                         fill
                         sizes="56px"
                         unoptimized
-                        className="object-cover"
+                        className="object-cover object-top"
                       />
                     </div>
                   ) : (

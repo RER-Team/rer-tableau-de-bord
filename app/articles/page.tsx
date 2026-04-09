@@ -143,6 +143,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
         chapo: true,
         lienPhoto: true,
         legendePhoto: true,
+        creditPhoto: true,
         dateDepot: true,
         datePublication: true,
         createdAt: true,

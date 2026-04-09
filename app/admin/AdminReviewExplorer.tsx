@@ -22,6 +22,7 @@ type ArticleSummary = {
   chapo: string | null;
   lienPhoto: string | null;
   legendePhoto: string | null;
+  creditPhoto: string | null;
   auteur: { prenom: string; nom: string } | null;
   mutuelle: { nom: string } | null;
   rubrique: { libelle: string } | null;
@@ -46,6 +47,7 @@ type ArticleDetail = {
   formatId?: string | null;
   lienPhoto: string | null;
   legendePhoto: string | null;
+  creditPhoto: string | null;
   postRs: string | null;
   dateDepot: string | null;
   datePublication: string | null;
@@ -590,6 +592,7 @@ function AdminArticlePanel({
               mutuelleId: detail.mutuelleId ?? undefined,
               lienPhoto: detail.lienPhoto,
               legendePhoto: detail.legendePhoto ?? "",
+              creditPhoto: detail.creditPhoto ?? "",
               // On utilise le draft local pour rendre le titre vraiment éditable.
               titre: titleDraft,
               contenuHtml: buildInitialHtml,
@@ -628,6 +631,9 @@ function AdminArticlePanel({
               if (patch.legendePhoto !== undefined) {
                 payload.legendePhoto = patch.legendePhoto || null;
               }
+              if (patch.creditPhoto !== undefined) {
+                payload.creditPhoto = patch.creditPhoto || null;
+              }
               if (
                 patch.contenuHtml !== undefined ||
                 patch.contenuJson !== undefined
@@ -653,7 +659,7 @@ function AdminArticlePanel({
                 } else {
                   const updated = (await res.json()) as ArticleDetail;
                   onDetailUpdated?.(updated);
-                  router.refresh();
+                  touchLastSaved();
                 }
               } catch (e) {
                 console.error("Erreur lors de la sauvegarde de l’article", e);

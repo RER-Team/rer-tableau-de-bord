@@ -78,6 +78,7 @@ type ArticleDetail = {
   contenuJson?: unknown | null;
   lienPhoto: string | null;
   legendePhoto: string | null;
+  creditPhoto: string | null;
   postRs: string | null;
   auteurId: string;
   mutuelleId: string | null;
@@ -128,7 +129,6 @@ export function MesArticleSidePanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ref, setRef] = useState<ArticleEditorReferentiels | null>(null);
-  const [editorKey, setEditorKey] = useState(0);
   const [savingContent, setSavingContent] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [postRsDraft, setPostRsDraft] = useState("");
@@ -254,6 +254,8 @@ export function MesArticleSidePanel({
       if (patch.lienPhoto !== undefined) payload.lienPhoto = patch.lienPhoto ?? null;
       if (patch.legendePhoto !== undefined)
         payload.legendePhoto = patch.legendePhoto || null;
+      if (patch.creditPhoto !== undefined)
+        payload.creditPhoto = patch.creditPhoto || null;
       if (
         patch.contenuHtml !== undefined ||
         patch.contenuJson !== undefined
@@ -275,7 +277,6 @@ export function MesArticleSidePanel({
         if (res.ok) {
           const updated = await res.json();
           setArticle((prev) => (prev ? { ...prev, ...updated } : null));
-          setEditorKey((k) => k + 1);
           setLastSavedAt(new Date());
           router.refresh();
         }
@@ -418,11 +419,14 @@ export function MesArticleSidePanel({
                       width={1200}
                       height={700}
                       unoptimized
-                      className="h-auto w-full max-h-80 object-cover"
+                      className="h-auto w-full max-h-80 object-cover object-top"
                     />
                   </div>
                   {article.legendePhoto && (
                     <p className="text-xs text-rer-muted">{article.legendePhoto}</p>
+                  )}
+                  {article.creditPhoto && (
+                    <p className="photo-credit">{article.creditPhoto}</p>
                   )}
                 </div>
               )}
@@ -492,7 +496,6 @@ export function MesArticleSidePanel({
                   : "Enregistré"}
               </div>
               <ArticleEditorCard
-                key={editorKey}
                 mode="edit"
                 value={{
                   formatId: article.formatId ?? "",
@@ -501,6 +504,7 @@ export function MesArticleSidePanel({
                   mutuelleId: article.mutuelleId ?? undefined,
                   lienPhoto: article.lienPhoto,
                   legendePhoto: article.legendePhoto ?? "",
+                  creditPhoto: article.creditPhoto ?? "",
                   titre: titleDraft,
                   contenuHtml: buildInitialHtml,
                   contenuJson: article.contenuJson ?? null,

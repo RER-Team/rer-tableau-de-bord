@@ -140,6 +140,7 @@ export async function GET(request: NextRequest) {
         chapo: true,
         lienPhoto: true,
         legendePhoto: true,
+        creditPhoto: true,
         dateDepot: true,
         datePublication: true,
         createdAt: true,
@@ -180,6 +181,7 @@ export async function POST(request: NextRequest) {
       rubriqueId,
       formatId,
       legendePhoto,
+      creditPhoto,
       postRs,
       lienPhoto,
       lienGoogleDoc,
@@ -232,6 +234,15 @@ export async function POST(request: NextRequest) {
     }
     const safeAuteurId = auteurId.trim();
     const isEditor = canEditArticles(sessionUser.role);
+    if (!isEditor && !sessionUser.auteurId) {
+      return NextResponse.json(
+        {
+          error:
+            "Votre compte n’est pas lié à un profil auteur. Contactez un administrateur pour finaliser votre accès.",
+        },
+        { status: 403 }
+      );
+    }
     if (!isEditor && sessionUser.auteurId !== safeAuteurId) {
       return NextResponse.json(
         { error: "Vous ne pouvez créer des articles que pour votre propre profil auteur." },
@@ -296,6 +307,7 @@ export async function POST(request: NextRequest) {
         formatId: formatId || null,
         etatId: targetEtat?.id ?? null,
         legendePhoto: legendePhoto?.trim() || null,
+        creditPhoto: creditPhoto?.trim() || null,
         postRs: postRs?.trim() || null,
         lienPhoto: (lienPhoto?.trim() || autoLienPhotoFromSanitized || autoLienPhoto) ?? null,
         lienGoogleDoc: lienGoogleDoc?.trim() || null,

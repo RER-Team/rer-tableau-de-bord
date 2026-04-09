@@ -23,6 +23,7 @@ const articlePreviewSelect = {
   contenuJson: true,
   lienPhoto: true,
   legendePhoto: true,
+  creditPhoto: true,
   postRs: true,
   dateDepot: true,
   datePublication: true,
@@ -164,6 +165,7 @@ export async function PATCH(
     rubriqueId,
     formatId,
     legendePhoto,
+    creditPhoto,
     postRs,
     lienPhoto,
     lienGoogleDoc,
@@ -181,6 +183,7 @@ export async function PATCH(
     rubriqueId,
     formatId,
     legendePhoto,
+    creditPhoto,
     postRs,
     lienPhoto,
     lienGoogleDoc,
@@ -264,6 +267,7 @@ export async function PATCH(
   if (rubriqueId !== undefined) data.rubriqueId = rubriqueId || null;
   if (formatId !== undefined) data.formatId = formatId || null;
   if (legendePhoto !== undefined) data.legendePhoto = legendePhoto?.trim() || null;
+  if (creditPhoto !== undefined) data.creditPhoto = creditPhoto?.trim() || null;
   if (postRs !== undefined) data.postRs = postRs?.trim() || null;
   if (lienPhoto !== undefined) {
     data.lienPhoto = lienPhoto?.trim() || null;
@@ -366,7 +370,7 @@ export async function DELETE(
   const { id } = await params;
   const existing = await prisma.article.findUnique({
     where: { id },
-    select: { id: true, auteurId: true },
+    select: { id: true, auteurId: true, etat: { select: { slug: true } } },
   });
   if (!existing) {
     return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
@@ -378,6 +382,17 @@ export async function DELETE(
   if (!isAdmin && !isAuthor) {
     return NextResponse.json(
       { error: "Vous n’êtes pas autorisé à supprimer cet article." },
+      { status: 403 }
+    );
+  }
+
+  const normalizedStatus = normalizeArticleStatusSlug(existing.etat?.slug);
+  if (!isAdmin && isAuthor && normalizedStatus !== "brouillon" && normalizedStatus !== "a_relire") {
+    return NextResponse.json(
+      {
+        error:
+          "Les auteurs ne peuvent supprimer que les brouillons et les articles soumis à relecture.",
+      },
       { status: 403 }
     );
   }

@@ -16,6 +16,7 @@ type ArticleSummary = {
   chapo: string | null;
   lienPhoto: string | null;
   legendePhoto: string | null;
+  creditPhoto: string | null;
   auteur: { prenom: string; nom: string } | null;
   mutuelle: { nom: string } | null;
   rubrique: { libelle: string } | null;
@@ -33,6 +34,7 @@ type ArticleDetail = {
   contenu: string | null;
   lienPhoto: string | null;
   legendePhoto: string | null;
+  creditPhoto: string | null;
   postRs: string | null;
   dateDepot: string | null;
   datePublication: string | null;
@@ -182,8 +184,22 @@ export function getFormatBadgeClasses(libelle?: string): string {
   if (key.includes("actus") || key.includes("actu")) {
     return base + " border-[#1D4ED8]/50 bg-[#EFF6FF]/50 text-[#1D4ED8]";
   }
+  if (key.includes("podcast")) {
+    return base + " border-[#7C3AED]/50 bg-[#F5F3FF]/70 text-[#6D28D9]";
+  }
+  if (key.includes("vidéo") || key.includes("video")) {
+    return base + " border-[#DC2626]/50 bg-[#FEF2F2]/70 text-[#B91C1C]";
+  }
   // Article ou autres formats
   return base + " border-[#6B7280]/40 bg-[#F3F4F6]/80 text-[#374151]";
+}
+
+function getFormatLabelWithIcon(libelle?: string | null): string {
+  if (!libelle) return "";
+  const key = libelle.toLowerCase();
+  if (key.includes("podcast")) return `🎙 ${libelle}`;
+  if (key.includes("vidéo") || key.includes("video")) return `🎬 ${libelle}`;
+  return libelle;
 }
 
 /**
@@ -488,7 +504,7 @@ function ArticleDetailContent({
                   width={1200}
                   height={700}
                   unoptimized
-                  className="h-auto w-full max-h-64 object-cover"
+                  className="h-auto w-full max-h-64 object-cover object-top"
                 />
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -515,6 +531,9 @@ function ArticleDetailContent({
                 <p className="text-xs text-rer-muted">
                   {detail.legendePhoto}
                 </p>
+              )}
+              {detail.creditPhoto && (
+                <p className="photo-credit">{detail.creditPhoto}</p>
               )}
             </div>
           )}
@@ -805,7 +824,7 @@ export function ArticlesExplorerView({
                         fill
                         sizes="128px"
                         unoptimized
-                        className="object-cover"
+                        className="object-cover object-top"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[10px] text-rer-muted">
@@ -821,7 +840,7 @@ export function ArticlesExplorerView({
                             article.format.libelle
                           )}
                         >
-                          {article.format.libelle}
+                          {getFormatLabelWithIcon(article.format.libelle)}
                         </span>
                       )}
                       {article.rubrique && (

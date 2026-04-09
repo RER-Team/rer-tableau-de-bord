@@ -18,6 +18,7 @@ type Article = {
   contenu: string;
   lienPhoto: string | null;
   legendePhoto: string | null;
+  creditPhoto: string | null;
   postRs: string | null;
   dateDepot: string | null;
   datePublication: string | null;
@@ -28,6 +29,14 @@ type Article = {
   format: { libelle: string } | null;
   etat: { libelle: string; slug: string } | null;
 };
+
+function getFormatLabelWithIcon(libelle?: string | null): string {
+  if (!libelle) return "";
+  const key = libelle.toLowerCase();
+  if (key.includes("podcast")) return `🎙 ${libelle}`;
+  if (key.includes("vidéo") || key.includes("video")) return `🎬 ${libelle}`;
+  return libelle;
+}
 
 type Session = { user?: { role?: string } } | null;
 
@@ -250,7 +259,7 @@ export default function ArticleDetailPage() {
                 <span
                   className={getFormatBadgeClasses(article.format.libelle)}
                 >
-                  {article.format.libelle}
+                  {getFormatLabelWithIcon(article.format.libelle)}
                 </span>
               )}
               {article.rubrique && (
@@ -276,13 +285,16 @@ export default function ArticleDetailPage() {
                   width={1400}
                   height={900}
                   unoptimized
-                  className="h-auto w-full max-h-96 object-cover"
+                  className="h-auto w-full max-h-96 object-cover object-top"
                 />
               </div>
               {article.legendePhoto && (
                 <p className="text-xs text-rer-muted">
                   {article.legendePhoto}
                 </p>
+              )}
+              {article.creditPhoto && (
+                <p className="photo-credit">{article.creditPhoto}</p>
               )}
             </div>
           )}

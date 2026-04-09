@@ -127,9 +127,10 @@ export function MesArticlesTable({
   };
 
   const handleDeleteOne = async (article: MesArticleRow) => {
-    if (article.etatSlug !== "a_relire") return;
+    const deletableStatuses = new Set(["brouillon", "a_relire"]);
+    if (!article.etatSlug || !deletableStatuses.has(article.etatSlug)) return;
     const confirmed = window.confirm(
-      "Supprimer définitivement cet article ?"
+      `Supprimer définitivement « ${article.titre} » ?`
     );
     if (!confirmed) return;
     try {
@@ -274,7 +275,7 @@ export function MesArticlesTable({
                           fill
                           sizes="56px"
                           unoptimized
-                          className="object-cover"
+                          className="object-cover object-top"
                         />
                       </div>
                     ) : (
@@ -372,7 +373,7 @@ export function MesArticlesTable({
                         Modifier
                       </button>
                     )}
-                    {article.etatSlug === "a_relire" && (
+                    {(article.etatSlug === "a_relire" || article.etatSlug === "brouillon") && (
                       <button
                         type="button"
                         onClick={(event) => {

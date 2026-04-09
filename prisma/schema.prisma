@@ -59,6 +59,7 @@ model Article {
   contenu         String              @db.Text
   contenuJson     Json?
   legendePhoto    String?             @db.Text
+  creditPhoto     String?             @db.Text
   postRs          String?             @db.Text
   lienPhoto       String?
   lienGoogleDoc   String?

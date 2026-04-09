@@ -40,11 +40,12 @@ export default function DepotPage() {
   const [formatId, setFormatId] = useState("");
   const [draftId, setDraftId] = useState<string | null>(null);
   const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [session, setSession] = useState<{ user?: { auteurId?: string | null } } | null>(
+  const [session, setSession] = useState<{ user?: { auteurId?: string | null; role?: string | null } } | null>(
     null
   );
   const [lienPhoto, setLienPhoto] = useState<string | null>(null);
   const [legendePhoto, setLegendePhoto] = useState<string>("");
+  const [creditPhoto, setCreditPhoto] = useState<string>("");
   const [isMainImageDragOver, setIsMainImageDragOver] = useState(false);
   const [postRs, setPostRs] = useState<string>("");
   const [editorResetKey, setEditorResetKey] = useState(0);
@@ -121,6 +122,7 @@ export default function DepotPage() {
         if (detail.mutuelleId) setMutuelleId(detail.mutuelleId);
         setLienPhoto(detail.lienPhoto ?? null);
         setLegendePhoto(detail.legendePhoto ?? "");
+        setCreditPhoto(detail.creditPhoto ?? "");
         setPostRs(detail.postRs ?? "");
         setDraftStatus("saved");
       } finally {
@@ -155,6 +157,7 @@ export default function DepotPage() {
           formatId: formatId || undefined,
           lienPhoto: lienPhoto || undefined,
           legendePhoto: legendePhoto || undefined,
+          creditPhoto: creditPhoto || undefined,
           postRs: postRs || undefined,
           etatSlug: "brouillon",
           isDraft: true,
@@ -197,6 +200,7 @@ export default function DepotPage() {
     submitStatus,
     lienPhoto,
     legendePhoto,
+    creditPhoto,
     postRs,
   ]);
 
@@ -288,6 +292,7 @@ export default function DepotPage() {
           formatId: formatId || undefined,
           lienPhoto: lienPhoto || undefined,
           legendePhoto: legendePhoto || undefined,
+          creditPhoto: creditPhoto || undefined,
           postRs: postRs || undefined,
           etatSlug: "a_relire",
           isDraft: false,
@@ -309,6 +314,7 @@ export default function DepotPage() {
       setContenuJson(null);
       setLienPhoto(null);
       setLegendePhoto("");
+      setCreditPhoto("");
       setPostRs("");
       if (newId) {
         router.push(`/mes-articles`);
@@ -367,6 +373,7 @@ export default function DepotPage() {
     setContenuJson(null);
     setLienPhoto(null);
     setLegendePhoto("");
+    setCreditPhoto("");
     setPostRs("");
     setFormatId("");
     setRubriqueId("");
@@ -419,6 +426,11 @@ export default function DepotPage() {
         </div>
       </div>
       <form onSubmit={handleSubmit} className="space-y-6">
+        {session?.user?.role === "auteur" && !session?.user?.auteurId && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Votre compte n&apos;est pas lié à un profil auteur. Contactez un administrateur avant de déposer un article.
+          </div>
+        )}
         <ArticleEditorCard
           mode="create"
           value={{
@@ -428,6 +440,7 @@ export default function DepotPage() {
             mutuelleId,
             lienPhoto,
             legendePhoto,
+            creditPhoto,
             titre,
             contenuHtml,
             contenuJson,
@@ -443,6 +456,7 @@ export default function DepotPage() {
             if (patch.mutuelleId !== undefined) setMutuelleId(patch.mutuelleId || "");
             if (patch.lienPhoto !== undefined) setLienPhoto(patch.lienPhoto ?? null);
             if (patch.legendePhoto !== undefined) setLegendePhoto(patch.legendePhoto || "");
+            if (patch.creditPhoto !== undefined) setCreditPhoto(patch.creditPhoto || "");
             if (patch.titre !== undefined) setTitre(patch.titre);
             if (patch.contenuHtml !== undefined) setContenuHtml(patch.contenuHtml);
             if (patch.contenuJson !== undefined) setContenuJson(patch.contenuJson ?? null);
@@ -455,7 +469,7 @@ export default function DepotPage() {
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
-            disabled={submitStatus === "sending"}
+            disabled={submitStatus === "sending" || (session?.user?.role === "auteur" && !session?.user?.auteurId)}
             className="rounded-lg bg-rer-blue px-5 py-2 text-sm font-medium text-white hover:bg-[#1e3380] disabled:opacity-50"
           >
             {submitStatus === "sending" ? "Envoi…" : "Créer l’article"}

@@ -59,7 +59,7 @@ td {
 }
 
 .prose img.article-image {
-  @apply my-4 w-full h-auto max-h-96 object-cover rounded-lg border border-rer-border bg-rer-app;
+  @apply my-4 w-full h-auto max-h-96 object-cover object-top rounded-lg border border-rer-border bg-rer-app;
 }
 
 .prose p.image-caption {
@@ -69,6 +69,10 @@ td {
 .prose p.image-caption:empty::before {
   content: "Légende de l’image…";
   color: rgb(107 114 128 / 0.7); /* proche de text-gray-500 */
+}
+
+.photo-credit {
+  @apply text-[11px] italic text-rer-muted;
 }
 
 .prose figure.embed-block {

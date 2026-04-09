@@ -179,7 +179,7 @@ export function ArticlesCardsView({
                   fill
                   sizes="(max-width: 640px) 100vw, 160px"
                   unoptimized
-                  className="object-cover"
+                      className="object-cover object-top"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xs text-rer-muted">

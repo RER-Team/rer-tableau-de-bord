@@ -46,6 +46,10 @@ type RichArticleEditorProps = {
    * - none: rendu nu, utile si le parent fournit déjà la carte
    */
   chrome?: "default" | "none";
+  /**
+   * Active la normalisation automatique du premier paragraphe en chapô.
+   */
+  hasChapo?: boolean;
 };
 
 export function RichArticleEditor({
@@ -56,6 +60,7 @@ export function RichArticleEditor({
   onChange,
   className = "",
   chrome = "default",
+  hasChapo = true,
 }: RichArticleEditorProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isNormalizingRef = useRef(false);
@@ -181,6 +186,7 @@ export function RichArticleEditor({
 
           // Si aucun paragraphe n'a de chapô, on applique sur le premier
           if (
+            hasChapo &&
             firstParagraphPos !== null &&
             firstParagraphNode &&
             !firstParagraphHasChapo
@@ -254,7 +260,7 @@ export function RichArticleEditor({
 
       onChange({ json, html });
     },
-  });
+  }, [readOnly, hasChapo, initialHtml, initialJson, onChange]);
 
   useEffect(() => {
     if (!editor) return;
@@ -264,7 +270,11 @@ export function RichArticleEditor({
   if (!editor || (editor as any).isDestroyed) return null;
 
   const baseButtonClasses =
-    "inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors";
+    "inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors";
+  const activeButtonClasses =
+    "border-rer-blue/40 bg-rer-blue/10 text-rer-blue";
+  const idleButtonClasses =
+    "border-rer-border bg-white text-rer-text hover:bg-rer-app";
 
   const insertBlockAtSlash = (html: string) => {
     if (!editor) return;
@@ -507,67 +517,104 @@ export function RichArticleEditor({
       {!readOnly && (
         <BubbleMenu
           editor={editor}
-          className="flex items-center gap-1 rounded-full border border-rer-border bg-white px-3 py-1.5 text-[12px] text-rer-text shadow-lg"
+          className="flex items-center gap-1 rounded-full border border-rer-border bg-white px-3 py-2 text-[12px] text-rer-text shadow-lg"
         >
           <button
             type="button"
+            title="Gras (Ctrl+B)"
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={editor.isActive("bold") ? "font-bold" : ""}
+            className={`${baseButtonClasses} ${
+              editor.isActive("bold") ? `${activeButtonClasses} font-bold` : idleButtonClasses
+            }`}
           >
-            B
+            <span className="font-bold">Gras</span>
           </button>
           <button
             type="button"
+            title="Italique (Ctrl+I)"
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={editor.isActive("italic") ? "italic" : ""}
+            className={`${baseButtonClasses} ${
+              editor.isActive("italic") ? `${activeButtonClasses} italic` : idleButtonClasses
+            }`}
           >
-            I
+            <span className="italic">Italique</span>
           </button>
+          <span className="mx-1 h-4 w-px bg-rer-border/70" />
           <button
             type="button"
+            title="Ajouter ou modifier un lien"
             onClick={handleSetLink}
+            className={`${baseButtonClasses} ${
+              editor.isActive("link") ? activeButtonClasses : idleButtonClasses
+            }`}
           >
-            Lien
+            🔗 Lien
           </button>
+          <span className="mx-1 h-4 w-px bg-rer-border/70" />
           <button
             type="button"
+            title="Titre niveau 2"
             onClick={() =>
               editor.chain().focus().toggleHeading({ level: 2 }).run()
             }
-            className={editor.isActive("heading", { level: 2 }) ? "font-semibold" : ""}
+            className={`${baseButtonClasses} ${
+              editor.isActive("heading", { level: 2 }) ? activeButtonClasses : idleButtonClasses
+            }`}
           >
             H2
           </button>
           <button
             type="button"
+            title="Titre niveau 3"
             onClick={() =>
               editor.chain().focus().toggleHeading({ level: 3 }).run()
             }
-            className={editor.isActive("heading", { level: 3 }) ? "font-semibold" : ""}
+            className={`${baseButtonClasses} ${
+              editor.isActive("heading", { level: 3 }) ? activeButtonClasses : idleButtonClasses
+            }`}
           >
             H3
           </button>
+          <span className="mx-1 h-4 w-px bg-rer-border/70" />
           <button
             type="button"
+            title="Liste à puces"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={editor.isActive("bulletList") ? "underline" : ""}
+            className={`${baseButtonClasses} ${
+              editor.isActive("bulletList") ? activeButtonClasses : idleButtonClasses
+            }`}
           >
             Liste
           </button>
           <button
             type="button"
+            title="Citation"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            className={editor.isActive("blockquote") ? "italic" : ""}
+            className={`${baseButtonClasses} ${
+              editor.isActive("blockquote")
+                ? `${activeButtonClasses} italic`
+                : idleButtonClasses
+            }`}
           >
             Citation
           </button>
-          <button
-            type="button"
-            onClick={handleToggleChapo}
-            className={editor.isActive("paragraph", { class: "chapo" }) ? "font-semibold underline" : ""}
-          >
-            Chapô
-          </button>
+          {hasChapo && (
+            <>
+              <span className="mx-1 h-4 w-px bg-rer-border/70" />
+              <button
+                type="button"
+                title="Basculer le style chapô"
+                onClick={handleToggleChapo}
+                className={`${baseButtonClasses} ${
+                  editor.isActive("paragraph", { class: "chapo" })
+                    ? `${activeButtonClasses} font-semibold`
+                    : idleButtonClasses
+                }`}
+              >
+                Chapô
+              </button>
+            </>
+          )}
         </BubbleMenu>
       )}
 
