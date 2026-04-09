@@ -471,28 +471,33 @@ export function ArticleEditorCard({
               rows={1}
               className="w-full resize-none border-none bg-transparent text-3xl font-semibold leading-tight text-rer-text placeholder:text-rer-muted focus:outline-none focus:ring-0"
             />
-            <p className="text-[11px] text-rer-muted">
+            <p className="inline-flex items-center rounded-lg border border-dashed border-rer-border bg-rer-app/40 px-2 py-1 text-[11px] text-rer-muted">
               Astuce&nbsp;: sur une ligne vide dans le texte, tapez «&nbsp;/&nbsp;» pour insérer
               une image, un embed ou appliquer un style (H2, H3, citation).
             </p>
-            <RichArticleEditor
-              key={editorKey}
-              chrome="none"
-              initialHtml={contenuHtml}
-              initialJson={contenuJson ?? undefined}
-              onChange={({ json, html }) => {
-                if (editorDebounceRef.current) {
-                  window.clearTimeout(editorDebounceRef.current);
-                }
-                editorDebounceRef.current = window.setTimeout(() => {
-                  if (lastEditorHtmlRef.current === html) return;
-                  lastEditorHtmlRef.current = html;
-                  onChange({ contenuJson: json, contenuHtml: html });
-                }, 500);
-              }}
-              className="min-h-[420px]"
-              hasChapo={hasChapo}
-            />
+            <div className="rounded-xl border border-rer-border bg-white/95 p-3 shadow-sm ring-1 ring-rer-border/40">
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-rer-muted">
+                Corps de l&apos;article
+              </p>
+              <RichArticleEditor
+                key={editorKey}
+                chrome="none"
+                initialHtml={contenuHtml}
+                initialJson={contenuJson ?? undefined}
+                onChange={({ json, html }) => {
+                  if (editorDebounceRef.current) {
+                    window.clearTimeout(editorDebounceRef.current);
+                  }
+                  editorDebounceRef.current = window.setTimeout(() => {
+                    if (lastEditorHtmlRef.current === html) return;
+                    lastEditorHtmlRef.current = html;
+                    onChange({ contenuJson: json, contenuHtml: html });
+                  }, 500);
+                }}
+                className="min-h-[420px]"
+                hasChapo={hasChapo}
+              />
+            </div>
           </div>
 
           {signesRef != null && (
