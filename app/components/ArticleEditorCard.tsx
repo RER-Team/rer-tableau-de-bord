@@ -79,6 +79,8 @@ export function ArticleEditorCard({
   })();
 
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
+  const editorDebounceRef = useRef<number | null>(null);
+  const lastEditorHtmlRef = useRef(contenuHtml || "");
   const titleFocusedRef = useRef(false);
   const postRsFocusedRef = useRef(false);
   const legendeFocusedRef = useRef(false);
@@ -138,6 +140,18 @@ export function ArticleEditorCard({
       setCreditDraft(creditPhoto || "");
     }
   }, [creditPhoto]);
+
+  useEffect(() => {
+    lastEditorHtmlRef.current = contenuHtml || "";
+  }, [contenuHtml]);
+
+  useEffect(() => {
+    return () => {
+      if (editorDebounceRef.current) {
+        window.clearTimeout(editorDebounceRef.current);
+      }
+    };
+  }, []);
 
   const handleClearMainImage = () => {
     onChange({ lienPhoto: null, legendePhoto: "", creditPhoto: "" });
@@ -467,7 +481,14 @@ export function ArticleEditorCard({
               initialHtml={contenuHtml}
               initialJson={contenuJson ?? undefined}
               onChange={({ json, html }) => {
-                onChange({ contenuJson: json, contenuHtml: html });
+                if (editorDebounceRef.current) {
+                  window.clearTimeout(editorDebounceRef.current);
+                }
+                editorDebounceRef.current = window.setTimeout(() => {
+                  if (lastEditorHtmlRef.current === html) return;
+                  lastEditorHtmlRef.current = html;
+                  onChange({ contenuJson: json, contenuHtml: html });
+                }, 500);
               }}
               className="min-h-[420px]"
               hasChapo={hasChapo}

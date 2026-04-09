@@ -278,7 +278,6 @@ export function MesArticleSidePanel({
           const updated = await res.json();
           setArticle((prev) => (prev ? { ...prev, ...updated } : null));
           setLastSavedAt(new Date());
-          router.refresh();
         }
       } catch (e) {
         console.error("Sauvegarde article", e);
