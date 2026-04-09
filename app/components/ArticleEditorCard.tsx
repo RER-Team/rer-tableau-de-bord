@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -476,7 +476,7 @@ export function ArticleEditorCard({
               une image, un embed ou appliquer un style (H2, H3, citation).
             </p>
             <div
-              className="rounded-xl bg-white/95 p-3"
+              className="rounded-xl border border-rer-border/40 bg-white/95 p-3"
               onClick={() => {
                 const proseMirror =
                   document.querySelector<HTMLElement>(".ProseMirror");
