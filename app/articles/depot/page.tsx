@@ -425,7 +425,7 @@ export default function DepotPage() {
           </div>
         </div>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form id="article-depot-form" onSubmit={handleSubmit} className="space-y-6 pb-24">
         {session?.user?.role === "auteur" && !session?.user?.auteurId && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
             Votre compte n&apos;est pas lié à un profil auteur. Contactez un administrateur avant de déposer un article.
@@ -484,6 +484,14 @@ export default function DepotPage() {
           )}
         </div>
       </form>
+      <button
+        type="submit"
+        form="article-depot-form"
+        disabled={submitStatus === "sending" || (session?.user?.role === "auteur" && !session?.user?.auteurId)}
+        className="fixed bottom-6 right-6 z-40 hidden rounded-full bg-rer-blue px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-[#1e3380] disabled:opacity-50 lg:inline-flex"
+      >
+        {submitStatus === "sending" ? "Envoi…" : "Créer l’article"}
+      </button>
     </div>
   );
 }

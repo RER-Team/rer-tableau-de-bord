@@ -61,6 +61,7 @@ export function ArticlesTableView({
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [imageLayouts, setImageLayouts] = useState<Record<string, "portrait" | "landscape">>({});
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const currentPageRef = useRef(initialPage);
 
@@ -217,7 +218,20 @@ export function ArticlesTableView({
                         fill
                         sizes="56px"
                         unoptimized
-                        className="object-cover object-top"
+                        onLoadingComplete={(img) => {
+                          const nextLayout =
+                            img.naturalHeight > img.naturalWidth ? "portrait" : "landscape";
+                          setImageLayouts((prev) =>
+                            prev[article.id] === nextLayout
+                              ? prev
+                              : { ...prev, [article.id]: nextLayout }
+                          );
+                        }}
+                        className={
+                          imageLayouts[article.id] === "portrait"
+                            ? "object-contain p-0.5"
+                            : "object-cover object-top"
+                        }
                       />
                     </div>
                   ) : (

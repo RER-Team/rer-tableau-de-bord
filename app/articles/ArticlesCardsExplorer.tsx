@@ -603,6 +603,7 @@ export function ArticlesExplorerView({
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageLayouts, setImageLayouts] = useState<Record<string, "portrait" | "landscape">>({});
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [hasMore, setHasMore] = useState(articles.length < total);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -824,7 +825,20 @@ export function ArticlesExplorerView({
                         fill
                         sizes="128px"
                         unoptimized
-                        className="object-cover object-top"
+                        onLoadingComplete={(img) => {
+                          const nextLayout =
+                            img.naturalHeight > img.naturalWidth ? "portrait" : "landscape";
+                          setImageLayouts((prev) =>
+                            prev[article.id] === nextLayout
+                              ? prev
+                              : { ...prev, [article.id]: nextLayout }
+                          );
+                        }}
+                        className={
+                          imageLayouts[article.id] === "portrait"
+                            ? "object-contain p-1"
+                            : "object-cover object-top"
+                        }
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[10px] text-rer-muted">
