@@ -475,10 +475,24 @@ export function ArticleEditorCard({
               Astuce&nbsp;: sur une ligne vide dans le texte, tapez «&nbsp;/&nbsp;» pour insérer
               une image, un embed ou appliquer un style (H2, H3, citation).
             </p>
-            <div className="rounded-xl border border-rer-border bg-white/95 p-3 shadow-sm ring-1 ring-rer-border/40">
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-rer-muted">
-                Corps de l&apos;article
-              </p>
+            <div
+              className="rounded-xl bg-white/95 p-3"
+              onClick={() => {
+                const proseMirror =
+                  document.querySelector<HTMLElement>(".ProseMirror");
+                proseMirror?.focus();
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  const proseMirror =
+                    document.querySelector<HTMLElement>(".ProseMirror");
+                  proseMirror?.focus();
+                }
+              }}
+            >
               <RichArticleEditor
                 key={editorKey}
                 chrome="none"
