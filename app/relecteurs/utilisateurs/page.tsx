@@ -157,6 +157,11 @@ export default function AdminUsersPage() {
     return m ? `${a.prenom} ${a.nom} (${m.nom})` : `${a.prenom} ${a.nom}`;
   };
 
+  const getAuteur = (id: string | null) => {
+    if (!id) return null;
+    return data.auteurs.find((a) => a.id === id) ?? null;
+  };
+
   const updateAuteur = async (
     auteurId: string,
     patch: Partial<{ prenom: string; nom: string; mutuelleId: string | null }>
@@ -298,11 +303,38 @@ export default function AdminUsersPage() {
             {data.users.map((u) => (
               <tr key={u.id} className="hover:bg-rer-app/60">
                 <td className="px-2 py-1.5 align-top">
-                  {u.auteurId && data.auteurs.find((a) => a.id === u.auteurId) ? (
+                  {u.auteurId && getAuteur(u.auteurId) ? (
                     (() => {
-                      const a = data.auteurs.find((x) => x.id === u.auteurId)!;
+                      const a = getAuteur(u.auteurId)!;
                       return (
-                        <div className="flex flex-wrap items-center gap-1">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <select
+                              value={u.auteurId ?? ""}
+                              onChange={(e) => {
+                                const value = e.target.value || null;
+                                if (value !== u.auteurId) {
+                                  handleUpdate(u, { auteurId: value });
+                                }
+                              }}
+                              className="h-7 min-w-[190px] rounded border border-rer-border bg-white px-2 text-xs"
+                            >
+                              <option value="">Aucun auteur associé</option>
+                              {data.auteurs.map((auteur) => (
+                                <option key={auteur.id} value={auteur.id}>
+                                  {auteur.prenom} {auteur.nom}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdate(u, { auteurId: null })}
+                              className="text-[11px] font-medium text-rer-muted hover:text-rer-text"
+                            >
+                              Délier
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1">
                           <input
                             type="text"
                             defaultValue={a.prenom}
@@ -321,19 +353,39 @@ export default function AdminUsersPage() {
                             }
                             className="h-7 w-28 rounded border border-transparent px-1 py-0.5 text-xs hover:border-rer-border focus:border-rer-blue focus:outline-none"
                           />
+                          </div>
                         </div>
                       );
                     })()
                   ) : (
-                    <p className="text-xs text-rer-subtle">
-                      Aucun auteur associé (utiliser l’import ou créer un compte).
-                    </p>
+                    <div className="space-y-1">
+                      <p className="text-xs text-rer-subtle">
+                        Aucun auteur associé.
+                      </p>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const value = e.target.value || null;
+                          if (value) {
+                            handleUpdate(u, { auteurId: value });
+                          }
+                        }}
+                        className="h-7 min-w-[190px] rounded border border-rer-border bg-white px-2 text-xs"
+                      >
+                        <option value="">Associer un auteur…</option>
+                        {data.auteurs.map((auteur) => (
+                          <option key={auteur.id} value={auteur.id}>
+                            {auteur.prenom} {auteur.nom}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   )}
                 </td>
                 <td className="px-2 py-1.5 align-top">
-                  {u.auteurId && data.auteurs.find((a) => a.id === u.auteurId) ? (
+                  {u.auteurId && getAuteur(u.auteurId) ? (
                     (() => {
-                      const a = data.auteurs.find((x) => x.id === u.auteurId)!;
+                      const a = getAuteur(u.auteurId)!;
                       return (
                         <select
                           defaultValue={a.mutuelleId || ""}
