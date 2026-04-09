@@ -108,6 +108,7 @@ export function ArticleReadSidePanel({
   const [article, setArticle] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mainImageLayout, setMainImageLayout] = useState<"portrait" | "landscape">("landscape");
 
   useEffect(() => {
     if (!open || !articleId) return;
@@ -124,6 +125,7 @@ export function ArticleReadSidePanel({
       })
       .then((data: ArticleDetail) => {
         setArticle(data);
+        setMainImageLayout("landscape");
       })
       .catch((e) => {
         if (controller.signal.aborted) return;
@@ -242,7 +244,16 @@ export function ArticleReadSidePanel({
                       width={1200}
                       height={700}
                       unoptimized
-                      className="h-auto w-full max-h-80 object-cover object-top"
+                      onLoadingComplete={(img) => {
+                        setMainImageLayout(
+                          img.naturalHeight > img.naturalWidth ? "portrait" : "landscape"
+                        );
+                      }}
+                      className={
+                        mainImageLayout === "portrait"
+                          ? "h-auto w-full max-h-[32rem] object-contain"
+                          : "h-auto w-full max-h-80 object-cover object-top"
+                      }
                     />
                   </div>
                   {article.legendePhoto && (

@@ -53,7 +53,6 @@ export function ArticlesCardsView({
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [imageLayouts, setImageLayouts] = useState<Record<string, "portrait" | "landscape">>({});
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const currentPageRef = useRef(initialPage);
 
@@ -180,20 +179,7 @@ export function ArticlesCardsView({
                   fill
                   sizes="(max-width: 640px) 100vw, 160px"
                   unoptimized
-                  onLoadingComplete={(img) => {
-                    const nextLayout =
-                      img.naturalHeight > img.naturalWidth ? "portrait" : "landscape";
-                    setImageLayouts((prev) =>
-                      prev[article.id] === nextLayout
-                        ? prev
-                        : { ...prev, [article.id]: nextLayout }
-                    );
-                  }}
-                  className={
-                    imageLayouts[article.id] === "portrait"
-                      ? "object-contain p-1"
-                      : "object-cover object-top"
-                  }
+                  className="object-cover object-top"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xs text-rer-muted">

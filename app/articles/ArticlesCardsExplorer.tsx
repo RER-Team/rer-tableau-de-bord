@@ -336,6 +336,7 @@ function ArticleDetailContent({
   const [imageCopyState, setImageCopyState] = useState<
     "idle" | "copied" | "error"
   >("idle");
+  const [mainImageLayout, setMainImageLayout] = useState<"portrait" | "landscape">("landscape");
 
   const canCopy = !!detail && !loading && !error;
 
@@ -343,6 +344,10 @@ function ArticleDetailContent({
     () => (detail?.contenu ? transformEmbeds(detail.contenu) : ""),
     [detail?.contenu]
   );
+
+  useEffect(() => {
+    setMainImageLayout("landscape");
+  }, [detail?.id, detail?.lienPhoto]);
   const statusContext = mine === "1" ? "author" : "public";
 
   const handleCopyHtml = async () => {
@@ -504,7 +509,16 @@ function ArticleDetailContent({
                   width={1200}
                   height={700}
                   unoptimized
-                  className="h-auto w-full max-h-64 object-cover object-top"
+                  onLoadingComplete={(img) => {
+                    setMainImageLayout(
+                      img.naturalHeight > img.naturalWidth ? "portrait" : "landscape"
+                    );
+                  }}
+                  className={
+                    mainImageLayout === "portrait"
+                      ? "h-auto w-full max-h-[32rem] object-contain"
+                      : "h-auto w-full max-h-64 object-cover object-top"
+                  }
                 />
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -603,7 +617,6 @@ export function ArticlesExplorerView({
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [imageLayouts, setImageLayouts] = useState<Record<string, "portrait" | "landscape">>({});
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [hasMore, setHasMore] = useState(articles.length < total);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -825,20 +838,7 @@ export function ArticlesExplorerView({
                         fill
                         sizes="128px"
                         unoptimized
-                        onLoadingComplete={(img) => {
-                          const nextLayout =
-                            img.naturalHeight > img.naturalWidth ? "portrait" : "landscape";
-                          setImageLayouts((prev) =>
-                            prev[article.id] === nextLayout
-                              ? prev
-                              : { ...prev, [article.id]: nextLayout }
-                          );
-                        }}
-                        className={
-                          imageLayouts[article.id] === "portrait"
-                            ? "object-contain p-1"
-                            : "object-cover object-top"
-                        }
+                        className="object-cover object-top"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[10px] text-rer-muted">
