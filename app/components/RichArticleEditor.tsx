@@ -64,6 +64,16 @@ export function RichArticleEditor({
 }: RichArticleEditorProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isNormalizingRef = useRef(false);
+  const hasChapoRef = useRef(hasChapo);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    hasChapoRef.current = hasChapo;
+  }, [hasChapo]);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   const editor = useEditor({
     extensions: [
@@ -116,7 +126,7 @@ export function RichArticleEditor({
     // entre serveur et client comme recommandé par Tiptap.
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
-      if (!onChange) return;
+      if (!onChangeRef.current) return;
 
       if (!readOnly) {
         const { doc, schema } = editor.state;
@@ -186,7 +196,7 @@ export function RichArticleEditor({
 
           // Si aucun paragraphe n'a de chapô, on applique sur le premier
           if (
-            hasChapo &&
+            hasChapoRef.current &&
             firstParagraphPos !== null &&
             firstParagraphNode &&
             !firstParagraphHasChapo
@@ -258,9 +268,9 @@ export function RichArticleEditor({
       });
       // #endregion
 
-      onChange({ json, html });
+      onChangeRef.current({ json, html });
     },
-  }, [readOnly, hasChapo, initialHtml, initialJson, onChange]);
+  });
 
   useEffect(() => {
     if (!editor) return;
