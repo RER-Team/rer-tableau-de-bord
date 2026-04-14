@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { getStatusWhereClause } from "@/lib/article-status";
@@ -274,16 +273,6 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
           )}
         </section>
 
-        {/* Bouton flottant mobile pour déposer un article */}
-        <Link
-          href="/articles/depot"
-          className="btn-cta fixed bottom-6 right-6 z-30 lg:hidden"
-        >
-          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-base leading-none">
-            +
-          </span>
-          <span>Nouvel article</span>
-        </Link>
       </div>
     </main>
   );
