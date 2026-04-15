@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-export function AppNotificationsBell() {
+type AppNotificationsBellProps = {
+  isActive?: boolean;
+};
+
+export function AppNotificationsBell({ isActive = false }: AppNotificationsBellProps) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -38,11 +42,17 @@ export function AppNotificationsBell() {
   return (
     <Link
       href="/notifications"
-      className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-rer-border bg-white text-rer-muted hover:text-rer-text"
+      className={`relative inline-flex h-12 w-12 items-center justify-center rounded-full border bg-white transition-colors ${
+        isActive
+          ? "border-rer-blue text-rer-blue"
+          : "border-rer-border text-rer-muted hover:bg-rer-app/60 hover:text-rer-text"
+      }`}
       aria-label="Ouvrir les notifications"
       title="Notifications"
     >
-      <span aria-hidden>🔔</span>
+      <span aria-hidden className="text-base">
+        🔔
+      </span>
       {unreadCount > 0 ? (
         <span className="absolute -right-1 -top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-rer-blue px-1 text-[10px] font-semibold text-white">
           {unreadCount > 99 ? "99+" : unreadCount}

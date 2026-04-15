@@ -35,8 +35,9 @@ vi.mock("@/lib/password-reset", () => ({
 
 import { POST } from "@/app/api/auth/forgot-password/route";
 
-const GENERIC_MESSAGE =
+const SUCCESS_MESSAGE =
   "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.";
+const NOT_FOUND_MESSAGE = "Aucun compte n'existe avec cette adresse email.";
 
 function makeRequest(body: unknown, ip = "1.1.1.1") {
   return {
@@ -61,23 +62,23 @@ describe("POST /api/auth/forgot-password", () => {
     );
   });
 
-  it("retourne un message générique si email invalide", async () => {
+  it("retourne 400 si email invalide", async () => {
     const response = await POST(makeRequest({ email: "invalide" }));
     const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data.message).toBe(GENERIC_MESSAGE);
+    expect(response.status).toBe(400);
+    expect(data.error).toBe("Veuillez saisir une adresse email valide.");
     expect(mocks.userFindUnique).not.toHaveBeenCalled();
   });
 
-  it("retourne un message générique si utilisateur introuvable", async () => {
+  it("retourne 404 si utilisateur introuvable", async () => {
     mocks.userFindUnique.mockResolvedValue(null);
 
     const response = await POST(makeRequest({ email: "absent@example.com" }));
     const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data.message).toBe(GENERIC_MESSAGE);
+    expect(response.status).toBe(404);
+    expect(data.error).toBe(NOT_FOUND_MESSAGE);
     expect(mocks.tokenCreate).not.toHaveBeenCalled();
     expect(mocks.sendPasswordResetEmail).not.toHaveBeenCalled();
   });
@@ -93,7 +94,7 @@ describe("POST /api/auth/forgot-password", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.message).toBe(GENERIC_MESSAGE);
+    expect(data.message).toBe(SUCCESS_MESSAGE);
     expect(mocks.tokenDeleteMany).toHaveBeenCalledWith({ where: { userId: "u1" } });
     expect(mocks.tokenCreate).toHaveBeenCalledWith({
       data: {
@@ -124,7 +125,7 @@ describe("POST /api/auth/forgot-password", () => {
     );
     const data = await limited.json();
     expect(limited.status).toBe(200);
-    expect(data.message).toBe(GENERIC_MESSAGE);
+    expect(data.message).toBe(SUCCESS_MESSAGE);
     expect(mocks.userFindUnique).toHaveBeenCalledTimes(5);
   });
 });

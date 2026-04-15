@@ -13,6 +13,9 @@ import {
 
 const GENERIC_MESSAGE =
   "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.";
+const ACCOUNT_NOT_FOUND_MESSAGE =
+  "Aucun compte n'existe avec cette adresse email.";
+const INVALID_EMAIL_MESSAGE = "Veuillez saisir une adresse email valide.";
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_ATTEMPTS_PER_IP = 20;
 const RATE_LIMIT_MAX_ATTEMPTS_PER_EMAIL = 5;
@@ -75,7 +78,7 @@ export async function POST(request: NextRequest) {
 
   if (!email || !isValidEmail(email)) {
     logForgotPasswordEvent("invalid-email", { ipHash: hashForLog(ip) });
-    return NextResponse.json({ message: GENERIC_MESSAGE }, { status: 200 });
+    return NextResponse.json({ error: INVALID_EMAIL_MESSAGE }, { status: 400 });
   }
 
   const ipLimited = isRateLimited(
@@ -107,7 +110,7 @@ export async function POST(request: NextRequest) {
       ipHash: hashForLog(ip),
       emailHash: hashForLog(email),
     });
-    return NextResponse.json({ message: GENERIC_MESSAGE }, { status: 200 });
+    return NextResponse.json({ error: ACCOUNT_NOT_FOUND_MESSAGE }, { status: 404 });
   }
 
   const token = generatePasswordResetToken();

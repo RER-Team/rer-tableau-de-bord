@@ -58,14 +58,15 @@ function LoginPageInner() {
       const data = await res.json().catch(() => ({}));
       setForgotMessage(
         data.message ||
-          "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé."
+          data.error ||
+          "Impossible d'envoyer le lien de réinitialisation."
       );
-      if (res.ok) {
+      if (res.ok && data.message) {
         setForgotEmail("");
       }
     } catch {
       setForgotMessage(
-        "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé."
+        "Erreur réseau: impossible d'envoyer le lien de réinitialisation."
       );
     } finally {
       setForgotLoading(false);
