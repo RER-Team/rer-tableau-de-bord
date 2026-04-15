@@ -33,7 +33,8 @@
     "nodemailer": "^7.0.13",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "sanitize-html": "^2.17.1"
+    "sanitize-html": "^2.17.1",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",

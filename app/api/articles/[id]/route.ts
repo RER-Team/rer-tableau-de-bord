@@ -8,6 +8,8 @@ import {
   normalizeArticleStatusSlug,
 } from "@/lib/article-status";
 import { sanitizeArticleHtml } from "@/lib/sanitizeArticleHtml";
+import { buildArticleNotificationEvents } from "@/lib/notifications/article-events";
+import { dispatchArticleNotificationEvent } from "@/lib/notifications/dispatch";
 
 const historiqueUserSelect = {
   id: true,
@@ -291,6 +293,7 @@ export async function PATCH(
   const previousEtatId = existing.etatId;
   const newEtatId = (data.etatId as string | null) ?? previousEtatId;
   const etatChanged = newEtatId !== previousEtatId;
+  const previousStatusSlug = normalizeArticleStatusSlug(existing.etat?.slug ?? null);
 
   // Si l'état change vers "publie" et que datePublication est encore vide,
   // on fige la date de validation à maintenant.
@@ -354,6 +357,24 @@ export async function PATCH(
     message: "PATCH /api/articles/[id] completed",
     data: { articleId: id, etatChanged, newEtatId },
   });
+
+  const events = buildArticleNotificationEvents({
+    articleId: article.id,
+    actorUserId: user.id,
+    targetAuteurId: article.auteurId,
+    isCreate: false,
+    fromStatusSlug: previousStatusSlug,
+    toStatusSlug: article.etat?.slug ?? null,
+    authorResubmitted,
+  });
+
+  for (const event of events) {
+    try {
+      await dispatchArticleNotificationEvent({ event });
+    } catch (error) {
+      console.error("dispatchArticleNotificationEvent PATCH /api/articles/[id]", error);
+    }
+  }
 
   return NextResponse.json(article);
 }

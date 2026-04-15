@@ -4,6 +4,8 @@ import { canEditArticles, getSessionUser } from "@/lib/auth";
 import { ingestDebug } from "@/lib/ingest-debug";
 import { getStatusWhereClause, normalizeArticleStatusSlug } from "@/lib/article-status";
 import { sanitizeArticleHtml } from "@/lib/sanitizeArticleHtml";
+import { buildArticleNotificationEvents } from "@/lib/notifications/article-events";
+import { dispatchArticleNotificationEvent } from "@/lib/notifications/dispatch";
 
 function extractFirstImageSrc(html: string | null): string | null {
   if (!html) return null;
@@ -333,6 +335,22 @@ export async function POST(request: NextRequest) {
       },
     });
     // #endregion
+
+    const events = buildArticleNotificationEvents({
+      articleId: article.id,
+      actorUserId: sessionUser.id,
+      targetAuteurId: article.auteurId,
+      isCreate: true,
+      toStatusSlug: article.etat?.slug ?? null,
+    });
+
+    for (const event of events) {
+      try {
+        await dispatchArticleNotificationEvent({ event });
+      } catch (error) {
+        console.error("dispatchArticleNotificationEvent POST /api/articles", error);
+      }
+    }
 
     return NextResponse.json(article);
   } catch (e) {

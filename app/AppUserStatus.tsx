@@ -2,17 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signIn, signOut, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
-
-const enableUserSwitch =
-  process.env.NEXT_PUBLIC_ENABLE_USER_SWITCH === "1";
-
-type UserSummary = {
-  id: string;
-  email: string;
-  role: string;
-};
+import { signOut, useSession } from "next-auth/react";
+import { AppNotificationsBell } from "./AppNotificationsBell";
 
 export function AppUserStatus() {
   const { data: session, status } = useSession();
@@ -41,6 +32,7 @@ export function AppUserStatus() {
 
   return (
     <div className="flex items-center gap-2 text-xs text-rer-muted">
+      <AppNotificationsBell />
       <span className="hidden sm:inline">
         {session.user.email} · rôle {session.user.role}
       </span>

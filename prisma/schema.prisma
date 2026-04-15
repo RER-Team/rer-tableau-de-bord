@@ -127,6 +127,10 @@ model User {
   updatedAt           DateTime             @updatedAt @map("updated_at")
   historiques         ArticleHistorique[]
   passwordResetTokens PasswordResetToken[]
+  notificationPreference UserNotificationPreference?
+  notifications       Notification[]
+  pushSubscriptions   PushSubscription[]
+  notificationDeliveries NotificationDelivery[]
 }
 
 model PasswordResetToken {
@@ -140,4 +144,60 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model UserNotificationPreference {
+  id                String   @id @default(cuid())
+  userId            String   @unique @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailEnabled      Boolean  @default(true) @map("email_enabled")
+  inAppEnabled      Boolean  @default(true) @map("in_app_enabled")
+  browserPushEnabled Boolean @default(false) @map("browser_push_enabled")
+  onSubmitted       Boolean  @default(true) @map("on_submitted")
+  onCorrections     Boolean  @default(true) @map("on_corrections")
+  onPublished       Boolean  @default(true) @map("on_published")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String
+  title      String
+  body       String   @db.Text
+  metadata   Json?
+  readAt     DateTime? @map("read_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+}
+
+model NotificationDelivery {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  articleId    String?  @map("article_id")
+  eventType    String   @map("event_type")
+  channel      String
+  dedupeKey    String   @unique @map("dedupe_key")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId, eventType])
 }

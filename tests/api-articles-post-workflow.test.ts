@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   etatFindFirst: vi.fn(),
   etatCreate: vi.fn(),
   articleCreate: vi.fn(),
+  dispatchArticleNotificationEvent: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -31,6 +32,10 @@ vi.mock("@/lib/prisma", () => ({
       create: mocks.articleCreate,
     },
   },
+}));
+
+vi.mock("@/lib/notifications/dispatch", () => ({
+  dispatchArticleNotificationEvent: mocks.dispatchArticleNotificationEvent,
 }));
 
 import { POST } from "@/app/api/articles/route";

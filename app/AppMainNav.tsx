@@ -10,6 +10,7 @@ export function AppMainNav() {
 
   const isOnArticles = pathname.startsWith("/articles");
   const isOnMesArticles = pathname.startsWith("/mes-articles");
+  const isOnPreferences = pathname.startsWith("/parametres");
   const isOnAdmin =
     pathname.startsWith("/admin") || pathname.startsWith("/relecteurs");
 
@@ -39,6 +40,14 @@ export function AppMainNav() {
         }`}
       >
         Mes articles
+      </Link>
+      <Link
+        href="/parametres/notifications"
+        className={`${baseClasses} ${
+          isOnPreferences ? activeClasses : inactiveClasses
+        }`}
+      >
+        Preferences
       </Link>
       {canSeeAdmin && (
         <Link

@@ -526,6 +526,21 @@ export function RichArticleEditor({
       .run();
   };
 
+  const handleClearStyles = () => {
+    if (!editor) return;
+    editor
+      .chain()
+      .focus()
+      .unsetLink()
+      .unsetBold()
+      .unsetItalic()
+      .unsetStrike()
+      .unsetCode()
+      .clearNodes()
+      .updateAttributes("paragraph", { class: null })
+      .run();
+  };
+
   return (
     <div
       className={
@@ -598,6 +613,15 @@ export function RichArticleEditor({
           editor={editor}
           className="flex items-center gap-1 rounded-full border border-rer-border bg-white px-3 py-2 text-[12px] text-rer-text shadow-lg"
         >
+          <button
+            type="button"
+            title="Supprimer les styles (texte normal)"
+            onClick={handleClearStyles}
+            className={`${baseButtonClasses} border-red-200 bg-red-50 text-red-700 hover:bg-red-100`}
+          >
+            X
+          </button>
+          <span className="mx-1 h-4 w-px bg-rer-border/70" />
           <button
             type="button"
             title="Gras (Ctrl+B)"

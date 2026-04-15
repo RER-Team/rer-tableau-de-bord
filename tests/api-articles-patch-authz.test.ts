@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   etatCreate: vi.fn(),
   etatFindUnique: vi.fn(),
   articleHistoriqueCreate: vi.fn(),
+  dispatchArticleNotificationEvent: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -39,6 +40,10 @@ vi.mock("@/lib/prisma", () => ({
       create: mocks.articleHistoriqueCreate,
     },
   },
+}));
+
+vi.mock("@/lib/notifications/dispatch", () => ({
+  dispatchArticleNotificationEvent: mocks.dispatchArticleNotificationEvent,
 }));
 
 import { PATCH } from "@/app/api/articles/[id]/route";
