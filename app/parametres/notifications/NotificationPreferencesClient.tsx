@@ -31,6 +31,10 @@ function base64UrlToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+function toArrayBuffer(view: Uint8Array): ArrayBuffer {
+  return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength) as ArrayBuffer;
+}
+
 export function NotificationPreferencesClient() {
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences);
   const [loading, setLoading] = useState(true);
@@ -119,7 +123,7 @@ export function NotificationPreferencesClient() {
           if (!pushConfig.publicKey) throw new Error("Cle VAPID indisponible.");
           const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: base64UrlToUint8Array(pushConfig.publicKey),
+            applicationServerKey: toArrayBuffer(base64UrlToUint8Array(pushConfig.publicKey)),
           });
           await fetch("/api/notifications/push-subscriptions", {
             method: "POST",
