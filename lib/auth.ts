@@ -2,6 +2,8 @@ import { getServerSession } from "next-auth";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import { authOptions } from "./auth-options";
+import { prisma } from "./prisma";
+import { computePasswordSessionVersion } from "./password-session";
 
 export type Role = "admin" | "relecteur" | "auteur" | "lecteur";
 export const VALID_ROLES: Role[] = ["admin", "relecteur", "auteur", "lecteur"];
@@ -32,6 +34,15 @@ export async function getSessionUser(req?: NextRequest): Promise<SessionUser | n
   if (req) {
     const token = await getToken({ req });
     if (!token?.sub) return null;
+    const dbUser = await prisma.user.findUnique({
+      where: { id: token.sub },
+      select: { passwordHash: true },
+    });
+    if (!dbUser?.passwordHash) return null;
+    const currentPasswordVersion = computePasswordSessionVersion(dbUser.passwordHash);
+    if (!token.passwordVersion || token.passwordVersion !== currentPasswordVersion) {
+      return null;
+    }
     return {
       id: token.sub,
       email: (token.email as string) ?? null,

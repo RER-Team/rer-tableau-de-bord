@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
+import { getPasswordPolicyMessage, isPasswordValid } from "@/lib/password-policy";
 
 export async function POST(
   request: NextRequest,
@@ -24,9 +25,9 @@ export async function POST(
   }
   const { password } = body as { password?: string };
 
-  if (!password || typeof password !== "string" || password.length < 12) {
+  if (!password || typeof password !== "string" || !isPasswordValid(password)) {
     return NextResponse.json(
-      { error: "Mot de passe invalide (minimum 12 caractères)" },
+      { error: getPasswordPolicyMessage() },
       { status: 400 }
     );
   }

@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
 import { hashPasswordResetToken } from "@/lib/password-reset";
+import { getPasswordPolicyMessage, isPasswordValid } from "@/lib/password-policy";
+
+function hashForLog(value: string): string {
+  return createHash("sha256").update(value).digest("hex").slice(0, 12);
+}
+
+function logResetPasswordEvent(event: string, details: Record<string, unknown>) {
+  console.info("[auth.reset-password]", JSON.stringify({ event, ...details }));
+}
 
 export async function POST(request: NextRequest) {
   let body: { token?: string; password?: string };
   try {
     body = (await request.json()) as { token?: string; password?: string };
   } catch {
+    logResetPasswordEvent("invalid-json", {});
     return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
   }
 
@@ -16,11 +27,13 @@ export async function POST(request: NextRequest) {
     typeof body.password === "string" ? body.password : "";
 
   if (!token) {
+    logResetPasswordEvent("missing-token", {});
     return NextResponse.json({ error: "Token manquant" }, { status: 400 });
   }
-  if (!password || password.length < 12) {
+  if (!password || !isPasswordValid(password)) {
+    logResetPasswordEvent("invalid-password", { tokenHashPrefix: hashForLog(token) });
     return NextResponse.json(
-      { error: "Mot de passe invalide (minimum 12 caractères)" },
+      { error: getPasswordPolicyMessage() },
       { status: 400 }
     );
   }
@@ -37,6 +50,9 @@ export async function POST(request: NextRequest) {
   });
 
   if (!resetToken || resetToken.usedAt || resetToken.expiresAt <= new Date()) {
+    logResetPasswordEvent("invalid-or-expired-link", {
+      tokenHashPrefix: hashForLog(token),
+    });
     return NextResponse.json({ error: "Lien invalide ou expiré" }, { status: 400 });
   }
 
@@ -53,6 +69,10 @@ export async function POST(request: NextRequest) {
   });
 
   if (consumed.count !== 1) {
+    logResetPasswordEvent("token-race-lost", {
+      resetTokenId: resetToken.id,
+      userId: resetToken.userId,
+    });
     return NextResponse.json({ error: "Lien invalide ou expiré" }, { status: 400 });
   }
 
@@ -65,5 +85,22 @@ export async function POST(request: NextRequest) {
     where: { userId: resetToken.userId },
   });
 
-  return NextResponse.json({ ok: true }, { status: 200 });
+  logResetPasswordEvent("password-updated", { userId: resetToken.userId });
+
+  const response = NextResponse.json({ ok: true }, { status: 200 });
+  // Invalide la session du navigateur courant pour forcer une reconnexion.
+  response.cookies.set("next-auth.session-token", "", {
+    path: "/",
+    maxAge: 0,
+    httpOnly: true,
+    sameSite: "lax",
+  });
+  response.cookies.set("__Secure-next-auth.session-token", "", {
+    path: "/",
+    maxAge: 0,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: true,
+  });
+  return response;
 }

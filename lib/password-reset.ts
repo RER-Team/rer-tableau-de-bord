@@ -34,6 +34,11 @@ export async function sendPasswordResetEmail(options: {
   email: string;
   resetUrl: string;
 }): Promise<void> {
+  const emailDomain = options.email.split("@")[1] ?? "unknown";
+  console.info(
+    "[auth.password-reset-email]",
+    JSON.stringify({ event: "send-attempt", emailDomain })
+  );
   const template = buildPasswordResetTemplate({ resetUrl: options.resetUrl });
   await sendMail({
     to: options.email,
@@ -43,6 +48,10 @@ export async function sendPasswordResetEmail(options: {
     tags: ["password-reset"],
     meta: { flow: "forgot-password" },
   });
+  console.info(
+    "[auth.password-reset-email]",
+    JSON.stringify({ event: "sent", emailDomain })
+  );
 
   // En dev, on garde la trace explicite du lien pour faciliter les tests manuels.
   if (process.env.NODE_ENV !== "production") {

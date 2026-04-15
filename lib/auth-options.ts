@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
 import { prisma } from "./prisma";
+import { computePasswordSessionVersion } from "./password-session";
 
 declare module "next-auth" {
   interface Session {
@@ -24,6 +25,7 @@ declare module "next-auth/jwt" {
     auteurId?: string | null;
     originalUserId?: string | null;
     originalUserEmail?: string | null;
+    passwordVersion?: string;
   }
 }
 
@@ -47,6 +49,7 @@ const baseCredentialsProvider = CredentialsProvider({
       email: user.email,
       role: user.role,
       auteurId: user.auteurId,
+      passwordVersion: computePasswordSessionVersion(user.passwordHash),
     };
   },
 });
@@ -79,6 +82,7 @@ if (enableImpersonate) {
           email: user.email,
           role: user.role,
           auteurId: user.auteurId,
+          passwordVersion: computePasswordSessionVersion(user.passwordHash),
         };
         // Si on a l’admin d’origine, on est en train de “simuler” → on garde la trace pour le footer
         if (credentials.originalUserEmail?.trim()) {
@@ -102,6 +106,9 @@ export const authOptions: NextAuthOptions = {
         const u = user as { _originalUserEmail?: string; _originalUserId?: string | null };
         token.originalUserEmail = u._originalUserEmail ?? null;
         token.originalUserId = u._originalUserId ?? null;
+        token.passwordVersion =
+          (user as { passwordVersion?: string }).passwordVersion ??
+          token.passwordVersion;
       }
       return token;
     },

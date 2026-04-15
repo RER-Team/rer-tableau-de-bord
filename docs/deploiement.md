@@ -72,6 +72,13 @@ MAIL_PROVIDER=webhook
 MAIL_WEBHOOK_URL=https://votre-service-mail.local/api/send
 ```
 
+### 1.2 Prérequis délivrabilité (prod)
+
+Pour maximiser la réception des e-mails de réinitialisation:
+- Configurer SPF, DKIM et DMARC sur le domaine de `MAIL_FROM`.
+- Utiliser un expéditeur dédié de type `no-reply@...` cohérent avec votre provider.
+- Vérifier que l’URL publique (`NEXTAUTH_URL`) pointe bien vers le domaine final pour générer des liens de reset corrects.
+
 ---
 
 ## 2. Option A : Vercel (recommandé pour Next.js)
@@ -144,5 +151,12 @@ Donc en pratique : BDD Supabase + hébergement Next.js sur Vercel/Railway/Render
   - `/login` → “Mot de passe oublié ?”,
   - réception du lien de reset,
   - `/reset-password` avec un nouveau mot de passe valide.
+- Vérifier la sécurité du flux reset :
+  - token valable 60 minutes maximum,
+  - réponse API toujours générique (pas de fuite d’existence de compte),
+  - throttling actif (20 tentatives / 15 min / IP et 5 tentatives / 15 min / email).
+- Vérifier le comportement de session post-reset :
+  - la session du navigateur courant est supprimée après succès,
+  - une ancienne session JWT n’est plus acceptée par les API protégées.
 - Documenter l’URL de prod et les comptes de test dans `docs/SUIVI.md` (Sprint 5).
 - Les erreurs UX de l’éditeur de dépôt seront corrigées dans une prochaine itération.

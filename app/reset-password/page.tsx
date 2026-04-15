@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy";
 
 function ResetPasswordPageInner() {
   const router = useRouter();
@@ -22,8 +23,10 @@ function ResetPasswordPageInner() {
       setError("Lien invalide : token manquant.");
       return;
     }
-    if (password.length < 12) {
-      setError("Le mot de passe doit contenir au moins 12 caractères.");
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(
+        `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`
+      );
       return;
     }
     if (password !== confirmPassword) {
@@ -61,7 +64,8 @@ function ResetPasswordPageInner() {
           Réinitialiser le mot de passe
         </h1>
         <p className="mt-1 text-sm text-rer-muted">
-          Saisissez votre nouveau mot de passe (minimum 12 caractères).
+          Saisissez votre nouveau mot de passe (minimum {MIN_PASSWORD_LENGTH}{" "}
+          caractères).
         </p>
 
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
@@ -87,7 +91,7 @@ function ResetPasswordPageInner() {
               onChange={(e) => setPassword(e.target.value)}
               className="mt-1 w-full rounded-lg border border-rer-border bg-white px-3 py-2 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
               required
-              minLength={12}
+              minLength={MIN_PASSWORD_LENGTH}
             />
           </div>
 
@@ -106,7 +110,7 @@ function ResetPasswordPageInner() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="mt-1 w-full rounded-lg border border-rer-border bg-white px-3 py-2 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
               required
-              minLength={12}
+              minLength={MIN_PASSWORD_LENGTH}
             />
           </div>
 

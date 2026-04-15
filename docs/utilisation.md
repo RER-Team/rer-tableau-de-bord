@@ -20,6 +20,8 @@ Seuls les utilisateurs connectés peuvent accéder au tableau de bord et aux act
 - Saisir l’email du compte puis envoyer la demande.
 - Un lien de réinitialisation est généré (valide 60 minutes) et envoyé via le mécanisme d’e-mail configuré.
 - Ouvrir le lien reçu pour accéder à `/reset-password`, puis définir un nouveau mot de passe (minimum 12 caractères).
+- Le formulaire applique une protection anti-abus côté API : fenêtre de 15 minutes, limite de 20 requêtes par IP et 5 requêtes par email.
+- Après une réinitialisation réussie, la session du navigateur courant est invalidée et les API protégées rejettent les sessions JWT devenues obsolètes (reconnexion requise).
 
 ---
 
