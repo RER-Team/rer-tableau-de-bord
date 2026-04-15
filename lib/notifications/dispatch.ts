@@ -33,13 +33,13 @@ export async function dispatchArticleNotificationEvent(
   args: DispatchArticleNotificationEventArgs
 ): Promise<void> {
   const { event } = args;
-  const timestampBucket = new Date().toISOString().slice(0, 13);
 
   const article = await prisma.article.findUnique({
     where: { id: event.articleId },
-    select: { id: true, titre: true },
+    select: { id: true, titre: true, updatedAt: true },
   });
   if (!article) return;
+  const transitionKey = article.updatedAt.toISOString();
 
   const targetUser = await prisma.user.findFirst({
     where: { auteurId: event.targetAuteurId },
@@ -97,7 +97,7 @@ export async function dispatchArticleNotificationEvent(
   };
 
   if (effectivePreference.inAppEnabled) {
-    const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:in_app:${timestampBucket}`;
+    const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:in_app:${transitionKey}`;
     const existing = await prisma.notificationDelivery.findUnique({
       where: { dedupeKey },
       select: { id: true },
@@ -138,7 +138,7 @@ export async function dispatchArticleNotificationEvent(
   }
 
   if (effectivePreference.emailEnabled && targetUser.email) {
-    const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:email:${timestampBucket}`;
+    const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:email:${transitionKey}`;
     const existing = await prisma.notificationDelivery.findUnique({
       where: { dedupeKey },
       select: { id: true },
@@ -200,7 +200,7 @@ export async function dispatchArticleNotificationEvent(
       url: `/articles/${article.id}`,
     };
     for (const subscription of subscriptions) {
-      const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:push:${subscription.id}:${timestampBucket}`;
+      const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:push:${subscription.id}:${transitionKey}`;
       const existing = await prisma.notificationDelivery.findUnique({
         where: { dedupeKey },
         select: { id: true },
