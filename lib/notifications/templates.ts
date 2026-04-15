@@ -32,50 +32,50 @@ const defaultTemplateByEvent: Record<
   Omit<NotificationTemplatePayload, "eventType">
 > = {
   "article.submitted": {
-    emailSubject: "Tu as depose ton article : {{articleTitle}}",
+    emailSubject: "Tu as déposé ton article : {{articleTitle}}",
     emailText: [
       "Bonjour,",
       "",
-      'Tu as bien depose ton article "{{articleTitle}}".',
+      'Tu as bien déposé ton article "{{articleTitle}}".',
       "Il est maintenant en relecture.",
       "Tu peux le consulter ici : {{articleUrl}}",
     ].join("\n"),
     emailHtml:
-      '<p>Bonjour,</p><p>Tu as bien depose ton article "<strong>{{articleTitle}}</strong>".</p><p>Il est maintenant en relecture.</p><p><a href="{{articleUrl}}">Ouvrir l\'article</a></p>',
-    inAppTitle: "Article depose",
-    inAppBody: 'Tu as depose "{{articleTitle}}". Il est en relecture.',
-    pushTitle: "Article depose",
-    pushBody: 'Tu as depose "{{articleTitle}}".',
+      '<p>Bonjour,</p><p>Tu as bien déposé ton article "<strong>{{articleTitle}}</strong>".</p><p>Il est maintenant en relecture.</p><p><a href="{{articleUrl}}">Ouvrir l\'article</a></p>',
+    inAppTitle: "Article déposé",
+    inAppBody: 'Tu as déposé "{{articleTitle}}". Il est en relecture.',
+    pushTitle: "Article déposé",
+    pushBody: 'Tu as déposé "{{articleTitle}}".',
   },
   "article.corrections_requested_or_resubmitted": {
-    emailSubject: "Corrections enregistrees : {{articleTitle}}",
+    emailSubject: "Corrections enregistrées : {{articleTitle}}",
     emailText: [
       "Bonjour,",
       "",
-      'Une mise a jour de correction a ete enregistree pour ton article "{{articleTitle}}".',
+      'Une mise à jour de correction a été enregistrée pour ton article "{{articleTitle}}".',
       "Tu peux le consulter ici : {{articleUrl}}",
     ].join("\n"),
     emailHtml:
-      '<p>Bonjour,</p><p>Une mise a jour de correction a ete enregistree pour ton article "<strong>{{articleTitle}}</strong>".</p><p><a href="{{articleUrl}}">Ouvrir l\'article</a></p>',
-    inAppTitle: "Corrections enregistrees",
-    inAppBody: 'Ton article "{{articleTitle}}" a ete mis a jour.',
-    pushTitle: "Corrections enregistrees",
-    pushBody: 'Ton article "{{articleTitle}}" a ete mis a jour.',
+      '<p>Bonjour,</p><p>Une mise à jour de correction a été enregistrée pour ton article "<strong>{{articleTitle}}</strong>".</p><p><a href="{{articleUrl}}">Ouvrir l\'article</a></p>',
+    inAppTitle: "Corrections enregistrées",
+    inAppBody: 'Ton article "{{articleTitle}}" a été mis à jour.',
+    pushTitle: "Corrections enregistrées",
+    pushBody: 'Ton article "{{articleTitle}}" a été mis à jour.',
   },
   "article.published": {
-    emailSubject: "Ton article est publie : {{articleTitle}}",
+    emailSubject: "Ton article est publié : {{articleTitle}}",
     emailText: [
       "Bonjour,",
       "",
-      'Bonne nouvelle, ton article "{{articleTitle}}" est maintenant publie.',
-      "Voir l'article publie : {{articleUrl}}",
+      'Bonne nouvelle, ton article "{{articleTitle}}" est maintenant publié.',
+      "Voir l'article publié : {{articleUrl}}",
     ].join("\n"),
     emailHtml:
-      '<p>Bonjour,</p><p>Bonne nouvelle, ton article "<strong>{{articleTitle}}</strong>" est maintenant publie.</p><p><a href="{{articleUrl}}">Voir l\'article publie</a></p>',
-    inAppTitle: "Article publie",
-    inAppBody: 'Ton article "{{articleTitle}}" est publie.',
-    pushTitle: "Article publie",
-    pushBody: 'Ton article "{{articleTitle}}" est publie.',
+      '<p>Bonjour,</p><p>Bonne nouvelle, ton article "<strong>{{articleTitle}}</strong>" est maintenant publié.</p><p><a href="{{articleUrl}}">Voir l\'article publié</a></p>',
+    inAppTitle: "Article publié",
+    inAppBody: 'Ton article "{{articleTitle}}" est publié.',
+    pushTitle: "Article publié",
+    pushBody: 'Ton article "{{articleTitle}}" est publié.',
   },
 };
 
