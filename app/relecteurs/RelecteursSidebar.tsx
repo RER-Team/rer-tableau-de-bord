@@ -28,6 +28,11 @@ const NAV_ITEMS: NavItem[] = [
     description: "Formats, rubriques, mutuelles, auteurs",
   },
   {
+    href: "/admin/emails",
+    label: "Emails",
+    description: "Templates notifications",
+  },
+  {
     label: "Statistiques",
     description: "Volumes, délais, répartition…",
     comingSoon: true,

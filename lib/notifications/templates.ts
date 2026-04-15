@@ -1,0 +1,111 @@
+import type { ArticleNotificationEventType } from "./article-events";
+
+export const articleNotificationEventTypes: ArticleNotificationEventType[] = [
+  "article.submitted",
+  "article.corrections_requested_or_resubmitted",
+  "article.published",
+];
+
+export type NotificationTemplatePayload = {
+  eventType: ArticleNotificationEventType;
+  emailSubject: string;
+  emailText: string;
+  emailHtml: string;
+  inAppTitle: string;
+  inAppBody: string;
+  pushTitle: string;
+  pushBody: string;
+};
+
+export const allowedTemplateVariables = [
+  "{{articleTitle}}",
+  "{{articleUrl}}",
+] as const;
+
+export type TemplateVariables = {
+  articleTitle: string;
+  articleUrl: string;
+};
+
+const defaultTemplateByEvent: Record<
+  ArticleNotificationEventType,
+  Omit<NotificationTemplatePayload, "eventType">
+> = {
+  "article.submitted": {
+    emailSubject: "Tu as depose ton article : {{articleTitle}}",
+    emailText: [
+      "Bonjour,",
+      "",
+      'Tu as bien depose ton article "{{articleTitle}}".',
+      "Il est maintenant en relecture.",
+      "Tu peux le consulter ici : {{articleUrl}}",
+    ].join("\n"),
+    emailHtml:
+      '<p>Bonjour,</p><p>Tu as bien depose ton article "<strong>{{articleTitle}}</strong>".</p><p>Il est maintenant en relecture.</p><p><a href="{{articleUrl}}">Ouvrir l\'article</a></p>',
+    inAppTitle: "Article depose",
+    inAppBody: 'Tu as depose "{{articleTitle}}". Il est en relecture.',
+    pushTitle: "Article depose",
+    pushBody: 'Tu as depose "{{articleTitle}}".',
+  },
+  "article.corrections_requested_or_resubmitted": {
+    emailSubject: "Corrections enregistrees : {{articleTitle}}",
+    emailText: [
+      "Bonjour,",
+      "",
+      'Une mise a jour de correction a ete enregistree pour ton article "{{articleTitle}}".',
+      "Tu peux le consulter ici : {{articleUrl}}",
+    ].join("\n"),
+    emailHtml:
+      '<p>Bonjour,</p><p>Une mise a jour de correction a ete enregistree pour ton article "<strong>{{articleTitle}}</strong>".</p><p><a href="{{articleUrl}}">Ouvrir l\'article</a></p>',
+    inAppTitle: "Corrections enregistrees",
+    inAppBody: 'Ton article "{{articleTitle}}" a ete mis a jour.',
+    pushTitle: "Corrections enregistrees",
+    pushBody: 'Ton article "{{articleTitle}}" a ete mis a jour.',
+  },
+  "article.published": {
+    emailSubject: "Ton article est publie : {{articleTitle}}",
+    emailText: [
+      "Bonjour,",
+      "",
+      'Bonne nouvelle, ton article "{{articleTitle}}" est maintenant publie.',
+      "Voir l'article publie : {{articleUrl}}",
+    ].join("\n"),
+    emailHtml:
+      '<p>Bonjour,</p><p>Bonne nouvelle, ton article "<strong>{{articleTitle}}</strong>" est maintenant publie.</p><p><a href="{{articleUrl}}">Voir l\'article publie</a></p>',
+    inAppTitle: "Article publie",
+    inAppBody: 'Ton article "{{articleTitle}}" est publie.',
+    pushTitle: "Article publie",
+    pushBody: 'Ton article "{{articleTitle}}" est publie.',
+  },
+};
+
+export function getDefaultNotificationTemplate(
+  eventType: ArticleNotificationEventType
+): NotificationTemplatePayload {
+  return {
+    eventType,
+    ...defaultTemplateByEvent[eventType],
+  };
+}
+
+export function renderTemplate(
+  template: string,
+  variables: TemplateVariables
+): string {
+  return template
+    .replaceAll("{{articleTitle}}", variables.articleTitle)
+    .replaceAll("{{articleUrl}}", variables.articleUrl);
+}
+
+export function validateTemplateVariables(value: string): string[] {
+  const matches = value.match(/\{\{[^}]+\}\}/g) ?? [];
+  const allowed = new Set(allowedTemplateVariables);
+  const invalid = matches.filter((match) => !allowed.has(match as any));
+  return Array.from(new Set(invalid));
+}
+
+export function isArticleNotificationEventType(
+  value: string
+): value is ArticleNotificationEventType {
+  return (articleNotificationEventTypes as string[]).includes(value);
+}

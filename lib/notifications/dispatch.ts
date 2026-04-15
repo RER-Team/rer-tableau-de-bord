@@ -2,9 +2,12 @@ import { prisma } from "@/lib/prisma";
 import type { ArticleNotificationEvent } from "./article-events";
 import { defaultNotificationPreferences } from "./preferences";
 import { sendMail } from "@/lib/mail";
-import { buildArticleNotificationTemplate } from "@/lib/mail/templates/article-notification";
 import { sendWebPushNotification } from "./web-push";
 import { retryWithTimeout } from "./reliability";
+import {
+  getDefaultNotificationTemplate,
+  renderTemplate,
+} from "./templates";
 
 type DispatchArticleNotificationEventArgs = {
   event: ArticleNotificationEvent;
@@ -19,50 +22,11 @@ function shouldNotifyForEvent(
   }
 ): boolean {
   if (eventType === "article.submitted") return preference.onSubmitted;
-  if (eventType === "article.corrections_requested_or_resubmitted") return preference.onCorrections;
+  if (eventType === "article.corrections_requested_or_resubmitted") {
+    return preference.onCorrections;
+  }
   if (eventType === "article.published") return preference.onPublished;
   return false;
-}
-
-function buildInAppCopy(event: ArticleNotificationEvent): { title: string; body: string } {
-  if (event.type === "article.submitted") {
-    return {
-      title: "Article depose",
-      body: "Votre article a ete depose et transmis pour relecture.",
-    };
-  }
-  if (event.type === "article.corrections_requested_or_resubmitted") {
-    return {
-      title: "Mise a jour article",
-      body: "Des corrections ont ete prises en compte sur votre article.",
-    };
-  }
-  return {
-    title: "Article valide",
-    body: "Votre article a ete valide et publie.",
-  };
-}
-
-function buildPushCopy(event: ArticleNotificationEvent, articleId: string, articleTitle: string) {
-  if (event.type === "article.submitted") {
-    return {
-      title: "Article depose",
-      body: `Votre article "${articleTitle}" est en relecture.`,
-      url: `/articles/${articleId}`,
-    };
-  }
-  if (event.type === "article.corrections_requested_or_resubmitted") {
-    return {
-      title: "Article mis a jour",
-      body: `Des corrections ont ete enregistrees sur "${articleTitle}".`,
-      url: `/articles/${articleId}`,
-    };
-  }
-  return {
-    title: "Article publie",
-    body: `Votre article "${articleTitle}" est publie.`,
-    url: `/articles/${articleId}`,
-  };
 }
 
 export async function dispatchArticleNotificationEvent(
@@ -83,6 +47,10 @@ export async function dispatchArticleNotificationEvent(
   });
   if (!targetUser?.id) return;
 
+  const baseUrl =
+    process.env.NEXTAUTH_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim() || "";
+  const articleUrl = baseUrl ? `${baseUrl}/articles/${article.id}` : `/articles/${article.id}`;
+
   const preference = await prisma.userNotificationPreference.findUnique({
     where: { userId: targetUser.id },
     select: {
@@ -98,6 +66,36 @@ export async function dispatchArticleNotificationEvent(
   const effectivePreference = preference ?? defaultNotificationPreferences;
   if (!shouldNotifyForEvent(event.type, effectivePreference)) return;
 
+  const customTemplate = await prisma.notificationTemplate.findUnique({
+    where: { eventType: event.type },
+    select: {
+      emailSubject: true,
+      emailText: true,
+      emailHtml: true,
+      inAppTitle: true,
+      inAppBody: true,
+      pushTitle: true,
+      pushBody: true,
+      isActive: true,
+    },
+  });
+  const templateBase = customTemplate?.isActive
+    ? {
+        eventType: event.type,
+        emailSubject: customTemplate.emailSubject,
+        emailText: customTemplate.emailText,
+        emailHtml: customTemplate.emailHtml,
+        inAppTitle: customTemplate.inAppTitle,
+        inAppBody: customTemplate.inAppBody,
+        pushTitle: customTemplate.pushTitle,
+        pushBody: customTemplate.pushBody,
+      }
+    : getDefaultNotificationTemplate(event.type);
+  const templateVars = {
+    articleTitle: article.titre,
+    articleUrl,
+  };
+
   if (effectivePreference.inAppEnabled) {
     const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:in_app:${timestampBucket}`;
     const existing = await prisma.notificationDelivery.findUnique({
@@ -105,14 +103,15 @@ export async function dispatchArticleNotificationEvent(
       select: { id: true },
     });
     if (!existing) {
-      const copy = buildInAppCopy(event);
+      const inAppTitle = renderTemplate(templateBase.inAppTitle, templateVars);
+      const inAppBody = renderTemplate(templateBase.inAppBody, templateVars);
       await prisma.$transaction([
         prisma.notification.create({
           data: {
             userId: targetUser.id,
             type: event.type,
-            title: copy.title,
-            body: `${copy.body} (${article.titre})`,
+            title: inAppTitle,
+            body: inAppBody,
             metadata: {
               articleId: article.id,
               articleTitle: article.titre,
@@ -146,24 +145,17 @@ export async function dispatchArticleNotificationEvent(
     });
 
     if (!existing) {
-      const baseUrl =
-        process.env.NEXTAUTH_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim() || "";
-      const articleUrl = baseUrl
-        ? `${baseUrl}/articles/${article.id}`
-        : `/articles/${article.id}`;
-      const template = buildArticleNotificationTemplate({
-        eventType: event.type,
-        articleTitle: article.titre,
-        articleUrl,
-      });
+      const emailSubject = renderTemplate(templateBase.emailSubject, templateVars);
+      const emailText = renderTemplate(templateBase.emailText, templateVars);
+      const emailHtml = renderTemplate(templateBase.emailHtml, templateVars);
 
       await retryWithTimeout(
         () =>
           sendMail({
             to: targetUser.email,
-            subject: template.subject,
-            text: template.text,
-            html: template.html,
+            subject: emailSubject,
+            text: emailText,
+            html: emailHtml,
             tags: ["article-notification", event.type],
             meta: {
               articleId: article.id,
@@ -202,7 +194,11 @@ export async function dispatchArticleNotificationEvent(
       select: { id: true, endpoint: true, p256dh: true, auth: true },
     });
 
-    const pushPayload = buildPushCopy(event, article.id, article.titre);
+    const pushPayload = {
+      title: renderTemplate(templateBase.pushTitle, templateVars),
+      body: renderTemplate(templateBase.pushBody, templateVars),
+      url: `/articles/${article.id}`,
+    };
     for (const subscription of subscriptions) {
       const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:push:${subscription.id}:${timestampBucket}`;
       const existing = await prisma.notificationDelivery.findUnique({

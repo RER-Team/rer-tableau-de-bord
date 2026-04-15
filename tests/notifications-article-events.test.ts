@@ -16,7 +16,7 @@ describe("buildArticleNotificationEvents", () => {
     ]);
   });
 
-  it("declenche corrections lors d'un retour a a_relire", () => {
+  it("declenche la notif de corrections lors d'un retour a a_relire", () => {
     const events = buildArticleNotificationEvents({
       articleId: "a1",
       actorUserId: "u1",
@@ -24,7 +24,6 @@ describe("buildArticleNotificationEvents", () => {
       isCreate: false,
       fromStatusSlug: "publie",
       toStatusSlug: "a_relire",
-      authorResubmitted: false,
     });
 
     expect(events).toEqual([

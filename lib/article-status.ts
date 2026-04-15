@@ -1,4 +1,7 @@
-export type CanonicalArticleStatusSlug = "brouillon" | "a_relire" | "publie";
+export type CanonicalArticleStatusSlug =
+  | "brouillon"
+  | "a_relire"
+  | "publie";
 export type KnownArticleStatusSlug =
   | CanonicalArticleStatusSlug
   | "corrige"

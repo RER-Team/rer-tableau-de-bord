@@ -236,6 +236,16 @@ export async function POST(request: NextRequest) {
     }
     const safeAuteurId = auteurId.trim();
     const isEditor = canEditArticles(sessionUser.role);
+    if (
+      !isEditor &&
+      targetSlug !== "brouillon" &&
+      targetSlug !== "a_relire"
+    ) {
+      return NextResponse.json(
+        { error: "Transition d’état non autorisée." },
+        { status: 403 }
+      );
+    }
     if (!isEditor && !sessionUser.auteurId) {
       return NextResponse.json(
         {
@@ -286,7 +296,7 @@ export async function POST(request: NextRequest) {
       });
     } else if (!targetEtat && targetSlug === "publie") {
       targetEtat = await prisma.etat.create({
-        data: { slug: "publie", libelle: "Publié", ordre: 2 },
+        data: { slug: "publie", libelle: "Publié", ordre: 3 },
       });
     } else if (!targetEtat && targetSlug === "a_relire") {
       targetEtat = await prisma.etat.create({

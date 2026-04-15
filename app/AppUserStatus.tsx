@@ -8,6 +8,7 @@ import { AppNotificationsBell } from "./AppNotificationsBell";
 export function AppUserStatus() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  const isOnPreferences = pathname.startsWith("/parametres");
   // On évite d'afficher le bloc sur la page login elle-même.
   if (pathname === "/login") return null;
 
@@ -33,6 +34,17 @@ export function AppUserStatus() {
   return (
     <div className="flex items-center gap-2 text-xs text-rer-muted">
       <AppNotificationsBell />
+      <Link
+        href="/parametres/notifications"
+        className={`rounded-lg border px-2 py-0.5 text-[11px] font-medium transition-colors ${
+          isOnPreferences
+            ? "border-rer-blue bg-rer-blue text-white"
+            : "border-rer-border bg-white text-rer-muted hover:bg-rer-app/60"
+        }`}
+        title="Préférences notifications"
+      >
+        Préférences
+      </Link>
       <span className="hidden sm:inline">
         {session.user.email} · rôle {session.user.role}
       </span>

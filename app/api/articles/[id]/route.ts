@@ -98,7 +98,12 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const ensureEtatBySlug = async (slug: "brouillon" | "a_relire" | "publie") => {
+  const ensureEtatBySlug = async (
+    slug:
+      | "brouillon"
+      | "a_relire"
+      | "publie"
+  ) => {
     let etat = await prisma.etat.findFirst({ where: { slug } });
     if (etat) return etat;
     const config =
@@ -241,7 +246,11 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    if (!isEditor && targetSlug !== "brouillon" && targetSlug !== "a_relire") {
+    if (
+      !isEditor &&
+      targetSlug !== "brouillon" &&
+      targetSlug !== "a_relire"
+    ) {
       return NextResponse.json(
         { error: "Transition d’état non autorisée." },
         { status: 403 }

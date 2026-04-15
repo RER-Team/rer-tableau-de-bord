@@ -201,3 +201,18 @@ model NotificationDelivery {
 
   @@index([userId, eventType])
 }
+
+model NotificationTemplate {
+  id           String   @id @default(cuid())
+  eventType    String   @unique @map("event_type")
+  emailSubject String   @map("email_subject")
+  emailText    String   @map("email_text") @db.Text
+  emailHtml    String   @map("email_html") @db.Text
+  inAppTitle   String   @map("in_app_title")
+  inAppBody    String   @map("in_app_body") @db.Text
+  pushTitle    String   @map("push_title")
+  pushBody     String   @map("push_body") @db.Text
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+}
