@@ -5,6 +5,13 @@ type ResendConfig = {
   from: string;
 };
 
+function resolveFromAddress(baseFrom: string, fromName?: string): string {
+  if (!fromName?.trim()) return baseFrom;
+  const extracted = baseFrom.match(/<([^>]+)>/);
+  const address = (extracted?.[1] ?? baseFrom).trim();
+  return `${fromName.trim()} <${address}>`;
+}
+
 export function createResendProvider(config: ResendConfig): MailProvider {
   return {
     name: "resend",
@@ -16,7 +23,7 @@ export function createResendProvider(config: ResendConfig): MailProvider {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: config.from,
+          from: resolveFromAddress(config.from, payload.fromName),
           to: payload.to,
           subject: payload.subject,
           text: payload.text,

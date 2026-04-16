@@ -8,6 +8,7 @@ export function createWebhookProvider(webhookUrl: string): MailProvider {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          fromName: payload.fromName,
           to: payload.to,
           subject: payload.subject,
           text: payload.text,

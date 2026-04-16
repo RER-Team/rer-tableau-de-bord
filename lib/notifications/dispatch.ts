@@ -44,17 +44,25 @@ export async function dispatchArticleNotificationEvent(
   args: DispatchArticleNotificationEventArgs
 ): Promise<void> {
   const { event } = args;
+  const adminAlertRecipientEmail = "contact@reseaudesediteursderevues.org";
 
   const article = await prisma.article.findUnique({
     where: { id: event.articleId },
-    select: { id: true, titre: true, updatedAt: true },
+    select: {
+      id: true,
+      titre: true,
+      updatedAt: true,
+      auteur: {
+        select: { id: true, prenom: true, nom: true },
+      },
+    },
   });
   if (!article) return;
   const transitionKey = article.updatedAt.toISOString();
 
   const targetUser = await prisma.user.findFirst({
     where: { auteurId: event.targetAuteurId },
-    select: { id: true, email: true },
+    select: { id: true, email: true, role: true },
   });
   if (!targetUser?.id) return;
   const targetAuteur = await prisma.auteur.findUnique({
@@ -191,6 +199,7 @@ export async function dispatchArticleNotificationEvent(
         () =>
           sendMail({
             to: targetUser.email,
+            fromName: adminSignature,
             subject: emailSubject,
             text: emailText,
             html: emailHtml,
@@ -223,6 +232,85 @@ export async function dispatchArticleNotificationEvent(
         eventType: event.type,
         userId: targetUser.id,
       });
+    }
+  }
+
+  if (event.type === "article.published" && targetUser.role === "auteur") {
+    const depositorName = `${article.auteur?.prenom || ""} ${article.auteur?.nom || ""}`.trim();
+    const contactSubject = `Article publié : ${article.titre}`;
+    const contactText = [
+      `Bonjour,`,
+      "",
+      `L'article "${article.titre}" déposé par ${depositorName || "un auteur"} vient d'être publié.`,
+      `Lien : ${articleUrl}`,
+    ].join("\n");
+    const contactHtml = `<p>Bonjour,</p><p>L'article "<strong>${article.titre}</strong>" déposé par ${depositorName || "un auteur"} vient d'être publié.</p><p><a href="${articleUrl}">Ouvrir l'article</a></p>`;
+    try {
+      await retryWithTimeout(
+        () =>
+          sendMail({
+            to: adminAlertRecipientEmail,
+            fromName: adminSignature,
+            subject: contactSubject,
+            text: contactText,
+            html: contactHtml,
+            tags: ["article-published", "admin-alert"],
+            meta: {
+              articleId: article.id,
+              eventType: event.type,
+              channel: "email_contact",
+            },
+          }),
+        {
+          label: "email-contact-published",
+          retries: 2,
+          baseDelayMs: 250,
+          timeoutMs: 8000,
+        }
+      );
+    } catch (error) {
+      console.error("[notifications] contact publication email error", error);
+    }
+
+    const adminUsers = await prisma.user.findMany({
+      where: { role: "admin" },
+      select: { id: true },
+    });
+    for (const admin of adminUsers) {
+      const dedupeKey = `${event.type}:${event.articleId}:${admin.id}:in_app_admin_alert:${transitionKey}`;
+      const existing = await prisma.notificationDelivery.findUnique({
+        where: { dedupeKey },
+        select: { id: true },
+      });
+      if (existing) continue;
+
+      const title = "Article publié (alerte admin)";
+      const body = `L'article "${article.titre}" déposé par ${depositorName || "un auteur"} vient d'être publié.`;
+      await prisma.$transaction([
+        prisma.notification.create({
+          data: {
+            userId: admin.id,
+            type: "article.published.admin_alert",
+            title,
+            body,
+            metadata: {
+              articleId: article.id,
+              articleTitle: article.titre,
+              eventType: event.type,
+              publishedByAuteurId: event.targetAuteurId,
+            },
+          },
+        }),
+        prisma.notificationDelivery.create({
+          data: {
+            userId: admin.id,
+            articleId: article.id,
+            eventType: event.type,
+            channel: "in_app",
+            dedupeKey,
+          },
+        }),
+      ]);
     }
   }
 

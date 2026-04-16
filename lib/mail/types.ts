@@ -3,6 +3,7 @@ export type MailPayload = {
   subject: string;
   text: string;
   html?: string;
+  fromName?: string;
   tags?: string[];
   meta?: Record<string, unknown>;
 };
