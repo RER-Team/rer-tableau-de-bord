@@ -20,12 +20,14 @@ export type NotificationTemplatePayload = {
 export const allowedTemplateVariables = [
   "{{articleTitle}}",
   "{{articleUrl}}",
+  "{{Prenom}}",
   "{{adminSignature}}",
 ] as const;
 
 export type TemplateVariables = {
   articleTitle: string;
   articleUrl: string;
+  Prenom?: string;
   adminSignature?: string;
 };
 
@@ -34,62 +36,63 @@ const defaultTemplateByEvent: Record<
   Omit<NotificationTemplatePayload, "eventType">
 > = {
   "article.submitted": {
-    emailSubject: "Changement d'étape : brouillon -> en relecture ({{articleTitle}})",
+    emailSubject: "Ton article est déposé : {{articleTitle}}",
     emailText: [
-      "Bonjour,",
+      "Bonjour {{Prenom}},",
       "",
-      `L'article "{{articleTitle}}" a changé d'étape : brouillon -> en relecture.`,
+      'Ton article "{{articleTitle}}" est bien déposé.',
+      "Il est maintenant en relecture.",
       "Tu peux le consulter ici : {{articleUrl}}",
       "",
       "{{adminSignature}}",
     ].join("\n"),
     emailHtml:
-      '<p>Bonjour,</p><p>L\'article "<strong>{{articleTitle}}</strong>" a changé d\'étape : brouillon -&gt; en relecture.</p><p><a href="{{articleUrl}}">Ouvrir l\'article</a></p><p>{{adminSignature}}</p>',
-    inAppTitle: "Changement d'étape : en relecture",
+      '<p>Bonjour {{Prenom}},</p><p>Ton article "<strong>{{articleTitle}}</strong>" est bien déposé.</p><p>Il est maintenant en relecture.</p><p><a href="{{articleUrl}}">Ouvrir l\'article</a></p><p>{{adminSignature}}</p>',
+    inAppTitle: "Ton article est déposé",
     inAppBody:
-      'L\'article "{{articleTitle}}" est passé de brouillon à en relecture. - {{adminSignature}}',
-    pushTitle: "Étape article : en relecture",
+      'Ton article "{{articleTitle}}" est maintenant en relecture. - {{adminSignature}}',
+    pushTitle: "Ton article est déposé",
     pushBody:
-      '"{{articleTitle}}" : brouillon -> en relecture. {{adminSignature}}',
+      '"{{articleTitle}}" est en relecture. {{adminSignature}}',
   },
   "article.corrections_requested_or_resubmitted": {
-    emailSubject:
-      "Changement d'étape : corrections / ré-soumission -> en relecture ({{articleTitle}})",
+    emailSubject: "Ton article est en cours de corrections : {{articleTitle}}",
     emailText: [
-      "Bonjour,",
+      "Bonjour {{Prenom}},",
       "",
-      `L'article "{{articleTitle}}" a changé d'étape : corrections / ré-soumission -> en relecture.`,
+      'Ton article "{{articleTitle}}" est en cours de corrections.',
+      "Une nouvelle version a été prise en compte pour relecture.",
       "Tu peux le consulter ici : {{articleUrl}}",
       "",
       "{{adminSignature}}",
     ].join("\n"),
     emailHtml:
-      '<p>Bonjour,</p><p>L\'article "<strong>{{articleTitle}}</strong>" a changé d\'étape : corrections / ré-soumission -&gt; en relecture.</p><p><a href="{{articleUrl}}">Ouvrir l\'article</a></p><p>{{adminSignature}}</p>',
-    inAppTitle: "Changement d'étape : retour en relecture",
+      '<p>Bonjour {{Prenom}},</p><p>Ton article "<strong>{{articleTitle}}</strong>" est en cours de corrections.</p><p>Une nouvelle version a été prise en compte pour relecture.</p><p><a href="{{articleUrl}}">Ouvrir l\'article</a></p><p>{{adminSignature}}</p>',
+    inAppTitle: "Ton article est en cours de corrections",
     inAppBody:
-      'L\'article "{{articleTitle}}" est passé en relecture après corrections / ré-soumission. - {{adminSignature}}',
-    pushTitle: "Étape article : retour en relecture",
+      'Ton article "{{articleTitle}}" a été mis à jour pour relecture. - {{adminSignature}}',
+    pushTitle: "Article en cours de corrections",
     pushBody:
-      '"{{articleTitle}}" : corrections / ré-soumission -> en relecture. {{adminSignature}}',
+      '"{{articleTitle}}" a été remis en relecture. {{adminSignature}}',
   },
   "article.published": {
-    emailSubject: "Changement d'étape : en relecture -> publié ({{articleTitle}})",
+    emailSubject: "Ton article est publié : {{articleTitle}}",
     emailText: [
-      "Bonjour,",
+      "Bonjour {{Prenom}},",
       "",
-      `L'article "{{articleTitle}}" a changé d'étape : en relecture -> publié.`,
+      `Bonne nouvelle : ton article "{{articleTitle}}" est publié.`,
       "Voir l'article publié : {{articleUrl}}",
       "",
       "{{adminSignature}}",
     ].join("\n"),
     emailHtml:
-      '<p>Bonjour,</p><p>L\'article "<strong>{{articleTitle}}</strong>" a changé d\'étape : en relecture -&gt; publié.</p><p><a href="{{articleUrl}}">Voir l\'article publié</a></p><p>{{adminSignature}}</p>',
-    inAppTitle: "Changement d'étape : publié",
+      '<p>Bonjour {{Prenom}},</p><p>Bonne nouvelle : ton article "<strong>{{articleTitle}}</strong>" est publié.</p><p><a href="{{articleUrl}}">Voir l\'article publié</a></p><p>{{adminSignature}}</p>',
+    inAppTitle: "Ton article est publié",
     inAppBody:
-      'L\'article "{{articleTitle}}" est passé de en relecture à publié. - {{adminSignature}}',
-    pushTitle: "Étape article : publié",
+      'Ton article "{{articleTitle}}" est maintenant publié. - {{adminSignature}}',
+    pushTitle: "Ton article est publié",
     pushBody:
-      '"{{articleTitle}}" : en relecture -> publié. {{adminSignature}}',
+      '"{{articleTitle}}" est maintenant publié. {{adminSignature}}',
   },
 };
 
@@ -109,6 +112,7 @@ export function renderTemplate(
   return template
     .replaceAll("{{articleTitle}}", variables.articleTitle)
     .replaceAll("{{articleUrl}}", variables.articleUrl)
+    .replaceAll("{{Prenom}}", variables.Prenom?.trim() || "à toi")
     .replaceAll(
       "{{adminSignature}}",
       variables.adminSignature?.trim() || "Constance et Léa"

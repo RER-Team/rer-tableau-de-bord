@@ -16,6 +16,7 @@ export function AppUserStatus() {
   const menuId = "account-menu";
   const isOnPreferences = pathname.startsWith("/parametres/notifications");
   const isOnNotifications = pathname.startsWith("/notifications");
+  const isOnProfile = pathname.startsWith("/mon-profil");
   const email = session?.user?.email ?? "";
   const role = session?.user?.role ?? "";
   const roleLabel =
@@ -135,20 +136,23 @@ export function AppUserStatus() {
             </div>
 
             <div className="p-1.5">
-              <button
-                type="button"
-                role="menuitem"
-                className="block w-full cursor-not-allowed rounded-lg px-3 py-2 text-left text-xs font-medium text-rer-subtle/80"
-                title="Mon profil (bientôt disponible)"
-                disabled
-              >
-                Mon profil
-              </button>
               <Link
                 ref={firstMenuItemRef}
-                href="/notifications"
+                href="/mon-profil"
                 role="menuitem"
                 className={`block rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                  isOnProfile
+                    ? "bg-rer-blue text-white"
+                    : "text-rer-muted hover:bg-rer-app/60 hover:text-rer-text"
+                }`}
+                onClick={() => closeMenuAndReturnFocus()}
+              >
+                Mon profil
+              </Link>
+              <Link
+                href="/notifications"
+                role="menuitem"
+                className={`mt-1 block rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
                   isOnNotifications
                     ? "bg-rer-blue text-white"
                     : "text-rer-muted hover:bg-rer-app/60 hover:text-rer-text"

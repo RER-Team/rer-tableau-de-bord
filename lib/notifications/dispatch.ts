@@ -13,9 +13,15 @@ type DispatchArticleNotificationEventArgs = {
   event: ArticleNotificationEvent;
 };
 
-function buildAdminSignature(email: string | null | undefined): string {
-  if (!email) return "Constance et Léa";
-  return email.trim() || "Constance et Léa";
+function buildAdminSignature(args: {
+  prenom?: string | null;
+  nom?: string | null;
+  email?: string | null;
+}): string {
+  const fullName = `${args.prenom?.trim() || ""} ${args.nom?.trim() || ""}`.trim();
+  if (fullName) return fullName;
+  if (args.email?.trim()) return args.email.trim();
+  return "Constance et Léa";
 }
 
 function shouldNotifyForEvent(
@@ -51,6 +57,10 @@ export async function dispatchArticleNotificationEvent(
     select: { id: true, email: true },
   });
   if (!targetUser?.id) return;
+  const targetAuteur = await prisma.auteur.findUnique({
+    where: { id: event.targetAuteurId },
+    select: { prenom: true },
+  });
 
   const baseUrl =
     process.env.NEXTAUTH_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim() || "";
@@ -100,16 +110,27 @@ export async function dispatchArticleNotificationEvent(
   const actorUser = event.actorUserId
     ? await prisma.user.findUnique({
         where: { id: event.actorUserId },
-        select: { email: true, role: true },
+        select: {
+          email: true,
+          role: true,
+          auteur: {
+            select: { prenom: true, nom: true },
+          },
+        },
       })
     : null;
   const adminSignature =
     actorUser && (actorUser.role === "admin" || actorUser.role === "relecteur")
-      ? buildAdminSignature(actorUser.email)
+      ? buildAdminSignature({
+          prenom: actorUser.auteur?.prenom,
+          nom: actorUser.auteur?.nom,
+          email: actorUser.email,
+        })
       : "Constance et Léa";
   const templateVars = {
     articleTitle: article.titre,
     articleUrl,
+    Prenom: targetAuteur?.prenom || undefined,
     adminSignature,
   };
 

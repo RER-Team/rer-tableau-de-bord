@@ -41,7 +41,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function RelecteursSidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
