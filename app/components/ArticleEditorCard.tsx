@@ -482,6 +482,7 @@ export function ArticleEditorCard({
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
+                if (e.currentTarget !== e.target) return;
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   const proseMirror =
