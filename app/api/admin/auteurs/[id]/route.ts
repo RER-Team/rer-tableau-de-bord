@@ -13,17 +13,19 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { prenom, nom, email, mutuelleId } = body as {
+  const { prenom, nom, email, mutuelleId, telephone } = body as {
     prenom?: string;
     nom?: string;
     email?: string | null;
     mutuelleId?: string | null;
+    telephone?: string | null;
   };
 
   const data: Record<string, unknown> = {};
   if (typeof prenom === "string") data.prenom = prenom.trim();
   if (typeof nom === "string") data.nom = nom.trim();
   if (email !== undefined) data.email = email?.trim() || null;
+  if (telephone !== undefined) data.telephone = telephone?.trim() || null;
   if (mutuelleId !== undefined) data.mutuelleId = mutuelleId || null;
 
   const auteur = await prisma.auteur.update({

@@ -45,9 +45,11 @@ model Auteur {
   prenom     String
   nom        String
   email      String?
+  telephone  String?
   mutuelleId String?
   mutuelle   Mutuelle? @relation(fields: [mutuelleId], references: [id])
   articles   Article[]
+  users      User[]
 
   @@unique([prenom, nom])
 }
@@ -123,6 +125,7 @@ model User {
   passwordHash        String?              @map("password_hash")
   role                String               @default("auteur") // admin | relecteur | auteur | lecteur
   auteurId            String?
+  auteur              Auteur?              @relation(fields: [auteurId], references: [id])
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
   historiques         ArticleHistorique[]

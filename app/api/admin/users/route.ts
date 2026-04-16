@@ -27,6 +27,14 @@ export async function GET(request: NextRequest) {
   });
   const auteurs = await prisma.auteur.findMany({
     orderBy: [{ nom: "asc" }, { prenom: "asc" }],
+    select: {
+      id: true,
+      prenom: true,
+      nom: true,
+      email: true,
+      telephone: true,
+      mutuelleId: true,
+    },
   });
   const mutuelles = await prisma.mutuelle.findMany({
     orderBy: { nom: "asc" },
@@ -80,6 +88,7 @@ export async function POST(request: NextRequest) {
           prenom: trimmedPrenom,
           nom: trimmedNom,
           email: email.trim().toLowerCase(),
+          telephone: null,
           mutuelleId,
         },
       });

@@ -14,6 +14,7 @@ type Auteur = {
   prenom: string;
   nom: string;
   email: string | null;
+  telephone: string | null;
   mutuelleId: string | null;
 };
 
@@ -164,7 +165,12 @@ export default function AdminUsersPage() {
 
   const updateAuteur = async (
     auteurId: string,
-    patch: Partial<{ prenom: string; nom: string; mutuelleId: string | null }>
+    patch: Partial<{
+      prenom: string;
+      nom: string;
+      mutuelleId: string | null;
+      telephone: string | null;
+    }>
   ) => {
     setSavingId(`auteur-${auteurId}`);
     setError(null);
@@ -294,6 +300,7 @@ export default function AdminUsersPage() {
             <tr>
               <th className="px-2 py-2 text-left">Personne</th>
               <th className="px-2 py-2 text-left">Mutuelle</th>
+              <th className="px-2 py-2 text-left">Téléphone</th>
               <th className="px-2 py-2 text-left">Email</th>
               <th className="px-2 py-2 text-left">Rôle</th>
               <th className="px-2 py-2 text-right">Actions</th>
@@ -380,6 +387,29 @@ export default function AdminUsersPage() {
                         ))}
                       </select>
                     </div>
+                  )}
+                </td>
+                <td className="px-2 py-1.5 align-top">
+                  {u.auteurId && getAuteur(u.auteurId) ? (
+                    (() => {
+                      const a = getAuteur(u.auteurId)!;
+                      return (
+                        <input
+                          type="tel"
+                          defaultValue={a.telephone || ""}
+                          onBlur={(e) =>
+                            e.target.value !== (a.telephone || "") &&
+                            updateAuteur(a.id, {
+                              telephone: e.target.value || null,
+                            })
+                          }
+                          className="h-8 w-full min-w-[120px] rounded border border-transparent px-1 py-0.5 text-xs hover:border-rer-border focus:border-rer-blue focus:outline-none"
+                          placeholder="06..."
+                        />
+                      );
+                    })()
+                  ) : (
+                    <span className="text-xs text-rer-subtle">—</span>
                   )}
                 </td>
                 <td className="px-2 py-1.5 align-top">
