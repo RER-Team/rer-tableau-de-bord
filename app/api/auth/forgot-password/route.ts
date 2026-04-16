@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import {
   buildPasswordResetUrl,
@@ -30,10 +29,6 @@ const emailRateLimitStore = new Map<string, RateLimitEntry>();
 
 function nowMs(): number {
   return Date.now();
-}
-
-function hashForLog(value: string): string {
-  return createHash("sha256").update(value).digest("hex").slice(0, 12);
 }
 
 function getClientIp(request: NextRequest): string {
@@ -69,7 +64,7 @@ export async function POST(request: NextRequest) {
   try {
     body = (await request.json()) as { email?: string };
   } catch {
-    logForgotPasswordEvent("invalid-json", { ipHash: hashForLog(ip) });
+    logForgotPasswordEvent("invalid-json", { ip });
     return NextResponse.json({ message: GENERIC_MESSAGE }, { status: 200 });
   }
 
@@ -77,7 +72,7 @@ export async function POST(request: NextRequest) {
   const email = normalizeEmail(rawEmail);
 
   if (!email || !isValidEmail(email)) {
-    logForgotPasswordEvent("invalid-email", { ipHash: hashForLog(ip) });
+    logForgotPasswordEvent("invalid-email", { ip, email });
     return NextResponse.json({ error: INVALID_EMAIL_MESSAGE }, { status: 400 });
   }
 
@@ -93,8 +88,8 @@ export async function POST(request: NextRequest) {
   );
   if (ipLimited || emailLimited) {
     logForgotPasswordEvent("rate-limited", {
-      ipHash: hashForLog(ip),
-      emailHash: hashForLog(email),
+      ip,
+      email,
       reason: ipLimited ? "ip" : "email",
     });
     return NextResponse.json({ message: GENERIC_MESSAGE }, { status: 200 });
@@ -107,8 +102,8 @@ export async function POST(request: NextRequest) {
 
   if (!user?.passwordHash) {
     logForgotPasswordEvent("user-not-eligible", {
-      ipHash: hashForLog(ip),
-      emailHash: hashForLog(email),
+      ip,
+      email,
     });
     return NextResponse.json({ error: ACCOUNT_NOT_FOUND_MESSAGE }, { status: 404 });
   }
@@ -138,16 +133,16 @@ export async function POST(request: NextRequest) {
   try {
     await sendPasswordResetEmail({ email: user.email, resetUrl });
     logForgotPasswordEvent("email-sent", {
-      ipHash: hashForLog(ip),
+      ip,
       userId: user.id,
-      emailHash: hashForLog(email),
+      email,
     });
   } catch {
     // On garde une réponse générique pour ne pas divulguer l'existence de comptes.
     logForgotPasswordEvent("email-failed", {
-      ipHash: hashForLog(ip),
+      ip,
       userId: user.id,
-      emailHash: hashForLog(email),
+      email,
     });
   }
 

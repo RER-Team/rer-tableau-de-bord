@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
 import { hashPasswordResetToken } from "@/lib/password-reset";
 import { getPasswordPolicyMessage, isPasswordValid } from "@/lib/password-policy";
-
-function hashForLog(value: string): string {
-  return createHash("sha256").update(value).digest("hex").slice(0, 12);
-}
 
 function logResetPasswordEvent(event: string, details: Record<string, unknown>) {
   console.info("[auth.reset-password]", JSON.stringify({ event, ...details }));
@@ -31,7 +26,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Token manquant" }, { status: 400 });
   }
   if (!password || !isPasswordValid(password)) {
-    logResetPasswordEvent("invalid-password", { tokenHashPrefix: hashForLog(token) });
+    logResetPasswordEvent("invalid-password", { tokenPreview: token.slice(0, 8) });
     return NextResponse.json(
       { error: getPasswordPolicyMessage() },
       { status: 400 }
@@ -51,7 +46,7 @@ export async function POST(request: NextRequest) {
 
   if (!resetToken || resetToken.usedAt || resetToken.expiresAt <= new Date()) {
     logResetPasswordEvent("invalid-or-expired-link", {
-      tokenHashPrefix: hashForLog(token),
+      tokenPreview: token.slice(0, 8),
     });
     return NextResponse.json({ error: "Lien invalide ou expiré" }, { status: 400 });
   }
