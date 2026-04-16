@@ -18,6 +18,7 @@ const INVALID_EMAIL_MESSAGE = "Veuillez saisir une adresse email valide.";
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_ATTEMPTS_PER_IP = 20;
 const RATE_LIMIT_MAX_ATTEMPTS_PER_EMAIL = 5;
+export const runtime = "nodejs";
 
 type RateLimitEntry = {
   count: number;
@@ -60,91 +61,102 @@ function logForgotPasswordEvent(event: string, details: Record<string, unknown>)
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
-  let body: { email?: string };
   try {
-    body = (await request.json()) as { email?: string };
-  } catch {
-    logForgotPasswordEvent("invalid-json", { ip });
+    let body: { email?: string };
+    try {
+      body = (await request.json()) as { email?: string };
+    } catch {
+      logForgotPasswordEvent("invalid-json", { ip });
+      return NextResponse.json({ message: GENERIC_MESSAGE }, { status: 200 });
+    }
+
+    const rawEmail = typeof body.email === "string" ? body.email : "";
+    const email = normalizeEmail(rawEmail);
+
+    if (!email || !isValidEmail(email)) {
+      logForgotPasswordEvent("invalid-email", { ip, email });
+      return NextResponse.json({ error: INVALID_EMAIL_MESSAGE }, { status: 400 });
+    }
+
+    const ipLimited = isRateLimited(
+      ipRateLimitStore,
+      `ip:${ip}`,
+      RATE_LIMIT_MAX_ATTEMPTS_PER_IP
+    );
+    const emailLimited = isRateLimited(
+      emailRateLimitStore,
+      `email:${email}`,
+      RATE_LIMIT_MAX_ATTEMPTS_PER_EMAIL
+    );
+    if (ipLimited || emailLimited) {
+      logForgotPasswordEvent("rate-limited", {
+        ip,
+        email,
+        reason: ipLimited ? "ip" : "email",
+      });
+      return NextResponse.json({ message: GENERIC_MESSAGE }, { status: 200 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, passwordHash: true },
+    });
+
+    if (!user?.passwordHash) {
+      logForgotPasswordEvent("user-not-eligible", {
+        ip,
+        email,
+      });
+      return NextResponse.json({ error: ACCOUNT_NOT_FOUND_MESSAGE }, { status: 404 });
+    }
+
+    const token = generatePasswordResetToken();
+    const tokenHash = hashPasswordResetToken(token);
+    const expiresAt = getPasswordResetExpirationDate();
+
+    await prisma.passwordResetToken.deleteMany({
+      where: { userId: user.id },
+    });
+
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    const baseUrl =
+      process.env.NEXTAUTH_URL?.trim() ||
+      process.env.APP_BASE_URL?.trim() ||
+      new URL(request.url).origin;
+    const resetUrl = buildPasswordResetUrl(baseUrl, token);
+
+    try {
+      await sendPasswordResetEmail({ email: user.email, resetUrl });
+      logForgotPasswordEvent("email-sent", {
+        ip,
+        userId: user.id,
+        email,
+      });
+    } catch {
+      // On garde une réponse générique pour ne pas divulguer l'existence de comptes.
+      logForgotPasswordEvent("email-failed", {
+        ip,
+        userId: user.id,
+        email,
+      });
+    }
+
     return NextResponse.json({ message: GENERIC_MESSAGE }, { status: 200 });
-  }
-
-  const rawEmail = typeof body.email === "string" ? body.email : "";
-  const email = normalizeEmail(rawEmail);
-
-  if (!email || !isValidEmail(email)) {
-    logForgotPasswordEvent("invalid-email", { ip, email });
-    return NextResponse.json({ error: INVALID_EMAIL_MESSAGE }, { status: 400 });
-  }
-
-  const ipLimited = isRateLimited(
-    ipRateLimitStore,
-    `ip:${ip}`,
-    RATE_LIMIT_MAX_ATTEMPTS_PER_IP
-  );
-  const emailLimited = isRateLimited(
-    emailRateLimitStore,
-    `email:${email}`,
-    RATE_LIMIT_MAX_ATTEMPTS_PER_EMAIL
-  );
-  if (ipLimited || emailLimited) {
-    logForgotPasswordEvent("rate-limited", {
+  } catch (error) {
+    logForgotPasswordEvent("unexpected-error", {
       ip,
-      email,
-      reason: ipLimited ? "ip" : "email",
+      error: error instanceof Error ? error.message : String(error),
     });
-    return NextResponse.json({ message: GENERIC_MESSAGE }, { status: 200 });
+    return NextResponse.json(
+      { error: "Erreur serveur lors de la demande de réinitialisation." },
+      { status: 500 }
+    );
   }
-
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true, email: true, passwordHash: true },
-  });
-
-  if (!user?.passwordHash) {
-    logForgotPasswordEvent("user-not-eligible", {
-      ip,
-      email,
-    });
-    return NextResponse.json({ error: ACCOUNT_NOT_FOUND_MESSAGE }, { status: 404 });
-  }
-
-  const token = generatePasswordResetToken();
-  const tokenHash = hashPasswordResetToken(token);
-  const expiresAt = getPasswordResetExpirationDate();
-
-  await prisma.passwordResetToken.deleteMany({
-    where: { userId: user.id },
-  });
-
-  await prisma.passwordResetToken.create({
-    data: {
-      userId: user.id,
-      tokenHash,
-      expiresAt,
-    },
-  });
-
-  const baseUrl =
-    process.env.NEXTAUTH_URL?.trim() ||
-    process.env.APP_BASE_URL?.trim() ||
-    new URL(request.url).origin;
-  const resetUrl = buildPasswordResetUrl(baseUrl, token);
-
-  try {
-    await sendPasswordResetEmail({ email: user.email, resetUrl });
-    logForgotPasswordEvent("email-sent", {
-      ip,
-      userId: user.id,
-      email,
-    });
-  } catch {
-    // On garde une réponse générique pour ne pas divulguer l'existence de comptes.
-    logForgotPasswordEvent("email-failed", {
-      ip,
-      userId: user.id,
-      email,
-    });
-  }
-
-  return NextResponse.json({ message: GENERIC_MESSAGE }, { status: 200 });
 }

@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
 import { hashPasswordResetToken } from "@/lib/password-reset";
 import { getPasswordPolicyMessage, isPasswordValid } from "@/lib/password-policy";
+export const runtime = "nodejs";
 
 function logResetPasswordEvent(event: string, details: Record<string, unknown>) {
   console.info("[auth.reset-password]", JSON.stringify({ event, ...details }));
