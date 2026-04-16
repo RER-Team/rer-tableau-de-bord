@@ -32,11 +32,6 @@ const NAV_ITEMS: NavItem[] = [
     label: "Emails",
     description: "Templates notifications",
   },
-  {
-    label: "Statistiques",
-    description: "Volumes, délais, répartition…",
-    comingSoon: true,
-  },
 ];
 
 export function RelecteursSidebar() {

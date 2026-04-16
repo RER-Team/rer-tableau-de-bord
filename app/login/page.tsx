@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import Image from "next/image";
 
 function LoginPageInner() {
   const router = useRouter();
@@ -16,6 +17,24 @@ function LoginPageInner() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMessage, setForgotMessage] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState("/default-logo.svg");
+  const [logoUnavailable, setLogoUnavailable] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const response = await fetch("/api/admin/logo", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = (await response.json()) as { logoUrl?: string };
+        if (payload.logoUrl) {
+          setLogoUrl(payload.logoUrl);
+          setLogoUnavailable(false);
+        }
+      } catch {
+        // Fallback logo par défaut.
+      }
+    })();
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -76,6 +95,25 @@ function LoginPageInner() {
   return (
     <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-8">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-sm ring-1 ring-rer-border">
+        <div className="mb-4 flex justify-center">
+          <div className="relative h-16 w-36">
+            {!logoUnavailable ? (
+              <Image
+                src={logoUrl}
+                alt="Logo RER"
+                fill
+                className="object-contain"
+                unoptimized
+                onError={() => setLogoUnavailable(true)}
+                priority
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-rer-muted">
+                RER
+              </div>
+            )}
+          </div>
+        </div>
         <h1 className="text-lg font-semibold text-rer-text">
           Connexion au tableau de bord
         </h1>
@@ -134,11 +172,6 @@ function LoginPageInner() {
           >
             {loading ? "Connexion…" : "Se connecter"}
           </button>
-
-          <p className="mt-2 text-[11px] text-rer-subtle">
-            Comptes de test (en local) : admin@rer.local / relecteur@rer.local
-            / auteur@rer.local avec le mot de passe <code>rer2025</code>.
-          </p>
 
           <div className="pt-2">
             <button

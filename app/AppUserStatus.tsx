@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { AppNotificationsBell } from "./AppNotificationsBell";
@@ -10,6 +11,7 @@ export function AppUserStatus() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const firstMenuItemRef = useRef<HTMLAnchorElement | null>(null);
@@ -27,6 +29,18 @@ export function AppUserStatus() {
     if (!localPart) return "Compte";
     return localPart.length > 14 ? `${localPart.slice(0, 14)}…` : localPart;
   }, [email]);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    fetch("/api/me/profile", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        setAvatarUrl(payload?.user?.avatarUrl || null);
+      })
+      .catch(() => {
+        setAvatarUrl(null);
+      });
+  }, [session?.user?.email]);
 
   const avatarInitials = useMemo(() => {
     const localPart = email.split("@")[0] ?? "";
@@ -110,8 +124,12 @@ export function AppUserStatus() {
           aria-label="Ouvrir le menu compte"
           onClick={() => setIsMenuOpen((open) => !open)}
         >
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-rer-blue/15 text-[11px] font-semibold text-rer-blue">
-            {avatarInitials}
+          <span className="relative inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-rer-blue/15 text-[11px] font-semibold text-rer-blue">
+            {avatarUrl ? (
+              <Image src={avatarUrl} alt="Avatar" fill className="object-cover" unoptimized />
+            ) : (
+              avatarInitials
+            )}
           </span>
           <span className="hidden max-w-36 truncate text-xs font-medium text-rer-text sm:inline">
             {accountLabel}

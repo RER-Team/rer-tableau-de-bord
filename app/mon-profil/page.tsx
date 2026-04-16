@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 type Mutuelle = {
   id: string;
@@ -11,6 +12,7 @@ type ProfilePayload = {
   user: {
     id: string;
     email: string;
+    avatarUrl: string | null;
     role: string;
     auteurId: string | null;
     auteur: {
@@ -37,10 +39,13 @@ export default function MonProfilPage() {
   const [email, setEmail] = useState("");
   const [mutuelleId, setMutuelleId] = useState("");
   const [telephone, setTelephone] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const hydrate = (payload: ProfilePayload) => {
     setMutuelles(payload.mutuelles);
     setEmail(payload.user.email || "");
+    setAvatarUrl(payload.user.avatarUrl || null);
     setPrenom(payload.user.auteur?.prenom || "");
     setNom(payload.user.auteur?.nom || "");
     setMutuelleId(payload.user.auteur?.mutuelleId || "");
@@ -80,6 +85,7 @@ export default function MonProfilPage() {
           email,
           mutuelleId: mutuelleId || null,
           telephone: telephone || null,
+          avatarUrl,
         }),
       });
       if (!res.ok) {
@@ -92,11 +98,31 @@ export default function MonProfilPage() {
       setNom(payload.auteur?.nom || "");
       setMutuelleId(payload.auteur?.mutuelleId || "");
       setTelephone(payload.auteur?.telephone || "");
+      setAvatarUrl(payload.avatarUrl || null);
       setSuccess("Profil enregistré.");
     } catch (e: any) {
       setError(e.message || "Erreur lors de l'enregistrement");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    setUploadingAvatar(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const { uploadArticleImage } = await import("@/lib/uploadArticleImage");
+      const { publicUrl } = await uploadArticleImage({
+        file,
+        filename: file.name || "avatar.jpg",
+      });
+      setAvatarUrl(publicUrl);
+      setSuccess("Photo de profil téléversée. N'oublie pas d'enregistrer.");
+    } catch (e: any) {
+      setError(e.message || "Impossible d'envoyer la photo de profil.");
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -121,6 +147,32 @@ export default function MonProfilPage() {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {success && <p className="text-sm text-green-700">{success}</p>}
+
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-rer-border bg-rer-app/40 p-3">
+        <div className="relative h-16 w-16 overflow-hidden rounded-full border border-rer-border bg-white">
+          {avatarUrl ? (
+            <Image src={avatarUrl} alt="Photo de profil" fill className="object-cover" unoptimized />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-rer-muted">
+              {((prenom[0] || "") + (nom[0] || "") || "U").toUpperCase()}
+            </div>
+          )}
+        </div>
+        <label className="inline-flex cursor-pointer items-center rounded-full border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-text hover:bg-rer-app">
+          {uploadingAvatar ? "Téléversement..." : "Changer la photo"}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={uploadingAvatar}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleAvatarUpload(file);
+              e.currentTarget.value = "";
+            }}
+          />
+        </label>
+      </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="space-y-1 text-sm">

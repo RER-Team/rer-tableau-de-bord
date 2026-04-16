@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/auth";
 const profileUserSelect = {
   id: true,
   email: true,
+  avatarUrl: true,
   role: true,
   auteurId: true,
   auteur: {
@@ -56,12 +57,14 @@ export async function PATCH(request: NextRequest) {
     nom?: string;
     mutuelleId?: string | null;
     telephone?: string | null;
+    avatarUrl?: string | null;
   };
 
   const email = body.email?.trim().toLowerCase();
   const prenom = body.prenom?.trim();
   const nom = body.nom?.trim();
   const telephone = body.telephone?.trim() || null;
+  const avatarUrl = body.avatarUrl?.trim() || null;
   const mutuelleId = body.mutuelleId || null;
 
   if (!email) {
@@ -96,7 +99,7 @@ export async function PATCH(request: NextRequest) {
   const updated = await prisma.$transaction(async (tx) => {
     const user = await tx.user.update({
       where: { id: currentUser.id },
-      data: { email },
+      data: { email, avatarUrl },
       select: { id: true, auteurId: true },
     });
 

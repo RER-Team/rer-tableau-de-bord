@@ -10,8 +10,8 @@ export default function RelecteursPage() {
           Espace d’administration éditoriale
         </h1>
         <p className="text-sm text-rer-muted">
-          Cette zone regroupera les outils de relecture, de paramétrage éditorial
-          et les statistiques. Pour l’instant, vous pouvez utiliser la vue
+          Cette zone regroupera les outils de relecture et de paramétrage éditorial.
+          Pour l’instant, vous pouvez utiliser la vue
           Explorer des articles pour travailler sur la file d&apos;articles.
         </p>
       </header>

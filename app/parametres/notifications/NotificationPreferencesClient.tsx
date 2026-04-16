@@ -110,35 +110,58 @@ export function NotificationPreferencesClient() {
       }
 
       try {
-        const registration = await navigator.serviceWorker.register("/notifications-sw.js");
+        await navigator.serviceWorker.register("/notifications-sw.js");
+        const registration = await navigator.serviceWorker.ready;
         if (enabled) {
           const permission = await Notification.requestPermission();
           if (permission !== "granted") {
             throw new Error("Permission refusee.");
           }
+          const existingSubscription = await registration.pushManager.getSubscription();
+          if (existingSubscription) {
+            const registerExistingResponse = await fetch("/api/notifications/push-subscriptions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(existingSubscription),
+            });
+            if (!registerExistingResponse.ok) {
+              throw new Error("Sauvegarde de l'abonnement existant impossible.");
+            }
+            await patchPreferences({ browserPushEnabled: true });
+            return;
+          }
           const pushConfigResponse = await fetch("/api/notifications/push-subscriptions", {
             cache: "no-store",
           });
+          if (!pushConfigResponse.ok) {
+            throw new Error("Configuration push indisponible.");
+          }
           const pushConfig = (await pushConfigResponse.json()) as { publicKey?: string };
           if (!pushConfig.publicKey) throw new Error("Cle VAPID indisponible.");
           const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: toArrayBuffer(base64UrlToUint8Array(pushConfig.publicKey)),
           });
-          await fetch("/api/notifications/push-subscriptions", {
+          const subscribeResponse = await fetch("/api/notifications/push-subscriptions", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(subscription),
           });
+          if (!subscribeResponse.ok) {
+            throw new Error("Sauvegarde de l'abonnement impossible.");
+          }
           await patchPreferences({ browserPushEnabled: true });
         } else {
           const subscription = await registration.pushManager.getSubscription();
           if (subscription) {
-            await fetch("/api/notifications/push-subscriptions", {
+            const deleteResponse = await fetch("/api/notifications/push-subscriptions", {
               method: "DELETE",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ endpoint: subscription.endpoint }),
             });
+            if (!deleteResponse.ok) {
+              throw new Error("Suppression de l'abonnement impossible.");
+            }
             await subscription.unsubscribe();
           }
           await patchPreferences({ browserPushEnabled: false });

@@ -22,6 +22,7 @@ function formatDate(value: string): string {
 }
 
 export function NotificationsClient() {
+  const PAGE_SIZE = 20;
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -31,7 +32,7 @@ export function NotificationsClient() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/notifications?limit=50", { cache: "no-store" });
+      const response = await fetch(`/api/notifications?limit=${PAGE_SIZE}`, { cache: "no-store" });
       if (!response.ok) {
         throw new Error("Impossible de charger les notifications.");
       }

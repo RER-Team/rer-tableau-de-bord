@@ -6,6 +6,11 @@ import { AppShell } from "./AppShell";
 export const metadata: Metadata = {
   title: "RER Tableau de bord",
   description: "Base de données d’articles",
+  icons: {
+    icon: "/default-logo.svg",
+    shortcut: "/default-logo.svg",
+    apple: "/default-logo.svg",
+  },
 };
 
 export default function RootLayout({

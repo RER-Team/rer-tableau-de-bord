@@ -13,6 +13,8 @@ type DispatchArticleNotificationEventArgs = {
   event: ArticleNotificationEvent;
 };
 
+const MAIL_SENDER_NAME = process.env.MAIL_SENDER_NAME?.trim() || "Constance et Léa";
+
 function buildAdminSignature(args: {
   prenom?: string | null;
   nom?: string | null;
@@ -199,7 +201,7 @@ export async function dispatchArticleNotificationEvent(
         () =>
           sendMail({
             to: targetUser.email,
-            fromName: adminSignature,
+            fromName: MAIL_SENDER_NAME,
             subject: emailSubject,
             text: emailText,
             html: emailHtml,
@@ -250,7 +252,7 @@ export async function dispatchArticleNotificationEvent(
         () =>
           sendMail({
             to: adminAlertRecipientEmail,
-            fromName: adminSignature,
+            fromName: MAIL_SENDER_NAME,
             subject: contactSubject,
             text: contactText,
             html: contactHtml,

@@ -233,83 +233,6 @@ export function getRubriqueBadgeClasses(libelle?: string): string {
   return base + " bg-[#4B5563] text-white";
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function buildHtmlFromDetail(article: ArticleDetail): string {
-  const parts: string[] = [];
-
-  if (article.titre) {
-    parts.push(`<h1>${escapeHtml(article.titre)}</h1>`);
-  }
-
-  if (article.chapo) {
-    parts.push(`<p><strong>Chapô.</strong> ${escapeHtml(article.chapo)}</p>`);
-  }
-
-  if (article.contenu) {
-    const paragraphs = article.contenu.split(/\n{2,}/g);
-    const htmlParagraphs = paragraphs
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0)
-      .map((p) => `<p>${escapeHtml(p)}</p>`)
-      .join("\n");
-    if (htmlParagraphs) {
-      parts.push(htmlParagraphs);
-    }
-  }
-
-  if (article.postRs) {
-    parts.push(
-      `<p><strong>Post réseaux sociaux.</strong> ${escapeHtml(
-        article.postRs
-      )}</p>`
-    );
-  }
-
-  return parts.join("\n\n");
-}
-
-function buildFormattedTextFromDetail(article: ArticleDetail): string {
-  const lines: string[] = [];
-
-  if (article.titre) {
-    // Titre simple sans syntaxe Markdown pour un meilleur collage dans Word / Google Docs
-    lines.push(article.titre);
-    lines.push("");
-  }
-
-  if (article.chapo) {
-    lines.push("Chapô :");
-    lines.push(article.chapo);
-    lines.push("");
-  }
-
-  if (article.contenu) {
-    const paragraphs = article.contenu.split(/\n{2,}/g);
-    paragraphs
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0)
-      .forEach((p) => {
-        lines.push(p);
-        lines.push("");
-      });
-  }
-
-  if (article.postRs) {
-    lines.push("Post réseaux sociaux :");
-    lines.push(article.postRs);
-  }
-
-  return lines.join("\n");
-}
-
 type ArticleDetailContentProps = {
   selectedId: string;
   selectedArticle: ArticleSummary | null;
@@ -356,7 +279,11 @@ function ArticleDetailContent({
   const handleCopyHtml = async () => {
     if (!detail || loading || error) return;
     try {
-      const html = buildHtmlFromDetail(detail);
+      const response = await fetch(`/api/articles/${detail.id}/export?format=html`, {
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("Export HTML indisponible.");
+      const html = await response.text();
       await navigator.clipboard.writeText(html);
       setCopyState("html");
       window.setTimeout(() => setCopyState("idle"), 2000);
@@ -369,7 +296,11 @@ function ArticleDetailContent({
   const handleCopyText = async () => {
     if (!detail || loading || error) return;
     try {
-      const text = buildFormattedTextFromDetail(detail);
+      const response = await fetch(`/api/articles/${detail.id}/export?format=txt`, {
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("Export texte indisponible.");
+      const text = await response.text();
       await navigator.clipboard.writeText(text);
       setCopyState("text");
       window.setTimeout(() => setCopyState("idle"), 2000);

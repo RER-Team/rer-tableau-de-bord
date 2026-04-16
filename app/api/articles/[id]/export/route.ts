@@ -57,10 +57,9 @@ function buildHtml(article: any): string {
   const chapo = article.chapo
     ? `<h2>Chapô</h2><p>${escapeHtml(article.chapo)}</p>`
     : "";
-  const contenu = `<p>${escapeHtml(article.contenu ?? "").replace(
-    /\n{2,}/g,
-    "</p><p>"
-  )}</p>`;
+  const contenu = `<p>${escapeHtml(article.contenu ?? "")
+    .replace(/\n{2,}/g, "</p><p>")
+    .replace(/\n/g, "<br />")}</p>`;
   const postRs = article.postRs
     ? `<h3>Post réseaux sociaux</h3><p>${escapeHtml(article.postRs)}</p>`
     : "";
