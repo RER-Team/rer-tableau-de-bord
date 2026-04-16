@@ -10,7 +10,6 @@ export function AppMainNav() {
 
   const isOnArticles = pathname.startsWith("/articles");
   const isOnMesArticles = pathname.startsWith("/mes-articles");
-  const isOnProfil = pathname.startsWith("/mon-profil");
   const isOnAdmin =
     pathname.startsWith("/admin") || pathname.startsWith("/relecteurs");
 
@@ -41,12 +40,6 @@ export function AppMainNav() {
       >
         Mes articles
       </Link>
-      <Link
-        href="/mon-profil"
-        className={`${baseClasses} ${isOnProfil ? activeClasses : inactiveClasses}`}
-      >
-        Mon profil
-      </Link>
       {canSeeAdmin && (
         <Link
           href="/admin"
@@ -54,7 +47,7 @@ export function AppMainNav() {
             isOnAdmin ? activeClasses : inactiveClasses
           }`}
         >
-          Admin
+          Relecture
         </Link>
       )}
     </nav>
