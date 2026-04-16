@@ -13,6 +13,11 @@ type DispatchArticleNotificationEventArgs = {
   event: ArticleNotificationEvent;
 };
 
+function buildAdminSignature(email: string | null | undefined): string {
+  if (!email) return "Constance et Léa";
+  return email.trim() || "Constance et Léa";
+}
+
 function shouldNotifyForEvent(
   eventType: ArticleNotificationEvent["type"],
   preference: {
@@ -91,9 +96,21 @@ export async function dispatchArticleNotificationEvent(
         pushBody: customTemplate.pushBody,
       }
     : getDefaultNotificationTemplate(event.type);
+
+  const actorUser = event.actorUserId
+    ? await prisma.user.findUnique({
+        where: { id: event.actorUserId },
+        select: { email: true, role: true },
+      })
+    : null;
+  const adminSignature =
+    actorUser && (actorUser.role === "admin" || actorUser.role === "relecteur")
+      ? buildAdminSignature(actorUser.email)
+      : "Constance et Léa";
   const templateVars = {
     articleTitle: article.titre,
     articleUrl,
+    adminSignature,
   };
 
   if (effectivePreference.inAppEnabled) {
