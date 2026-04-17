@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import sanitizeHtml from "sanitize-html";
 
 function slugify(input: string): string {
   const base = input
@@ -29,19 +30,29 @@ function buildText(article: any): string {
   }
   if (article.chapo) {
     lines.push("Chapô");
-    lines.push(article.chapo);
+    lines.push(toPlainText(article.chapo));
     lines.push("");
   }
-  lines.push(article.contenu ?? "");
+  lines.push(toPlainText(article.contenu ?? ""));
   lines.push("");
+  if (article.legendePhoto) {
+    lines.push("Légende photo");
+    lines.push(toPlainText(article.legendePhoto));
+    lines.push("");
+  }
+  if (article.creditPhoto) {
+    lines.push("Crédit photo");
+    lines.push(toPlainText(article.creditPhoto));
+    lines.push("");
+  }
   if (article.postRs) {
     lines.push("Post réseaux sociaux");
-    lines.push(article.postRs);
+    lines.push(toPlainText(article.postRs));
   }
   return lines.join("\n");
 }
 
-function buildHtml(article: any): string {
+function buildHtmlFragment(article: any): string {
   const metaParts: string[] = [];
   if (article.auteur) {
     metaParts.push(
@@ -53,31 +64,97 @@ function buildHtml(article: any): string {
   if (article.format) metaParts.push(`Format : ${article.format.libelle}`);
   if (article.etat) metaParts.push(`État : ${article.etat.libelle}`);
 
-  const meta = metaParts.length ? `<p>${metaParts.join(" · ")}</p>` : "";
+  const meta = metaParts.length ? `<p>${escapeHtml(metaParts.join(" · "))}</p>` : "";
   const chapo = article.chapo
-    ? `<h2>Chapô</h2><p>${escapeHtml(article.chapo)}</p>`
+    ? `<h2>Chapô</h2><p>${sanitizeArticleHtml(article.chapo)}</p>`
     : "";
-  const contenu = `<p>${escapeHtml(article.contenu ?? "")
-    .replace(/\n{2,}/g, "</p><p>")
-    .replace(/\n/g, "<br />")}</p>`;
+  const contenu = sanitizeArticleHtml(article.contenu ?? "");
+  const photoLegend = article.legendePhoto
+    ? `<p><strong>Légende photo :</strong> ${sanitizeArticleHtml(article.legendePhoto)}</p>`
+    : "";
+  const photoCredit = article.creditPhoto
+    ? `<p><strong>Crédit photo :</strong> ${sanitizeArticleHtml(article.creditPhoto)}</p>`
+    : "";
   const postRs = article.postRs
-    ? `<h3>Post réseaux sociaux</h3><p>${escapeHtml(article.postRs)}</p>`
+    ? `<h3>Post réseaux sociaux</h3><p>${sanitizeArticleHtml(article.postRs)}</p>`
     : "";
 
+  return `<h1>${escapeHtml(article.titre)}</h1>
+${meta}
+${chapo}
+${contenu}
+${photoLegend}
+${photoCredit}
+${postRs}`.trim();
+}
+
+function buildWordHtml(article: any): string {
+  const fragment = buildHtmlFragment(article);
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <title>${escapeHtml(article.titre)}</title>
 </head>
 <body>
-  <h1>${escapeHtml(article.titre)}</h1>
-  ${meta}
-  ${chapo}
-  ${contenu}
-  ${postRs}
+${fragment}
 </body>
 </html>`;
+}
+
+function toPlainText(value: string): string {
+  return sanitizeArticleHtml(value)
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function sanitizeArticleHtml(value: string): string {
+  const source = String(value || "");
+  const html = source.includes("<")
+    ? source
+    : source
+        .split(/\n{2,}/g)
+        .map((paragraph) => paragraph.trim())
+        .filter(Boolean)
+        .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br />")}</p>`)
+        .join("\n");
+
+  return sanitizeHtml(html, {
+    allowedTags: [
+      "p",
+      "br",
+      "strong",
+      "em",
+      "b",
+      "i",
+      "u",
+      "a",
+      "h2",
+      "h3",
+      "h4",
+      "ul",
+      "ol",
+      "li",
+      "blockquote",
+    ],
+    allowedAttributes: {
+      a: ["href", "target", "rel"],
+    },
+    transformTags: {
+      a: (tagName, attribs) => ({
+        tagName,
+        attribs: {
+          href: attribs.href || "#",
+          target: "_blank",
+          rel: "noopener noreferrer",
+        },
+      }),
+    },
+  });
 }
 
 function escapeHtml(value: string): string {
@@ -115,7 +192,7 @@ export async function GET(
   const baseName = slugify(article.titre || "article");
 
   if (format === "html") {
-    const html = buildHtml(article);
+    const html = buildHtmlFragment(article);
     return new NextResponse(html, {
       status: 200,
       headers: {
@@ -126,11 +203,10 @@ export async function GET(
   }
 
   if (format === "word" || format === "doc" || format === "docx") {
-    const html = buildHtml(article);
+    const html = buildWordHtml(article);
     return new NextResponse(html, {
       status: 200,
       headers: {
-        // Word ouvre très bien de l'HTML avec ce mime-type
         "Content-Type": "application/msword; charset=utf-8",
         "Content-Disposition": `attachment; filename="${baseName}.doc"`,
       },

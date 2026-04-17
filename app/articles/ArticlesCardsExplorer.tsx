@@ -284,7 +284,17 @@ function ArticleDetailContent({
       });
       if (!response.ok) throw new Error("Export HTML indisponible.");
       const html = await response.text();
-      await navigator.clipboard.writeText(html);
+      const plainText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      if ("ClipboardItem" in window) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": new Blob([html], { type: "text/html" }),
+            "text/plain": new Blob([plainText], { type: "text/plain" }),
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(plainText);
+      }
       setCopyState("html");
       window.setTimeout(() => setCopyState("idle"), 2000);
     } catch {
@@ -358,7 +368,7 @@ function ArticleDetailContent({
               ? "HTML copié"
               : copyState === "error"
               ? "Erreur copie"
-              : "Copier HTML"}
+              : "Copier riche (Docs/Word)"}
           </button>
           <button
             type="button"

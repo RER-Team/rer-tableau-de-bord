@@ -8,6 +8,7 @@ import { AppMainNav } from "./AppMainNav";
 import { AppUserStatus } from "./AppUserStatus";
 import { AppHeaderSecondary } from "./AppHeaderSecondary";
 import { AppUserSwitchFooter } from "./AppUserSwitchFooter";
+import { useSiteLogo } from "@/lib/useSiteLogo";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -16,44 +17,8 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isLogin = pathname === "/login";
-  const [logoUrl, setLogoUrl] = useState("/default-logo.svg");
-  const [logoUnavailable, setLogoUnavailable] = useState(false);
+  const { logoUrl, fallbackLogoUrl } = useSiteLogo();
   const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-
-    const loadLogo = async () => {
-      try {
-        const response = await fetch("/api/admin/logo", { cache: "no-store" });
-        if (!response.ok) return;
-
-        const payload = (await response.json()) as { logoUrl?: string };
-        if (active && payload.logoUrl) {
-          setLogoUrl(payload.logoUrl);
-          setLogoUnavailable(false);
-        }
-      } catch {
-        // On conserve le logo par défaut si la récupération échoue.
-      }
-    };
-
-    const handleLogoUpdated = (event: Event) => {
-      const customEvent = event as CustomEvent<{ logoUrl?: string }>;
-      if (active && customEvent.detail?.logoUrl) {
-        setLogoUrl(customEvent.detail.logoUrl);
-        setLogoUnavailable(false);
-      }
-    };
-
-    loadLogo();
-    window.addEventListener("site-logo-updated", handleLogoUpdated as EventListener);
-
-    return () => {
-      active = false;
-      window.removeEventListener("site-logo-updated", handleLogoUpdated as EventListener);
-    };
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -98,22 +63,21 @@ export function AppShell({ children }: AppShellProps) {
                   isScrolled ? "h-9 w-24 lg:h-10 lg:w-28" : "h-16 w-28 lg:h-20 lg:w-36"
                 }`}
               >
-                {!logoUnavailable ? (
-                  <Image
-                    src={logoUrl}
-                    alt="Logo RER"
-                    fill
-                    sizes="(max-width: 1024px) 112px, 144px"
-                    className="object-contain"
-                    unoptimized
-                    priority
-                    onError={() => setLogoUnavailable(true)}
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-sm font-bold tracking-wide text-rer-muted">
-                    RER
-                  </div>
-                )}
+                <Image
+                  key={logoUrl}
+                  src={logoUrl}
+                  alt="Logo RER"
+                  fill
+                  sizes="(max-width: 1024px) 112px, 144px"
+                  className="object-contain"
+                  unoptimized
+                  priority
+                  onError={(event) => {
+                    const imageElement = event.currentTarget as HTMLImageElement;
+                    if (imageElement.src.endsWith(fallbackLogoUrl)) return;
+                    imageElement.src = fallbackLogoUrl;
+                  }}
+                />
               </div>
               <div className="min-w-0 flex flex-col">
                 <span className="truncate text-sm font-semibold text-rer-text sm:text-base">

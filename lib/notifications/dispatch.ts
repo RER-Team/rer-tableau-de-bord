@@ -75,6 +75,7 @@ export async function dispatchArticleNotificationEvent(
   const baseUrl =
     process.env.NEXTAUTH_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim() || "";
   const articleUrl = baseUrl ? `${baseUrl}/articles/${article.id}` : `/articles/${article.id}`;
+  const pushUrl = baseUrl ? `${baseUrl}/articles/${article.id}` : `/articles/${article.id}`;
 
   const preference = await prisma.userNotificationPreference.findUnique({
     where: { userId: targetUser.id },
@@ -237,16 +238,26 @@ export async function dispatchArticleNotificationEvent(
     }
   }
 
-  if (event.type === "article.published" && targetUser.role === "auteur") {
+  if (
+    (event.type === "article.submitted" || event.type === "article.published") &&
+    targetUser.role === "auteur"
+  ) {
     const depositorName = `${article.auteur?.prenom || ""} ${article.auteur?.nom || ""}`.trim();
-    const contactSubject = `Article publié : ${article.titre}`;
+    const isSubmission = event.type === "article.submitted";
+    const contactSubject = isSubmission
+      ? `Article déposé : ${article.titre}`
+      : `Article publié : ${article.titre}`;
     const contactText = [
       `Bonjour,`,
       "",
-      `L'article "${article.titre}" déposé par ${depositorName || "un auteur"} vient d'être publié.`,
+      isSubmission
+        ? `L'article "${article.titre}" vient d'être déposé par ${depositorName || "un auteur"}.`
+        : `L'article "${article.titre}" déposé par ${depositorName || "un auteur"} vient d'être publié.`,
       `Lien : ${articleUrl}`,
     ].join("\n");
-    const contactHtml = `<p>Bonjour,</p><p>L'article "<strong>${article.titre}</strong>" déposé par ${depositorName || "un auteur"} vient d'être publié.</p><p><a href="${articleUrl}">Ouvrir l'article</a></p>`;
+    const contactHtml = isSubmission
+      ? `<p>Bonjour,</p><p>L'article "<strong>${article.titre}</strong>" vient d'être déposé par ${depositorName || "un auteur"}.</p><p><a href="${articleUrl}">Ouvrir l'article</a></p>`
+      : `<p>Bonjour,</p><p>L'article "<strong>${article.titre}</strong>" déposé par ${depositorName || "un auteur"} vient d'être publié.</p><p><a href="${articleUrl}">Ouvrir l'article</a></p>`;
     try {
       await retryWithTimeout(
         () =>
@@ -256,7 +267,7 @@ export async function dispatchArticleNotificationEvent(
             subject: contactSubject,
             text: contactText,
             html: contactHtml,
-            tags: ["article-published", "admin-alert"],
+            tags: [isSubmission ? "article-submitted" : "article-published", "admin-alert"],
             meta: {
               articleId: article.id,
               eventType: event.type,
@@ -325,7 +336,7 @@ export async function dispatchArticleNotificationEvent(
     const pushPayload = {
       title: renderTemplate(templateBase.pushTitle, templateVars),
       body: renderTemplate(templateBase.pushBody, templateVars),
-      url: `/articles/${article.id}`,
+      url: pushUrl,
     };
     for (const subscription of subscriptions) {
       const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:push:${subscription.id}:${transitionKey}`;

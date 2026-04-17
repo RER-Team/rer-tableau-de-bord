@@ -41,6 +41,10 @@ export default function MonProfilPage() {
   const [telephone, setTelephone] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [pendingAvatarDataUrl, setPendingAvatarDataUrl] = useState<string | null>(null);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropX, setCropX] = useState(50);
+  const [cropY, setCropY] = useState(50);
 
   const hydrate = (payload: ProfilePayload) => {
     setMutuelles(payload.mutuelles);
@@ -126,6 +130,38 @@ export default function MonProfilPage() {
     }
   };
 
+  const handleAvatarFileSelected = async (file: File) => {
+    const reader = new FileReader();
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      reader.onload = () => {
+        if (typeof reader.result === "string") resolve(reader.result);
+        else reject(new Error("Lecture image impossible."));
+      };
+      reader.onerror = () => reject(reader.error ?? new Error("Lecture image impossible."));
+      reader.readAsDataURL(file);
+    });
+    setPendingAvatarDataUrl(dataUrl);
+    setCropZoom(1);
+    setCropX(50);
+    setCropY(50);
+  };
+
+  const handleCropAndUpload = async () => {
+    if (!pendingAvatarDataUrl) return;
+    try {
+      const croppedFile = await buildCroppedAvatarFile(pendingAvatarDataUrl, cropZoom, cropX, cropY);
+      await handleAvatarUpload(croppedFile);
+      setPendingAvatarDataUrl(null);
+    } catch (e: any) {
+      setError(e.message || "Impossible de recadrer l'image.");
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarUrl(null);
+    setSuccess("Photo de profil supprimée. N'oublie pas d'enregistrer.");
+  };
+
   if (loading) {
     return (
       <section className="mx-auto mt-6 max-w-3xl space-y-3 rounded-xl bg-white p-5 shadow-sm ring-1 ring-rer-border">
@@ -167,12 +203,89 @@ export default function MonProfilPage() {
             disabled={uploadingAvatar}
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) void handleAvatarUpload(file);
+              if (file) void handleAvatarFileSelected(file);
               e.currentTarget.value = "";
             }}
           />
         </label>
+        <button
+          type="button"
+          onClick={handleRemoveAvatar}
+          disabled={!avatarUrl || uploadingAvatar}
+          className="inline-flex items-center rounded-full border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-text hover:bg-rer-app disabled:opacity-50"
+        >
+          Supprimer la photo
+        </button>
       </div>
+
+      {pendingAvatarDataUrl ? (
+        <div className="space-y-3 rounded-lg border border-rer-border bg-white p-3">
+          <p className="text-sm font-medium text-rer-text">Recadrer la photo de profil</p>
+          <div className="relative h-64 w-full overflow-hidden rounded-lg border border-rer-border bg-rer-app">
+            <img
+              src={pendingAvatarDataUrl}
+              alt="Aperçu recadrage"
+              className="h-full w-full object-cover"
+              style={{
+                transform: `scale(${cropZoom})`,
+                transformOrigin: `${cropX}% ${cropY}%`,
+              }}
+            />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <label className="text-xs text-rer-muted">
+              Zoom
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={cropZoom}
+                onChange={(e) => setCropZoom(Number(e.target.value))}
+                className="mt-1 w-full"
+              />
+            </label>
+            <label className="text-xs text-rer-muted">
+              Horizontal
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={cropX}
+                onChange={(e) => setCropX(Number(e.target.value))}
+                className="mt-1 w-full"
+              />
+            </label>
+            <label className="text-xs text-rer-muted">
+              Vertical
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={cropY}
+                onChange={(e) => setCropY(Number(e.target.value))}
+                className="mt-1 w-full"
+              />
+            </label>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleCropAndUpload()}
+              className="inline-flex items-center rounded-full bg-rer-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1e3380]"
+            >
+              Valider le recadrage
+            </button>
+            <button
+              type="button"
+              onClick={() => setPendingAvatarDataUrl(null)}
+              className="inline-flex items-center rounded-full border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-text hover:bg-rer-app"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="space-y-1 text-sm">
@@ -239,4 +352,42 @@ export default function MonProfilPage() {
       </div>
     </section>
   );
+}
+
+async function buildCroppedAvatarFile(
+  dataUrl: string,
+  zoom: number,
+  xPercent: number,
+  yPercent: number
+): Promise<File> {
+  const image = await loadImage(dataUrl);
+  const canvas = document.createElement("canvas");
+  const size = 512;
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas indisponible.");
+
+  const sourceSize = Math.min(image.width, image.height) / zoom;
+  const maxX = image.width - sourceSize;
+  const maxY = image.height - sourceSize;
+  const sx = (xPercent / 100) * maxX;
+  const sy = (yPercent / 100) * maxY;
+
+  ctx.drawImage(image, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob((result) => resolve(result), "image/jpeg", 0.9)
+  );
+  if (!blob) throw new Error("Échec du recadrage.");
+  return new File([blob], "avatar-crop.jpg", { type: "image/jpeg" });
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Image invalide."));
+    image.src = src;
+  });
 }

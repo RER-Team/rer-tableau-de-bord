@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   title: "RER Tableau de bord",
   description: "Base de données d’articles",
   icons: {
-    icon: "/default-logo.svg",
-    shortcut: "/default-logo.svg",
-    apple: "/default-logo.svg",
+    icon: "/api/favicon",
+    shortcut: "/api/favicon",
+    apple: "/api/favicon",
   },
 };
 

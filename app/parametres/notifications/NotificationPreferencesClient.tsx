@@ -113,6 +113,9 @@ export function NotificationPreferencesClient() {
         await navigator.serviceWorker.register("/notifications-sw.js");
         const registration = await navigator.serviceWorker.ready;
         if (enabled) {
+          if (Notification.permission === "denied") {
+            throw new Error("Permission navigateur déjà refusée.");
+          }
           const permission = await Notification.requestPermission();
           if (permission !== "granted") {
             throw new Error("Permission refusee.");
