@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { canEditArticles, getSessionUser } from "@/lib/auth";
+import { getSessionUser } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const sessionUser = await getSessionUser(request);
   if (!sessionUser) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
-  if (!canEditArticles(sessionUser.role)) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  if (sessionUser.role !== "admin") {
+    return NextResponse.json({ error: "Accès réservé aux administrateurs" }, { status: 403 });
   }
 
   const formats = await prisma.format.findMany({

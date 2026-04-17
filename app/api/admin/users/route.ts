@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { canEditArticles, getSessionUser, isValidRole } from "@/lib/auth";
+import { getSessionUser, isValidRole } from "@/lib/auth";
 
 const userSafeSelect = {
   id: true,
@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
   if (!sessionUser) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
-  if (!canEditArticles(sessionUser.role)) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  if (sessionUser.role !== "admin") {
+    return NextResponse.json({ error: "Accès réservé aux administrateurs" }, { status: 403 });
   }
 
   const users = await prisma.user.findMany({

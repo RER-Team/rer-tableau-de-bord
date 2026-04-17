@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser, canEditArticles } from "@/lib/auth";
+import { getSessionUser } from "@/lib/auth";
 import {
   getDefaultNotificationTemplate,
   isArticleNotificationEventType,
@@ -34,8 +34,8 @@ export async function PATCH(
   { params }: { params: Promise<{ eventType: string }> }
 ) {
   const user = await getSessionUser(request);
-  if (!user || !canEditArticles(user.role)) {
-    return NextResponse.json({ error: "Acces refuse" }, { status: 403 });
+  if (!user || user.role !== "admin") {
+    return NextResponse.json({ error: "Accès réservé aux administrateurs" }, { status: 403 });
   }
 
   const { eventType } = await params;

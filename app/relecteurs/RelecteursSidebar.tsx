@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 type NavItem = {
@@ -9,6 +10,7 @@ type NavItem = {
   label: string;
   description?: string;
   comingSoon?: boolean;
+  adminOnly?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -21,23 +23,29 @@ const NAV_ITEMS: NavItem[] = [
     href: "/admin/utilisateurs",
     label: "Utilisateurs",
     description: "Rôles et rattachements",
+    adminOnly: true,
   },
   {
     href: "/admin/referentiels",
     label: "Référentiels",
     description: "Formats, rubriques, mutuelles, auteurs",
+    adminOnly: true,
   },
   {
     href: "/admin/emails",
     label: "Emails",
     description: "Templates notifications",
+    adminOnly: true,
   },
 ];
 
 export function RelecteursSidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || role === "admin");
 
   useEffect(() => {
     setMobileOpen(false);
@@ -98,7 +106,7 @@ export function RelecteursSidebar() {
         </button>
 
         <div className="flex-1 space-y-1">
-          {NAV_ITEMS.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive =
               item.href && pathname === item.href.replace(/\?.*$/, "");
             const baseClasses =

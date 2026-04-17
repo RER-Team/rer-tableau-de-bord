@@ -1,4 +1,4 @@
-import { NotificationTemplatesAdmin } from "./templates-admin";
+import { NotificationTemplatesAdmin } from "../../emails/templates-admin";
 
 export const dynamic = "force-dynamic";
 

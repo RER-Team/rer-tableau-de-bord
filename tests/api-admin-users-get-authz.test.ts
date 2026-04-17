@@ -9,8 +9,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/auth", () => ({
   getSessionUser: mocks.getSessionUser,
-  canEditArticles: (role: string | undefined) =>
-    role === "admin" || role === "relecteur",
   isValidRole: (role: string) =>
     ["admin", "relecteur", "auteur", "lecteur"].includes(role),
 }));
@@ -54,10 +52,20 @@ describe("GET /api/admin/users", () => {
     expect(response.status).toBe(403);
   });
 
-  it("retourne 200 pour relecteur/admin avec select safe", async () => {
+  it("retourne 403 pour un relecteur", async () => {
     mocks.getSessionUser.mockResolvedValue({
       id: "u2",
       role: "relecteur",
+    });
+
+    const response = await GET({} as any);
+    expect(response.status).toBe(403);
+  });
+
+  it("retourne 200 pour admin avec select safe", async () => {
+    mocks.getSessionUser.mockResolvedValue({
+      id: "u3",
+      role: "admin",
     });
 
     const response = await GET({} as any);

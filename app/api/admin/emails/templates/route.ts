@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser, canEditArticles } from "@/lib/auth";
+import { getSessionUser } from "@/lib/auth";
 import {
   articleNotificationEventTypes,
   getDefaultNotificationTemplate,
@@ -8,8 +8,8 @@ import {
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request);
-  if (!user || !canEditArticles(user.role)) {
-    return NextResponse.json({ error: "Acces refuse" }, { status: 403 });
+  if (!user || user.role !== "admin") {
+    return NextResponse.json({ error: "Accès réservé aux administrateurs" }, { status: 403 });
   }
 
   const templates = await prisma.notificationTemplate.findMany({

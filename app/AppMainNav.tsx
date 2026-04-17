@@ -10,11 +10,13 @@ export function AppMainNav() {
 
   const isOnArticles = pathname.startsWith("/articles");
   const isOnMesArticles = pathname.startsWith("/mes-articles");
-  const isOnAdmin =
-    pathname.startsWith("/admin") || pathname.startsWith("/relecteurs");
+  const isOnRelecture =
+    pathname.startsWith("/admin/articles") || pathname.startsWith("/relecteurs");
+  const isOnAdminConfig = pathname.startsWith("/admin") && !pathname.startsWith("/admin/articles");
 
   const role = (session?.user as { role?: string } | undefined)?.role;
-  const canSeeAdmin = role === "admin" || role === "relecteur";
+  const canSeeRelecture = role === "admin" || role === "relecteur";
+  const canSeeAdmin = role === "admin";
 
   const baseClasses =
     "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors";
@@ -40,14 +42,24 @@ export function AppMainNav() {
       >
         Mes articles
       </Link>
-      {canSeeAdmin && (
+      {canSeeRelecture && (
         <Link
-          href="/admin"
+          href="/admin/articles"
           className={`${baseClasses} ${
-            isOnAdmin ? activeClasses : inactiveClasses
+            isOnRelecture ? activeClasses : inactiveClasses
           }`}
         >
           Relecture
+        </Link>
+      )}
+      {canSeeAdmin && (
+        <Link
+          href="/admin/utilisateurs"
+          className={`${baseClasses} ${
+            isOnAdminConfig ? activeClasses : inactiveClasses
+          }`}
+        >
+          Admin
         </Link>
       )}
     </nav>
