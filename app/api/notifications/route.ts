@@ -40,6 +40,7 @@ function getScopeTypes(scope: NotificationScopeFilter): string[] | null {
   if (scope === "authorActions") {
     return [
       "article.submitted",
+      "article.submitted.admin_alert",
       "article.corrections_requested_or_resubmitted",
       "article.published.admin_alert",
     ];

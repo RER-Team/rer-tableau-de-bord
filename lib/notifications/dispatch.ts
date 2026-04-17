@@ -223,14 +223,19 @@ export async function dispatchArticleNotificationEvent(
             },
           }),
         {
-          label: "email-contact-published",
+          label: isSubmission ? "email-contact-submitted" : "email-contact-published",
           retries: 2,
           baseDelayMs: 250,
           timeoutMs: 8000,
         }
       );
     } catch (error) {
-      console.error("[notifications] contact publication email error", error);
+      console.error("[notifications] contact admin alert email error", {
+        articleId: article.id,
+        eventType: event.type,
+        recipient: adminAlertRecipientEmail,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -333,7 +338,11 @@ export async function dispatchArticleNotificationEvent(
     }
   }
 
-  if (event.type === "article.published" && targetUser.role === "auteur") {
+  if (
+    (event.type === "article.submitted" || event.type === "article.published") &&
+    targetUser.role === "auteur"
+  ) {
+    const isSubmission = event.type === "article.submitted";
     const depositorName = `${article.auteur?.prenom || ""} ${article.auteur?.nom || ""}`.trim();
     const adminUsers = await prisma.user.findMany({
       where: { role: "admin" },
@@ -347,13 +356,17 @@ export async function dispatchArticleNotificationEvent(
       });
       if (existing) continue;
 
-      const title = `${resolveActionTag("article.published")} - ${depositorName || "Auteur"} - ${article.titre}`;
-      const body = `L'article "${article.titre}" déposé par ${depositorName || "un auteur"} vient d'être publié.`;
+      const title = `${resolveActionTag(event.type)} - ${depositorName || "Auteur"} - ${article.titre}`;
+      const body = isSubmission
+        ? `L'article "${article.titre}" vient d'être déposé par ${depositorName || "un auteur"}.`
+        : `L'article "${article.titre}" déposé par ${depositorName || "un auteur"} vient d'être publié.`;
       await prisma.$transaction([
         prisma.notification.create({
           data: {
             userId: admin.id,
-            type: "article.published.admin_alert",
+            type: isSubmission
+              ? "article.submitted.admin_alert"
+              : "article.published.admin_alert",
             title,
             body,
             metadata: {

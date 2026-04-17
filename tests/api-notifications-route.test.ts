@@ -71,6 +71,7 @@ describe("/api/notifications route handlers", () => {
           type: {
             in: [
               "article.submitted",
+              "article.submitted.admin_alert",
               "article.corrections_requested_or_resubmitted",
               "article.published.admin_alert",
             ],

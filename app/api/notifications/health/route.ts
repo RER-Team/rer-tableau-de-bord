@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
-import { sendMail } from "@/lib/mail";
+import { getMailRuntimeDiagnostics, sendMail } from "@/lib/mail";
 import { getWebPushPublicKey } from "@/lib/notifications/web-push";
 
 export async function GET(request: NextRequest) {
@@ -9,10 +9,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
+  const mailDiagnostics = getMailRuntimeDiagnostics();
   const smtpConfigured = Boolean(
-    process.env.MAIL_FROM?.trim() &&
-      (process.env.SMTP_URL?.trim() ||
-        (process.env.SMTP_HOST?.trim() && process.env.SMTP_PORT?.trim()))
+    mailDiagnostics.hasMailFrom &&
+      mailDiagnostics.hasSmtpConfig &&
+      mailDiagnostics.smtpHostConfigured
   );
 
   const webPushConfigured = Boolean(
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     smtpConfigured,
+    mailDiagnostics,
     webPushConfigured,
     webPushPublicKeyAvailable: Boolean(getWebPushPublicKey()),
   });
