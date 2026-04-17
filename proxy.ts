@@ -12,7 +12,9 @@ export async function proxy(req: NextRequest) {
   if (
     pathname === "/login" ||
     pathname === "/reset-password" ||
+    pathname === "/default-logo.svg" ||
     pathname.startsWith("/api/auth") ||
+    pathname === "/api/admin/logo" ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/icon") ||

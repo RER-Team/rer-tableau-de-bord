@@ -39,8 +39,17 @@ export function buildArticleNotificationEvents(
   }
 
   if (!args.isCreate) {
+    const draftSubmitted = fromStatus === "brouillon" && toStatus === "a_relire";
+    if (draftSubmitted) {
+      events.push({
+        type: "article.submitted",
+        articleId: args.articleId,
+        actorUserId: args.actorUserId,
+        targetAuteurId: args.targetAuteurId,
+      });
+    }
     const movedToReview = toStatus === "a_relire" && fromStatus !== "a_relire";
-    if (movedToReview || args.authorResubmitted === true) {
+    if ((movedToReview && !draftSubmitted) || args.authorResubmitted === true) {
       events.push({
         type: "article.corrections_requested_or_resubmitted",
         articleId: args.articleId,

@@ -433,7 +433,7 @@ function ArticleDetailContent({
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <a
-                  href={detail.lienPhoto}
+                  href={`/api/articles/${detail.id}/download-image`}
                   download
                   className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
                 >

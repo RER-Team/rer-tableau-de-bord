@@ -90,7 +90,7 @@ export async function dispatchArticleNotificationEvent(
   });
 
   const effectivePreference = preference ?? defaultNotificationPreferences;
-  if (!shouldNotifyForEvent(event.type, effectivePreference)) return;
+  const shouldNotifyUser = shouldNotifyForEvent(event.type, effectivePreference);
 
   const customTemplate = await prisma.notificationTemplate.findUnique({
     where: { eventType: event.type },
@@ -145,7 +145,55 @@ export async function dispatchArticleNotificationEvent(
     adminSignature,
   };
 
-  if (effectivePreference.inAppEnabled) {
+  if (
+    (event.type === "article.submitted" || event.type === "article.published") &&
+    targetUser.role === "auteur"
+  ) {
+    const depositorName = `${article.auteur?.prenom || ""} ${article.auteur?.nom || ""}`.trim();
+    const isSubmission = event.type === "article.submitted";
+    const contactSubject = isSubmission
+      ? `Article déposé : ${article.titre}`
+      : `Article publié : ${article.titre}`;
+    const contactText = [
+      `Bonjour,`,
+      "",
+      isSubmission
+        ? `L'article "${article.titre}" vient d'être déposé par ${depositorName || "un auteur"}.`
+        : `L'article "${article.titre}" déposé par ${depositorName || "un auteur"} vient d'être publié.`,
+      `Lien : ${articleUrl}`,
+    ].join("\n");
+    const contactHtml = isSubmission
+      ? `<p>Bonjour,</p><p>L'article "<strong>${article.titre}</strong>" vient d'être déposé par ${depositorName || "un auteur"}.</p><p><a href="${articleUrl}">Ouvrir l'article</a></p>`
+      : `<p>Bonjour,</p><p>L'article "<strong>${article.titre}</strong>" déposé par ${depositorName || "un auteur"} vient d'être publié.</p><p><a href="${articleUrl}">Ouvrir l'article</a></p>`;
+    try {
+      await retryWithTimeout(
+        () =>
+          sendMail({
+            to: adminAlertRecipientEmail,
+            fromName: MAIL_SENDER_NAME,
+            subject: contactSubject,
+            text: contactText,
+            html: contactHtml,
+            tags: [isSubmission ? "article-submitted" : "article-published", "admin-alert"],
+            meta: {
+              articleId: article.id,
+              eventType: event.type,
+              channel: "email_contact",
+            },
+          }),
+        {
+          label: "email-contact-published",
+          retries: 2,
+          baseDelayMs: 250,
+          timeoutMs: 8000,
+        }
+      );
+    } catch (error) {
+      console.error("[notifications] contact publication email error", error);
+    }
+  }
+
+  if (shouldNotifyUser && effectivePreference.inAppEnabled) {
     const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:in_app:${transitionKey}`;
     const existing = await prisma.notificationDelivery.findUnique({
       where: { dedupeKey },
@@ -186,7 +234,7 @@ export async function dispatchArticleNotificationEvent(
     }
   }
 
-  if (effectivePreference.emailEnabled && targetUser.email) {
+  if (shouldNotifyUser && effectivePreference.emailEnabled && targetUser.email) {
     const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:email:${transitionKey}`;
     const existing = await prisma.notificationDelivery.findUnique({
       where: { dedupeKey },
@@ -238,53 +286,8 @@ export async function dispatchArticleNotificationEvent(
     }
   }
 
-  if (
-    (event.type === "article.submitted" || event.type === "article.published") &&
-    targetUser.role === "auteur"
-  ) {
+  if (event.type === "article.published" && targetUser.role === "auteur") {
     const depositorName = `${article.auteur?.prenom || ""} ${article.auteur?.nom || ""}`.trim();
-    const isSubmission = event.type === "article.submitted";
-    const contactSubject = isSubmission
-      ? `Article déposé : ${article.titre}`
-      : `Article publié : ${article.titre}`;
-    const contactText = [
-      `Bonjour,`,
-      "",
-      isSubmission
-        ? `L'article "${article.titre}" vient d'être déposé par ${depositorName || "un auteur"}.`
-        : `L'article "${article.titre}" déposé par ${depositorName || "un auteur"} vient d'être publié.`,
-      `Lien : ${articleUrl}`,
-    ].join("\n");
-    const contactHtml = isSubmission
-      ? `<p>Bonjour,</p><p>L'article "<strong>${article.titre}</strong>" vient d'être déposé par ${depositorName || "un auteur"}.</p><p><a href="${articleUrl}">Ouvrir l'article</a></p>`
-      : `<p>Bonjour,</p><p>L'article "<strong>${article.titre}</strong>" déposé par ${depositorName || "un auteur"} vient d'être publié.</p><p><a href="${articleUrl}">Ouvrir l'article</a></p>`;
-    try {
-      await retryWithTimeout(
-        () =>
-          sendMail({
-            to: adminAlertRecipientEmail,
-            fromName: MAIL_SENDER_NAME,
-            subject: contactSubject,
-            text: contactText,
-            html: contactHtml,
-            tags: [isSubmission ? "article-submitted" : "article-published", "admin-alert"],
-            meta: {
-              articleId: article.id,
-              eventType: event.type,
-              channel: "email_contact",
-            },
-          }),
-        {
-          label: "email-contact-published",
-          retries: 2,
-          baseDelayMs: 250,
-          timeoutMs: 8000,
-        }
-      );
-    } catch (error) {
-      console.error("[notifications] contact publication email error", error);
-    }
-
     const adminUsers = await prisma.user.findMany({
       where: { role: "admin" },
       select: { id: true },
@@ -327,7 +330,7 @@ export async function dispatchArticleNotificationEvent(
     }
   }
 
-  if (effectivePreference.browserPushEnabled) {
+  if (shouldNotifyUser && effectivePreference.browserPushEnabled) {
     const subscriptions = await prisma.pushSubscription.findMany({
       where: { userId: targetUser.id },
       select: { id: true, endpoint: true, p256dh: true, auth: true },

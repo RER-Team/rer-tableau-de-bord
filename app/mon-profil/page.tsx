@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import Image from "next/image";
 
 type Mutuelle = {
@@ -43,8 +43,10 @@ export default function MonProfilPage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [pendingAvatarDataUrl, setPendingAvatarDataUrl] = useState<string | null>(null);
   const [cropZoom, setCropZoom] = useState(1);
-  const [cropX, setCropX] = useState(50);
-  const [cropY, setCropY] = useState(50);
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+  const dragPointerIdRef = useRef<number | null>(null);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const dragOriginRef = useRef({ x: 0, y: 0 });
 
   const hydrate = (payload: ProfilePayload) => {
     setMutuelles(payload.mutuelles);
@@ -142,16 +144,48 @@ export default function MonProfilPage() {
     });
     setPendingAvatarDataUrl(dataUrl);
     setCropZoom(1);
-    setCropX(50);
-    setCropY(50);
+    setCropOffset({ x: 0, y: 0 });
   };
 
   const handleCropAndUpload = async () => {
     if (!pendingAvatarDataUrl) return;
     try {
-      const croppedFile = await buildCroppedAvatarFile(pendingAvatarDataUrl, cropZoom, cropX, cropY);
+      const croppedFile = await buildCroppedAvatarFile(
+        pendingAvatarDataUrl,
+        cropZoom,
+        cropOffset
+      );
       await handleAvatarUpload(croppedFile);
       setPendingAvatarDataUrl(null);
+  const handleCropPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    dragPointerIdRef.current = event.pointerId;
+    dragStartRef.current = { x: event.clientX, y: event.clientY };
+    dragOriginRef.current = { ...cropOffset };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleCropPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (dragPointerIdRef.current !== event.pointerId) return;
+    const deltaX = event.clientX - dragStartRef.current.x;
+    const deltaY = event.clientY - dragStartRef.current.y;
+    const nextOffset = {
+      x: dragOriginRef.current.x + deltaX,
+      y: dragOriginRef.current.y + deltaY,
+    };
+    setCropOffset(clampCropOffset(nextOffset, cropZoom));
+  };
+
+  const handleCropPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (dragPointerIdRef.current !== event.pointerId) return;
+    dragPointerIdRef.current = null;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  const handleZoomChange = (nextZoom: number) => {
+    setCropZoom(nextZoom);
+    setCropOffset((previous) => clampCropOffset(previous, nextZoom));
+  };
+
     } catch (e: any) {
       setError(e.message || "Impossible de recadrer l'image.");
     }
@@ -226,15 +260,24 @@ export default function MonProfilPage() {
           </p>
           <div className="mx-auto w-full max-w-[320px]">
             <div className="relative aspect-square overflow-hidden rounded-2xl border border-rer-border bg-rer-app">
-            <img
-              src={pendingAvatarDataUrl}
-              alt="Aperçu recadrage"
-              className="h-full w-full object-cover"
-              style={{
-                transform: `scale(${cropZoom})`,
-                transformOrigin: `${cropX}% ${cropY}%`,
-              }}
-            />
+              <div
+                className="h-full w-full touch-none select-none"
+                onPointerDown={handleCropPointerDown}
+                onPointerMove={handleCropPointerMove}
+                onPointerUp={handleCropPointerUp}
+                onPointerCancel={handleCropPointerUp}
+              >
+                <img
+                  src={pendingAvatarDataUrl}
+                  alt="Aperçu recadrage"
+                  draggable={false}
+                  className="h-full w-full object-cover"
+                  style={{
+                    transform: `translate3d(${cropOffset.x}px, ${cropOffset.y}px, 0) scale(${cropZoom})`,
+                    transformOrigin: "center center",
+                  }}
+                />
+              </div>
               <div className="pointer-events-none absolute inset-0 border border-white/60" />
               <div className="pointer-events-none absolute inset-4 rounded-full border-2 border-white/90 shadow-[0_0_0_9999px_rgba(15,23,42,0.25)]" />
             </div>
@@ -248,32 +291,13 @@ export default function MonProfilPage() {
                 max={3}
                 step={0.01}
                 value={cropZoom}
-                onChange={(e) => setCropZoom(Number(e.target.value))}
+                onChange={(e) => handleZoomChange(Number(e.target.value))}
                 className="mt-1 w-full"
               />
             </label>
-            <label className="text-xs text-rer-muted">
-              Position horizontale
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={cropX}
-                onChange={(e) => setCropX(Number(e.target.value))}
-                className="mt-1 w-full"
-              />
-            </label>
-            <label className="text-xs text-rer-muted">
-              Position verticale
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={cropY}
-                onChange={(e) => setCropY(Number(e.target.value))}
-                className="mt-1 w-full"
-              />
-            </label>
+            <div className="text-xs text-rer-muted sm:col-span-2">
+              Glisse l’image dans le cadre pour ajuster le recadrage.
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -364,30 +388,50 @@ export default function MonProfilPage() {
 async function buildCroppedAvatarFile(
   dataUrl: string,
   zoom: number,
-  xPercent: number,
-  yPercent: number
+  offset: { x: number; y: number }
 ): Promise<File> {
   const image = await loadImage(dataUrl);
   const canvas = document.createElement("canvas");
-  const size = 512;
-  canvas.width = size;
-  canvas.height = size;
+  const outputSize = 512;
+  const viewportSize = 320;
+  canvas.width = outputSize;
+  canvas.height = outputSize;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas indisponible.");
 
-  const sourceSize = Math.min(image.width, image.height) / zoom;
-  const maxX = image.width - sourceSize;
-  const maxY = image.height - sourceSize;
-  const sx = (xPercent / 100) * maxX;
-  const sy = (yPercent / 100) * maxY;
+  const baseScale = Math.max(viewportSize / image.width, viewportSize / image.height);
+  const effectiveScale = baseScale * zoom;
+  const displayedWidth = image.width * effectiveScale;
+  const displayedHeight = image.height * effectiveScale;
+  const clampedOffset = clampCropOffset(offset, zoom);
+  const left = (viewportSize - displayedWidth) / 2 + clampedOffset.x;
+  const top = (viewportSize - displayedHeight) / 2 + clampedOffset.y;
+  const sx = clamp(-left / effectiveScale, 0, image.width);
+  const sy = clamp(-top / effectiveScale, 0, image.height);
+  const sWidth = clamp(viewportSize / effectiveScale, 1, image.width - sx);
+  const sHeight = clamp(viewportSize / effectiveScale, 1, image.height - sy);
 
-  ctx.drawImage(image, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+  ctx.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, outputSize, outputSize);
 
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob((result) => resolve(result), "image/jpeg", 0.9)
   );
   if (!blob) throw new Error("Échec du recadrage.");
   return new File([blob], "avatar-crop.jpg", { type: "image/jpeg" });
+}
+
+function clampCropOffset(offset: { x: number; y: number }, zoom: number): { x: number; y: number } {
+  const viewportSize = 320;
+  const side = viewportSize * zoom;
+  const max = Math.max(0, (side - viewportSize) / 2);
+  return {
+    x: clamp(offset.x, -max, max),
+    y: clamp(offset.y, -max, max),
+  };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {

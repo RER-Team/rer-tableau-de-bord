@@ -33,6 +33,23 @@ describe("buildArticleNotificationEvents", () => {
     ]);
   });
 
+  it("declenche article.submitted lors du passage brouillon vers a_relire", () => {
+    const events = buildArticleNotificationEvents({
+      articleId: "a1",
+      actorUserId: "u1",
+      targetAuteurId: "author-1",
+      isCreate: false,
+      fromStatusSlug: "brouillon",
+      toStatusSlug: "a_relire",
+    });
+
+    expect(events).toEqual([
+      expect.objectContaining({
+        type: "article.submitted",
+      }),
+    ]);
+  });
+
   it("declenche article.published au passage vers publie", () => {
     const events = buildArticleNotificationEvents({
       articleId: "a1",
