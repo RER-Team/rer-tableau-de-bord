@@ -221,7 +221,11 @@ export default function MonProfilPage() {
       {pendingAvatarDataUrl ? (
         <div className="space-y-3 rounded-lg border border-rer-border bg-white p-3">
           <p className="text-sm font-medium text-rer-text">Recadrer la photo de profil</p>
-          <div className="relative h-64 w-full overflow-hidden rounded-lg border border-rer-border bg-rer-app">
+          <p className="text-xs text-rer-muted">
+            Positionne ton image dans le cadre comme sur LinkedIn, puis valide.
+          </p>
+          <div className="mx-auto w-full max-w-[320px]">
+            <div className="relative aspect-square overflow-hidden rounded-2xl border border-rer-border bg-rer-app">
             <img
               src={pendingAvatarDataUrl}
               alt="Aperçu recadrage"
@@ -231,6 +235,9 @@ export default function MonProfilPage() {
                 transformOrigin: `${cropX}% ${cropY}%`,
               }}
             />
+              <div className="pointer-events-none absolute inset-0 border border-white/60" />
+              <div className="pointer-events-none absolute inset-4 rounded-full border-2 border-white/90 shadow-[0_0_0_9999px_rgba(15,23,42,0.25)]" />
+            </div>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
             <label className="text-xs text-rer-muted">
@@ -246,7 +253,7 @@ export default function MonProfilPage() {
               />
             </label>
             <label className="text-xs text-rer-muted">
-              Horizontal
+              Position horizontale
               <input
                 type="range"
                 min={0}
@@ -257,7 +264,7 @@ export default function MonProfilPage() {
               />
             </label>
             <label className="text-xs text-rer-muted">
-              Vertical
+              Position verticale
               <input
                 type="range"
                 min={0}

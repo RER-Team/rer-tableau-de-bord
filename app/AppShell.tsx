@@ -18,7 +18,12 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isLogin = pathname === "/login";
   const { logoUrl, fallbackLogoUrl } = useSiteLogo();
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    setLogoLoadFailed(false);
+  }, [logoUrl]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -64,19 +69,15 @@ export function AppShell({ children }: AppShellProps) {
                 }`}
               >
                 <Image
-                  key={logoUrl}
-                  src={logoUrl}
+                  key={logoLoadFailed ? fallbackLogoUrl : logoUrl}
+                  src={logoLoadFailed ? fallbackLogoUrl : logoUrl}
                   alt="Logo RER"
                   fill
                   sizes="(max-width: 1024px) 112px, 144px"
                   className="object-contain"
                   unoptimized
                   priority
-                  onError={(event) => {
-                    const imageElement = event.currentTarget as HTMLImageElement;
-                    if (imageElement.src.endsWith(fallbackLogoUrl)) return;
-                    imageElement.src = fallbackLogoUrl;
-                  }}
+                  onError={() => setLogoLoadFailed(true)}
                 />
               </div>
               <div className="min-w-0 flex flex-col">

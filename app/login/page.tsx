@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
@@ -19,6 +19,11 @@ function LoginPageInner() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMessage, setForgotMessage] = useState<string | null>(null);
   const { logoUrl, fallbackLogoUrl } = useSiteLogo();
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
+
+  useEffect(() => {
+    setLogoLoadFailed(false);
+  }, [logoUrl]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -82,17 +87,13 @@ function LoginPageInner() {
         <div className="mb-4 flex justify-center">
           <div className="relative h-16 w-36">
             <Image
-              key={logoUrl}
-              src={logoUrl}
+              key={logoLoadFailed ? fallbackLogoUrl : logoUrl}
+              src={logoLoadFailed ? fallbackLogoUrl : logoUrl}
               alt="Logo RER"
               fill
               className="object-contain"
               unoptimized
-              onError={(event) => {
-                const imageElement = event.currentTarget as HTMLImageElement;
-                if (imageElement.src.endsWith(fallbackLogoUrl)) return;
-                imageElement.src = fallbackLogoUrl;
-              }}
+              onError={() => setLogoLoadFailed(true)}
               priority
             />
           </div>

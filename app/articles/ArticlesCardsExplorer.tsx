@@ -257,7 +257,7 @@ function ArticleDetailContent({
   canOpenAdminEdit = false,
 }: ArticleDetailContentProps) {
   const [copyState, setCopyState] = useState<
-    "idle" | "html" | "text" | "error"
+    "idle" | "html" | "error"
   >("idle");
   const [imageCopyState, setImageCopyState] = useState<
     "idle" | "copied" | "error"
@@ -296,23 +296,6 @@ function ArticleDetailContent({
         await navigator.clipboard.writeText(plainText);
       }
       setCopyState("html");
-      window.setTimeout(() => setCopyState("idle"), 2000);
-    } catch {
-      setCopyState("error");
-      window.setTimeout(() => setCopyState("idle"), 3000);
-    }
-  };
-
-  const handleCopyText = async () => {
-    if (!detail || loading || error) return;
-    try {
-      const response = await fetch(`/api/articles/${detail.id}/export?format=txt`, {
-        cache: "no-store",
-      });
-      if (!response.ok) throw new Error("Export texte indisponible.");
-      const text = await response.text();
-      await navigator.clipboard.writeText(text);
-      setCopyState("text");
       window.setTimeout(() => setCopyState("idle"), 2000);
     } catch {
       setCopyState("error");
@@ -368,23 +351,7 @@ function ArticleDetailContent({
               ? "HTML copié"
               : copyState === "error"
               ? "Erreur copie"
-              : "Copier riche (Docs/Word)"}
-          </button>
-          <button
-            type="button"
-            disabled={!canCopy}
-            onClick={handleCopyText}
-            className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              canCopy
-                ? "border-rer-border bg-white text-rer-text hover:bg-rer-app/60"
-                : "border-rer-border bg-rer-app text-rer-muted"
-            }`}
-          >
-            {copyState === "text"
-              ? "Texte copié"
-              : copyState === "error"
-              ? "Erreur copie"
-              : "Copier texte"}
+              : "Copier (html / texte)"}
           </button>
           <a
             href={`/api/articles/${selectedId}/export?format=word`}
