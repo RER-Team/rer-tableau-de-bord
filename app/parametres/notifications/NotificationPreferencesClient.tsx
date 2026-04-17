@@ -12,6 +12,18 @@ type Preferences = {
   onPublished: boolean;
   onAuthorActions: boolean;
   onOwnArticles: boolean;
+  emailOwnArticles: boolean;
+  emailAuthorActions: boolean;
+  inAppOwnArticles: boolean;
+  inAppAuthorActions: boolean;
+  browserPushOwnArticles: boolean;
+  browserPushAuthorActions: boolean;
+  onSubmittedOwnArticles: boolean;
+  onSubmittedAuthorActions: boolean;
+  onCorrectionsOwnArticles: boolean;
+  onCorrectionsAuthorActions: boolean;
+  onPublishedOwnArticles: boolean;
+  onPublishedAuthorActions: boolean;
 };
 
 const defaultPreferences: Preferences = {
@@ -23,6 +35,18 @@ const defaultPreferences: Preferences = {
   onPublished: true,
   onAuthorActions: true,
   onOwnArticles: true,
+  emailOwnArticles: true,
+  emailAuthorActions: true,
+  inAppOwnArticles: true,
+  inAppAuthorActions: true,
+  browserPushOwnArticles: false,
+  browserPushAuthorActions: false,
+  onSubmittedOwnArticles: true,
+  onSubmittedAuthorActions: true,
+  onCorrectionsOwnArticles: true,
+  onCorrectionsAuthorActions: true,
+  onPublishedOwnArticles: true,
+  onPublishedAuthorActions: true,
 };
 
 function base64UrlToUint8Array(base64String: string): Uint8Array {
@@ -191,6 +215,44 @@ export function NotificationPreferencesClient() {
     [saving, loading, pushEnabledOnServer]
   );
   const isAdmin = session?.user?.role === "admin";
+  const matrixRows: Array<{
+    label: string;
+    ownKey: keyof Preferences;
+    authorKey: keyof Preferences;
+    disableAuthorColumn?: boolean;
+  }> = [
+    {
+      label: "Email",
+      ownKey: "emailOwnArticles",
+      authorKey: "emailAuthorActions",
+    },
+    {
+      label: "Notification dans l'interface",
+      ownKey: "inAppOwnArticles",
+      authorKey: "inAppAuthorActions",
+    },
+    {
+      label: "Notification navigateur",
+      ownKey: "browserPushOwnArticles",
+      authorKey: "browserPushAuthorActions",
+      disableAuthorColumn: !pushEnabledOnServer,
+    },
+    {
+      label: "Depot de l'article",
+      ownKey: "onSubmittedOwnArticles",
+      authorKey: "onSubmittedAuthorActions",
+    },
+    {
+      label: "Corrections effectuees",
+      ownKey: "onCorrectionsOwnArticles",
+      authorKey: "onCorrectionsAuthorActions",
+    },
+    {
+      label: "Validation et publication",
+      ownKey: "onPublishedOwnArticles",
+      authorKey: "onPublishedAuthorActions",
+    },
+  ];
 
   return (
     <section className="space-y-4 rounded-xl border border-rer-border bg-white p-4 shadow-sm">
@@ -200,97 +262,133 @@ export function NotificationPreferencesClient() {
       {error ? <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
       {message ? <p className="rounded-lg bg-green-50 p-2 text-sm text-green-700">{message}</p> : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      {isAdmin ? (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-rer-text">Canaux</h3>
-          <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-            <span>Email</span>
-            <input
-              type="checkbox"
-              checked={preferences.emailEnabled}
-              disabled={saving || loading}
-              onChange={(event) => void patchPreferences({ emailEnabled: event.target.checked })}
-            />
-          </label>
-          <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-            <span>Notification dans l&apos;interface</span>
-            <input
-              type="checkbox"
-              checked={preferences.inAppEnabled}
-              disabled={saving || loading}
-              onChange={(event) => void patchPreferences({ inAppEnabled: event.target.checked })}
-            />
-          </label>
-          <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-            <span>Notification navigateur</span>
-            <input
-              type="checkbox"
-              checked={preferences.browserPushEnabled}
-              disabled={isBrowserToggleDisabled}
-              onChange={(event) => void handleBrowserPushToggle(event.target.checked)}
-            />
-          </label>
-        </div>
-
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-rer-text">Evenements</h3>
-          <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-            <span>Depot de l&apos;article</span>
-            <input
-              type="checkbox"
-              checked={preferences.onSubmitted}
-              disabled={saving || loading}
-              onChange={(event) => void patchPreferences({ onSubmitted: event.target.checked })}
-            />
-          </label>
-          <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-            <span>Corrections effectuees</span>
-            <input
-              type="checkbox"
-              checked={preferences.onCorrections}
-              disabled={saving || loading}
-              onChange={(event) => void patchPreferences({ onCorrections: event.target.checked })}
-            />
-          </label>
-          <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-            <span>Validation et publication</span>
-            <input
-              type="checkbox"
-              checked={preferences.onPublished}
-              disabled={saving || loading}
-              onChange={(event) => void patchPreferences({ onPublished: event.target.checked })}
-            />
-          </label>
-        </div>
-
-        {isAdmin ? (
-          <div className="space-y-2 md:col-span-2">
-            <h3 className="text-sm font-semibold text-rer-text">Perimetre admin</h3>
-            <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-                <span>Articles des auteurs</span>
-                <input
-                  type="checkbox"
-                  checked={preferences.onAuthorActions}
-                  disabled={saving || loading}
-                  onChange={(event) =>
-                    void patchPreferences({ onAuthorActions: event.target.checked })
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-                <span>Mes articles (que j&apos;ai publies/modifies)</span>
-                <input
-                  type="checkbox"
-                  checked={preferences.onOwnArticles}
-                  disabled={saving || loading}
-                  onChange={(event) => void patchPreferences({ onOwnArticles: event.target.checked })}
-                />
-              </label>
-            </div>
+          <h3 className="text-sm font-semibold text-rer-text">
+            Matrice admin (canaux et evenements)
+          </h3>
+          <div className="overflow-x-auto rounded-lg border border-rer-border">
+            <table className="min-w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-rer-app/60 text-rer-text">
+                  <th className="px-3 py-2 text-left font-semibold">Canal / Evenement</th>
+                  <th className="px-3 py-2 text-center font-semibold">
+                    Mes articles
+                  </th>
+                  <th className="px-3 py-2 text-center font-semibold">
+                    Articles auteurs
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {matrixRows.map((row) => (
+                  <tr key={row.label} className="border-t border-rer-border">
+                    <td className="px-3 py-2 text-rer-text">{row.label}</td>
+                    <td className="px-3 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(preferences[row.ownKey])}
+                        disabled={saving || loading || (row.ownKey === "browserPushOwnArticles" && isBrowserToggleDisabled)}
+                        onChange={(event) => {
+                          if (row.ownKey === "browserPushOwnArticles") {
+                            void handleBrowserPushToggle(event.target.checked);
+                            void patchPreferences({ browserPushOwnArticles: event.target.checked });
+                            return;
+                          }
+                          void patchPreferences({ [row.ownKey]: event.target.checked } as Partial<Preferences>);
+                        }}
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(preferences[row.authorKey])}
+                        disabled={
+                          saving ||
+                          loading ||
+                          (row.authorKey === "browserPushAuthorActions" &&
+                            (isBrowserToggleDisabled || row.disableAuthorColumn))
+                        }
+                        onChange={(event) => {
+                          if (row.authorKey === "browserPushAuthorActions") {
+                            void handleBrowserPushToggle(event.target.checked);
+                            void patchPreferences({ browserPushAuthorActions: event.target.checked });
+                            return;
+                          }
+                          void patchPreferences({ [row.authorKey]: event.target.checked } as Partial<Preferences>);
+                        }}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-rer-text">Canaux</h3>
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+              <span>Email</span>
+              <input
+                type="checkbox"
+                checked={preferences.emailEnabled}
+                disabled={saving || loading}
+                onChange={(event) => void patchPreferences({ emailEnabled: event.target.checked })}
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+              <span>Notification dans l&apos;interface</span>
+              <input
+                type="checkbox"
+                checked={preferences.inAppEnabled}
+                disabled={saving || loading}
+                onChange={(event) => void patchPreferences({ inAppEnabled: event.target.checked })}
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+              <span>Notification navigateur</span>
+              <input
+                type="checkbox"
+                checked={preferences.browserPushEnabled}
+                disabled={isBrowserToggleDisabled}
+                onChange={(event) => void handleBrowserPushToggle(event.target.checked)}
+              />
+            </label>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-rer-text">Evenements</h3>
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+              <span>Depot de l&apos;article</span>
+              <input
+                type="checkbox"
+                checked={preferences.onSubmitted}
+                disabled={saving || loading}
+                onChange={(event) => void patchPreferences({ onSubmitted: event.target.checked })}
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+              <span>Corrections effectuees</span>
+              <input
+                type="checkbox"
+                checked={preferences.onCorrections}
+                disabled={saving || loading}
+                onChange={(event) => void patchPreferences({ onCorrections: event.target.checked })}
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+              <span>Validation et publication</span>
+              <input
+                type="checkbox"
+                checked={preferences.onPublished}
+                disabled={saving || loading}
+                onChange={(event) => void patchPreferences({ onPublished: event.target.checked })}
+              />
+            </label>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

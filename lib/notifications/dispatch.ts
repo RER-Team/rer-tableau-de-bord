@@ -53,6 +53,63 @@ function shouldNotifyForScope(
   return preference.onOwnArticles;
 }
 
+function isEventEnabledForScope(
+  eventType: ArticleNotificationEvent["type"],
+  scope: "adminArticles" | "authorActions",
+  preference: {
+    onSubmittedOwnArticles: boolean;
+    onSubmittedAuthorActions: boolean;
+    onCorrectionsOwnArticles: boolean;
+    onCorrectionsAuthorActions: boolean;
+    onPublishedOwnArticles: boolean;
+    onPublishedAuthorActions: boolean;
+  }
+): boolean {
+  if (eventType === "article.submitted") {
+    return scope === "authorActions"
+      ? preference.onSubmittedAuthorActions
+      : preference.onSubmittedOwnArticles;
+  }
+  if (eventType === "article.corrections_requested_or_resubmitted") {
+    return scope === "authorActions"
+      ? preference.onCorrectionsAuthorActions
+      : preference.onCorrectionsOwnArticles;
+  }
+  if (eventType === "article.published") {
+    return scope === "authorActions"
+      ? preference.onPublishedAuthorActions
+      : preference.onPublishedOwnArticles;
+  }
+  return false;
+}
+
+function isChannelEnabledForScope(
+  channel: "email" | "in_app" | "push",
+  scope: "adminArticles" | "authorActions",
+  preference: {
+    emailOwnArticles: boolean;
+    emailAuthorActions: boolean;
+    inAppOwnArticles: boolean;
+    inAppAuthorActions: boolean;
+    browserPushOwnArticles: boolean;
+    browserPushAuthorActions: boolean;
+  }
+): boolean {
+  if (channel === "email") {
+    return scope === "authorActions"
+      ? preference.emailAuthorActions
+      : preference.emailOwnArticles;
+  }
+  if (channel === "in_app") {
+    return scope === "authorActions"
+      ? preference.inAppAuthorActions
+      : preference.inAppOwnArticles;
+  }
+  return scope === "authorActions"
+    ? preference.browserPushAuthorActions
+    : preference.browserPushOwnArticles;
+}
+
 function resolveInAppScope(eventType: ArticleNotificationEvent["type"]): "adminArticles" | "authorActions" {
   if (
     eventType === "article.submitted" ||
@@ -135,14 +192,28 @@ export async function dispatchArticleNotificationEvent(
           onPublished: true,
           onAuthorActions: true,
           onOwnArticles: true,
+          emailOwnArticles: true,
+          emailAuthorActions: true,
+          inAppOwnArticles: true,
+          inAppAuthorActions: true,
+          browserPushOwnArticles: true,
+          browserPushAuthorActions: true,
+          onSubmittedOwnArticles: true,
+          onSubmittedAuthorActions: true,
+          onCorrectionsOwnArticles: true,
+          onCorrectionsAuthorActions: true,
+          onPublishedOwnArticles: true,
+          onPublishedAuthorActions: true,
         },
       })
     : null;
 
   const effectivePreference = preference ?? defaultNotificationPreferences;
-  const shouldNotifyUser = shouldNotifyForEvent(event.type, effectivePreference);
   const targetInAppScope = resolveInAppScope(event.type);
-  const shouldNotifyTargetScope = shouldNotifyForScope(targetInAppScope, effectivePreference);
+  const shouldNotifyUser =
+    shouldNotifyForEvent(event.type, effectivePreference) &&
+    shouldNotifyForScope(targetInAppScope, effectivePreference) &&
+    isEventEnabledForScope(event.type, targetInAppScope, effectivePreference);
 
   const customTemplate = await prisma.notificationTemplate.findUnique({
     where: { eventType: event.type },
@@ -240,7 +311,12 @@ export async function dispatchArticleNotificationEvent(
     }
   }
 
-  if (targetUser?.id && shouldNotifyUser && shouldNotifyTargetScope && effectivePreference.inAppEnabled) {
+  if (
+    targetUser?.id &&
+    shouldNotifyUser &&
+    effectivePreference.inAppEnabled &&
+    isChannelEnabledForScope("in_app", targetInAppScope, effectivePreference)
+  ) {
     const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:in_app:${transitionKey}`;
     const existing = await prisma.notificationDelivery.findUnique({
       where: { dedupeKey },
@@ -290,6 +366,7 @@ export async function dispatchArticleNotificationEvent(
     targetUser?.id &&
     shouldNotifyUser &&
     effectivePreference.emailEnabled &&
+    isChannelEnabledForScope("email", targetInAppScope, effectivePreference) &&
     targetUser.email
   ) {
     const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:email:${transitionKey}`;
@@ -360,6 +437,18 @@ export async function dispatchArticleNotificationEvent(
             onPublished: true,
             onAuthorActions: true,
             onOwnArticles: true,
+            emailOwnArticles: true,
+            emailAuthorActions: true,
+            inAppOwnArticles: true,
+            inAppAuthorActions: true,
+            browserPushOwnArticles: true,
+            browserPushAuthorActions: true,
+            onSubmittedOwnArticles: true,
+            onSubmittedAuthorActions: true,
+            onCorrectionsOwnArticles: true,
+            onCorrectionsAuthorActions: true,
+            onPublishedOwnArticles: true,
+            onPublishedAuthorActions: true,
           },
         },
       },
@@ -370,7 +459,9 @@ export async function dispatchArticleNotificationEvent(
       const shouldNotifyAdmin =
         adminEffectivePreference.inAppEnabled &&
         shouldNotifyForEvent(event.type, adminEffectivePreference) &&
-        shouldNotifyForScope("authorActions", adminEffectivePreference);
+        shouldNotifyForScope("authorActions", adminEffectivePreference) &&
+        isEventEnabledForScope(event.type, "authorActions", adminEffectivePreference) &&
+        isChannelEnabledForScope("in_app", "authorActions", adminEffectivePreference);
       if (!shouldNotifyAdmin) continue;
 
       const dedupeKey = `${event.type}:${event.articleId}:${admin.id}:in_app_admin_alert:${transitionKey}`;
@@ -415,7 +506,12 @@ export async function dispatchArticleNotificationEvent(
     }
   }
 
-  if (targetUser?.id && shouldNotifyUser && effectivePreference.browserPushEnabled) {
+  if (
+    targetUser?.id &&
+    shouldNotifyUser &&
+    effectivePreference.browserPushEnabled &&
+    isChannelEnabledForScope("push", targetInAppScope, effectivePreference)
+  ) {
     const subscriptions = await prisma.pushSubscription.findMany({
       where: { userId: targetUser.id },
       select: { id: true, endpoint: true, p256dh: true, auth: true },

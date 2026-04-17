@@ -9,6 +9,18 @@ export const notificationPreferenceSelect = {
   onPublished: true,
   onAuthorActions: true,
   onOwnArticles: true,
+  emailOwnArticles: true,
+  emailAuthorActions: true,
+  inAppOwnArticles: true,
+  inAppAuthorActions: true,
+  browserPushOwnArticles: true,
+  browserPushAuthorActions: true,
+  onSubmittedOwnArticles: true,
+  onSubmittedAuthorActions: true,
+  onCorrectionsOwnArticles: true,
+  onCorrectionsAuthorActions: true,
+  onPublishedOwnArticles: true,
+  onPublishedAuthorActions: true,
 } as const;
 
 export type NotificationPreferencePayload = {
@@ -20,6 +32,18 @@ export type NotificationPreferencePayload = {
   onPublished: boolean;
   onAuthorActions: boolean;
   onOwnArticles: boolean;
+  emailOwnArticles: boolean;
+  emailAuthorActions: boolean;
+  inAppOwnArticles: boolean;
+  inAppAuthorActions: boolean;
+  browserPushOwnArticles: boolean;
+  browserPushAuthorActions: boolean;
+  onSubmittedOwnArticles: boolean;
+  onSubmittedAuthorActions: boolean;
+  onCorrectionsOwnArticles: boolean;
+  onCorrectionsAuthorActions: boolean;
+  onPublishedOwnArticles: boolean;
+  onPublishedAuthorActions: boolean;
 };
 
 export const defaultNotificationPreferences: NotificationPreferencePayload = {
@@ -31,6 +55,18 @@ export const defaultNotificationPreferences: NotificationPreferencePayload = {
   onPublished: true,
   onAuthorActions: true,
   onOwnArticles: true,
+  emailOwnArticles: true,
+  emailAuthorActions: true,
+  inAppOwnArticles: true,
+  inAppAuthorActions: true,
+  browserPushOwnArticles: false,
+  browserPushAuthorActions: false,
+  onSubmittedOwnArticles: true,
+  onSubmittedAuthorActions: true,
+  onCorrectionsOwnArticles: true,
+  onCorrectionsAuthorActions: true,
+  onPublishedOwnArticles: true,
+  onPublishedAuthorActions: true,
 };
 
 export function toNotificationPreferencePayload(
@@ -45,6 +81,18 @@ export function toNotificationPreferencePayload(
         | "onPublished"
         | "onAuthorActions"
         | "onOwnArticles"
+        | "emailOwnArticles"
+        | "emailAuthorActions"
+        | "inAppOwnArticles"
+        | "inAppAuthorActions"
+        | "browserPushOwnArticles"
+        | "browserPushAuthorActions"
+        | "onSubmittedOwnArticles"
+        | "onSubmittedAuthorActions"
+        | "onCorrectionsOwnArticles"
+        | "onCorrectionsAuthorActions"
+        | "onPublishedOwnArticles"
+        | "onPublishedAuthorActions"
       >
     | null
     | undefined
@@ -59,6 +107,18 @@ export function toNotificationPreferencePayload(
     onPublished: value.onPublished,
     onAuthorActions: value.onAuthorActions,
     onOwnArticles: value.onOwnArticles,
+    emailOwnArticles: value.emailOwnArticles,
+    emailAuthorActions: value.emailAuthorActions,
+    inAppOwnArticles: value.inAppOwnArticles,
+    inAppAuthorActions: value.inAppAuthorActions,
+    browserPushOwnArticles: value.browserPushOwnArticles,
+    browserPushAuthorActions: value.browserPushAuthorActions,
+    onSubmittedOwnArticles: value.onSubmittedOwnArticles,
+    onSubmittedAuthorActions: value.onSubmittedAuthorActions,
+    onCorrectionsOwnArticles: value.onCorrectionsOwnArticles,
+    onCorrectionsAuthorActions: value.onCorrectionsAuthorActions,
+    onPublishedOwnArticles: value.onPublishedOwnArticles,
+    onPublishedAuthorActions: value.onPublishedAuthorActions,
   };
 }
 
@@ -74,6 +134,18 @@ export function sanitizePreferencePatch(
     "onPublished",
     "onAuthorActions",
     "onOwnArticles",
+    "emailOwnArticles",
+    "emailAuthorActions",
+    "inAppOwnArticles",
+    "inAppAuthorActions",
+    "browserPushOwnArticles",
+    "browserPushAuthorActions",
+    "onSubmittedOwnArticles",
+    "onSubmittedAuthorActions",
+    "onCorrectionsOwnArticles",
+    "onCorrectionsAuthorActions",
+    "onPublishedOwnArticles",
+    "onPublishedAuthorActions",
   ];
   const out: Partial<NotificationPreferencePayload> = {};
   for (const key of keys) {
