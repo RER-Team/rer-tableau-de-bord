@@ -98,7 +98,7 @@ function getArticleHref(metadata: unknown): string | null {
 }
 
 export function NotificationsClient({ variant = "page", onNavigate }: NotificationsClientProps) {
-  const PAGE_SIZE = variant === "popover" ? 12 : 20;
+  const PAGE_SIZE = 20;
   const isPopover = variant === "popover";
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -119,8 +119,8 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
     try {
       const params = new URLSearchParams({
         take: String(PAGE_SIZE),
-        status: statusFilter,
-        scope: scopeFilter,
+        status: isPopover ? "all" : statusFilter,
+        scope: isPopover ? "all" : scopeFilter,
       });
       if (isPopover) {
         params.set("view", "popover");
@@ -158,8 +158,8 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
     try {
       const params = new URLSearchParams({
         take: String(PAGE_SIZE),
-        status: statusFilter,
-        scope: scopeFilter,
+        status: isPopover ? "all" : statusFilter,
+        scope: isPopover ? "all" : scopeFilter,
         cursor: nextCursor,
       });
       if (isPopover) {
@@ -352,14 +352,25 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2" aria-label="Actions globales notifications">
-            <button
-              type="button"
-              onClick={markAllAsRead}
-              disabled={!hasUnread || loading}
-              className={actionButtonClass()}
-            >
-              Marquer tout comme lu
-            </button>
+            {isPopover ? (
+              <button
+                type="button"
+                onClick={() => void purgeAll()}
+                disabled={loading}
+                className={actionButtonClass("danger")}
+              >
+                Vider toutes les notifications
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={markAllAsRead}
+                disabled={!hasUnread || loading}
+                className={actionButtonClass()}
+              >
+                Marquer tout comme lu
+              </button>
+            )}
             {!isPopover ? (
               <button
                 type="button"
@@ -380,28 +391,29 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                 Vider le centre de notifications
               </button>
             ) : null}
-            <button
-              type="button"
-              onClick={() => void refresh()}
-              disabled={loading}
-              className={actionButtonClass()}
-            >
-              Actualiser
-            </button>
-            <Link
-              href="/parametres/notifications"
-              onClick={onNavigate}
-              className={actionButtonClass()}
-            >
-              Gérer mes notifications
-            </Link>
-            {isPopover ? (
-              <Link href="/notifications" onClick={onNavigate} className={actionButtonClass()}>
-                Voir tout
+            {!isPopover ? (
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                disabled={loading}
+                className={actionButtonClass()}
+              >
+                Actualiser
+              </button>
+            ) : null}
+            {!isPopover ? (
+              <Link
+                href="/parametres/notifications"
+                onClick={onNavigate}
+                className={actionButtonClass()}
+              >
+                Gérer mes notifications
               </Link>
             ) : null}
+            {isPopover ? null : null}
           </div>
         </div>
+        {!isPopover ? (
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrer par statut">
           <span className="text-xs font-medium uppercase tracking-wide text-rer-subtle">Statut</span>
           {(["all", "unread", "read"] as const).map((value) => (
@@ -416,6 +428,8 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
             </button>
           ))}
         </div>
+        ) : null}
+        {!isPopover ? (
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrer par origine">
           <span className="text-xs font-medium uppercase tracking-wide text-rer-subtle">Origine</span>
           {(["all", "adminArticles", "authorActions"] as const).map((value) => (
@@ -429,14 +443,15 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
               {value === "all"
                 ? "Toutes"
                 : value === "adminArticles"
-                  ? "Mes articles (que j'ai publies/modifies)"
+                  ? "Mes articles admin"
                   : "Articles des auteurs"}
             </button>
           ))}
         </div>
+        ) : null}
       </header>
 
-      <div className={`space-y-3 p-4 ${isPopover ? "max-h-[70vh] overflow-y-auto overscroll-contain pr-2" : ""}`}>
+      <div className={`space-y-3 p-4 ${isPopover ? "max-h-[58vh] overflow-y-auto overscroll-contain pr-2" : ""}`}>
         {feedback ? (
           <p
             role="status"
@@ -465,7 +480,7 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
 
         {!loading && items.length === 0 ? (
           <p className="rounded-lg border border-dashed border-rer-border p-6 text-sm text-rer-muted">
-            {statusFilter === "unread"
+            {statusFilter === "unread" && !isPopover
               ? "Aucune notification non lue pour cette vue."
               : "Aucune notification disponible pour cette vue."}
           </p>
@@ -484,13 +499,17 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                   const articleHref = getArticleHref(item.metadata);
                   const scopeBadgeClass =
                     scope === "adminArticles"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-violet-100 text-violet-700";
+                      ? "bg-blue-100 text-blue-800 border border-blue-200"
+                      : "bg-orange-100 text-orange-800 border border-orange-200";
+                  const scopeCardClass =
+                    scope === "adminArticles"
+                      ? "border-l-4 border-l-blue-500"
+                      : "border-l-4 border-l-orange-500";
 
                   return (
                     <li
                       key={item.id}
-                      className={`rounded-xl border px-3 py-2 transition-all duration-150 ${
+                      className={`rounded-xl border px-3 py-2 transition-all duration-150 ${scopeCardClass} ${
                         isRead
                           ? "border-rer-border bg-white hover:border-rer-border/80 hover:bg-rer-app/30"
                           : "border-rer-blue/30 bg-rer-blue/5 shadow-[inset_0_0_0_1px_rgba(33,85,163,0.04)] hover:border-rer-blue/40"
@@ -501,8 +520,8 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                           <div className="flex flex-wrap items-center gap-2">
                             <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${scopeBadgeClass}`}>
                               {scope === "adminArticles"
-                                ? "Mes articles (que j&apos;ai publies/modifies)"
-                                : "Articles des auteurs"}
+                                ? "Articles admin"
+                                : "Articles auteurs"}
                             </span>
                             {!isRead ? (
                               <span className="h-2 w-2 rounded-full bg-rer-blue" aria-label="Notification non lue" />
@@ -538,13 +557,15 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                               Marquer comme non lue
                             </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => void deleteOne(item.id)}
-                            className="rounded-md border border-rer-border px-2 py-1 text-xs font-medium text-rer-text transition-colors hover:border-red-200 hover:bg-red-50/70 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
-                          >
-                            Retirer
-                          </button>
+                          {!isPopover ? (
+                            <button
+                              type="button"
+                              onClick={() => void deleteOne(item.id)}
+                              className="rounded-md border border-rer-border px-2 py-1 text-xs font-medium text-rer-text transition-colors hover:border-red-200 hover:bg-red-50/70 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
+                            >
+                              Retirer
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     </li>
@@ -555,17 +576,23 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
           ))}
         </div>
 
-        <footer className="flex items-center justify-between border-t border-rer-border pt-3 text-xs text-rer-muted">
-          <span>{items.length} affichée(s) sur {totalCount}</span>
-          <button
-            type="button"
-            onClick={() => void loadMore()}
-            disabled={!hasMore || loadingMore}
-            className="rounded-md border border-rer-border px-2.5 py-1.5 text-xs font-medium text-rer-text transition-colors hover:bg-rer-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loadingMore ? "Chargement..." : hasMore ? "Afficher plus" : "Aucune autre notification"}
-          </button>
-        </footer>
+        {!isPopover ? (
+          <footer className="flex items-center justify-between border-t border-rer-border pt-3 text-xs text-rer-muted">
+            <span>{items.length} affichée(s) sur {totalCount}</span>
+            <button
+              type="button"
+              onClick={() => void loadMore()}
+              disabled={!hasMore || loadingMore}
+              className="rounded-md border border-rer-border px-2.5 py-1.5 text-xs font-medium text-rer-text transition-colors hover:bg-rer-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loadingMore ? "Chargement..." : hasMore ? "Afficher plus" : "Aucune autre notification"}
+            </button>
+          </footer>
+        ) : (
+          <footer className="border-t border-rer-border pt-3 text-xs text-rer-muted">
+            <span>{items.length} notification(s) recente(s)</span>
+          </footer>
+        )}
       </div>
     </section>
   );
