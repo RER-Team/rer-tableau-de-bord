@@ -99,7 +99,7 @@ function LoginPageInner() {
           </div>
         </div>
         <h1 className="text-lg font-semibold text-rer-text">
-          Connexion au tableau de bord
+          Connexion à la banque de contenus
         </h1>
         <p className="mt-1 text-sm text-rer-muted">
           Saisissez vos identifiants pour accéder aux articles et à l’espace
