@@ -235,6 +235,26 @@ export function ArticleReadSidePanel({
                     {article.mutuelle && ` · ${article.mutuelle.nom}`}
                   </p>
                 </div>
+                <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
+                  <a
+                    href={`/api/articles/${article.id}/export?format=txt`}
+                    className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
+                  >
+                    Export TXT
+                  </a>
+                  <a
+                    href={`/api/articles/${article.id}/export?format=html`}
+                    className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
+                  >
+                    Export HTML
+                  </a>
+                  <a
+                    href={`/api/articles/${article.id}/export?format=word`}
+                    className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
+                  >
+                    Exporter Word
+                  </a>
+                </div>
               </header>
 
               {article.lienPhoto && (
@@ -311,24 +331,6 @@ export function ArticleReadSidePanel({
                     Modifier (admin)
                   </Link>
                 )}
-                <a
-                  href={`/api/articles/${article.id}/export?format=txt`}
-                  className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
-                >
-                  Export TXT
-                </a>
-                <a
-                  href={`/api/articles/${article.id}/export?format=html`}
-                  className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
-                >
-                  Export HTML
-                </a>
-                <a
-                  href={`/api/articles/${article.id}/export?format=word`}
-                  className="inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-1 text-[11px] font-medium text-rer-text hover:bg-rer-app/60"
-                >
-                  Exporter Word
-                </a>
               </div>
             </div>
           )}
