@@ -102,7 +102,6 @@ export async function dispatchArticleNotificationEvent(
     where: { auteurId: event.targetAuteurId },
     select: { id: true, email: true, role: true },
   });
-  if (!targetUser?.id) return;
   const targetAuteur = await prisma.auteur.findUnique({
     where: { id: event.targetAuteurId },
     select: { prenom: true },
@@ -113,17 +112,19 @@ export async function dispatchArticleNotificationEvent(
   const articleUrl = baseUrl ? `${baseUrl}/articles/${article.id}` : `/articles/${article.id}`;
   const pushUrl = baseUrl ? `${baseUrl}/articles/${article.id}` : `/articles/${article.id}`;
 
-  const preference = await prisma.userNotificationPreference.findUnique({
-    where: { userId: targetUser.id },
-    select: {
-      emailEnabled: true,
-      inAppEnabled: true,
-      browserPushEnabled: true,
-      onSubmitted: true,
-      onCorrections: true,
-      onPublished: true,
-    },
-  });
+  const preference = targetUser?.id
+    ? await prisma.userNotificationPreference.findUnique({
+        where: { userId: targetUser.id },
+        select: {
+          emailEnabled: true,
+          inAppEnabled: true,
+          browserPushEnabled: true,
+          onSubmitted: true,
+          onCorrections: true,
+          onPublished: true,
+        },
+      })
+    : null;
 
   const effectivePreference = preference ?? defaultNotificationPreferences;
   const shouldNotifyUser = shouldNotifyForEvent(event.type, effectivePreference);
@@ -181,10 +182,7 @@ export async function dispatchArticleNotificationEvent(
     adminSignature,
   };
 
-  if (
-    (event.type === "article.submitted" || event.type === "article.published") &&
-    targetUser.role === "auteur"
-  ) {
+  if (event.type === "article.submitted" || event.type === "article.published") {
     const depositorName = `${article.auteur?.prenom || ""} ${article.auteur?.nom || ""}`.trim();
     const isSubmission = event.type === "article.submitted";
     const contactSubject = isSubmission
@@ -234,7 +232,7 @@ export async function dispatchArticleNotificationEvent(
     }
   }
 
-  if (shouldNotifyUser && effectivePreference.inAppEnabled) {
+  if (targetUser?.id && shouldNotifyUser && effectivePreference.inAppEnabled) {
     const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:in_app:${transitionKey}`;
     const existing = await prisma.notificationDelivery.findUnique({
       where: { dedupeKey },
@@ -280,7 +278,12 @@ export async function dispatchArticleNotificationEvent(
     }
   }
 
-  if (shouldNotifyUser && effectivePreference.emailEnabled && targetUser.email) {
+  if (
+    targetUser?.id &&
+    shouldNotifyUser &&
+    effectivePreference.emailEnabled &&
+    targetUser.email
+  ) {
     const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:email:${transitionKey}`;
     const existing = await prisma.notificationDelivery.findUnique({
       where: { dedupeKey },
@@ -333,8 +336,7 @@ export async function dispatchArticleNotificationEvent(
   }
 
   if (
-    (event.type === "article.submitted" || event.type === "article.published") &&
-    targetUser.role === "auteur"
+    (event.type === "article.submitted" || event.type === "article.published")
   ) {
     const isSubmission = event.type === "article.submitted";
     const depositorName = `${article.auteur?.prenom || ""} ${article.auteur?.nom || ""}`.trim();
@@ -385,7 +387,7 @@ export async function dispatchArticleNotificationEvent(
     }
   }
 
-  if (shouldNotifyUser && effectivePreference.browserPushEnabled) {
+  if (targetUser?.id && shouldNotifyUser && effectivePreference.browserPushEnabled) {
     const subscriptions = await prisma.pushSubscription.findMany({
       where: { userId: targetUser.id },
       select: { id: true, endpoint: true, p256dh: true, auth: true },

@@ -130,4 +130,27 @@ describe("dispatchArticleNotificationEvent", () => {
       })
     );
   });
+
+  it("envoie l'alerte admin meme sans compte user lie a l'auteur", async () => {
+    mocks.userFindFirst.mockResolvedValue(null);
+
+    await dispatchArticleNotificationEvent({
+      event: {
+        type: "article.submitted",
+        articleId: "article-1",
+        targetAuteurId: "auteur-1",
+      },
+    });
+
+    expect(mocks.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "contact@reseaudesediteursderevues.org",
+      })
+    );
+    expect(mocks.userFindMany).toHaveBeenCalledWith({
+      where: { role: "admin" },
+      select: { id: true },
+    });
+    expect(mocks.preferenceFindUnique).not.toHaveBeenCalled();
+  });
 });
