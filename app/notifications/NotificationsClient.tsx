@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { dispatchNotificationsUpdated } from "@/lib/notifications/client-sync";
 
@@ -324,6 +324,29 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
   }, [mutateNotifications]);
 
   const hasUnread = unreadCount > 0;
+  const isInteractiveTarget = (target: EventTarget | null): boolean => {
+    if (!(target instanceof HTMLElement)) return false;
+    return !!target.closest("button, a, input, textarea, select, [role='button']");
+  };
+
+  const handleNotificationContainerClick = useCallback(
+    (event: ReactMouseEvent<HTMLElement>, id: string, isRead: boolean) => {
+      if (isRead || isInteractiveTarget(event.target)) return;
+      void markAsRead(id);
+    },
+    [markAsRead]
+  );
+
+  const handleNotificationContainerKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLElement>, id: string, isRead: boolean) => {
+      if (isRead || isInteractiveTarget(event.target)) return;
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      void markAsRead(id);
+    },
+    [markAsRead]
+  );
+
   const groupedItems = useMemo(() => {
     const map = new Map<string, NotificationItem[]>();
     for (const item of items) {
@@ -443,8 +466,8 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
               {value === "all"
                 ? "Toutes"
                 : value === "adminArticles"
-                  ? "Mes articles admin"
-                  : "Articles des auteurs"}
+                  ? "Mes contenus admin"
+                  : "Contenus des auteurs"}
             </button>
           ))}
         </div>
@@ -509,10 +532,14 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                   return (
                     <li
                       key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={(event) => handleNotificationContainerClick(event, item.id, isRead)}
+                      onKeyDown={(event) => handleNotificationContainerKeyDown(event, item.id, isRead)}
                       className={`rounded-xl border px-3 py-2 transition-all duration-150 ${scopeCardClass} ${
                         isRead
                           ? "border-rer-border bg-white hover:border-rer-border/80 hover:bg-rer-app/30"
-                          : "border-rer-blue/30 bg-rer-blue/5 shadow-[inset_0_0_0_1px_rgba(33,85,163,0.04)] hover:border-rer-blue/40"
+                          : "cursor-pointer border-rer-blue/30 bg-rer-blue/5 shadow-[inset_0_0_0_1px_rgba(33,85,163,0.04)] hover:border-rer-blue/40"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -520,8 +547,8 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                           <div className="flex flex-wrap items-center gap-2">
                             <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${scopeBadgeClass}`}>
                               {scope === "adminArticles"
-                                ? "Articles admin"
-                                : "Articles auteurs"}
+                                ? "Contenus admin"
+                                : "Contenus auteurs"}
                             </span>
                             {!isRead ? (
                               <span className="h-2 w-2 rounded-full bg-rer-blue" aria-label="Notification non lue" />
@@ -535,7 +562,7 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                               href={articleHref}
                               className="inline-flex text-xs font-medium text-rer-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
                             >
-                              Ouvrir l&apos;article
+                              Ouvrir le contenu
                             </Link>
                           ) : null}
                         </div>
