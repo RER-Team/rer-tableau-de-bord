@@ -5,7 +5,7 @@ import { AppShell } from "./AppShell";
 
 export const metadata: Metadata = {
   title: "RER Tableau de bord",
-  description: "Base de données d’articles",
+  description: "Banque de contenus",
   icons: {
     icon: "/api/favicon",
     shortcut: "/api/favicon",

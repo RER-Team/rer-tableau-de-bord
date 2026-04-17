@@ -7,7 +7,7 @@ Remplacer Looker par un outil sur mesure (plus de dépendance aux erreurs Looker
 Gérer tout le cycle rédaction → relecture → publication dans une seule interface.
 Enrichir les contenus avec l’IA (découpage, titres, résumés, posts RS, adaptation multi-format).
 Offrir une UX moderne, efficace et responsive (bureau + mobile/tablette).
-Identité : conserver la marque « RESEAU DES EDITEURS DE REVUES » / « RER », le titre « Base de données d’articles » et la baseline « Cherchez, lisez, téléchargez, publiez sur votre site ! ».
+Identité : conserver la marque « RESEAU DES EDITEURS DE REVUES » / « RER », le titre « Banque de contenus » et la baseline « Cherchez, lisez, téléchargez, publiez sur votre site ! ».
 
 Workflow actuel (à remplacer / simplifier) :
 Make : automatisations (enchaînement des étapes entre les outils).

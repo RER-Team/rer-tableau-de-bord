@@ -117,7 +117,7 @@ IA (relecteurs/admin, extensible ; jamais publié sans validation humaine), noti
 
 ## 6. Design et UX
 
-- Tout sur la plateforme (pas de dépendance Google Docs). Identité RER, titre « Base de données d’articles », baseline « Cherchez, lisez, téléchargez, publiez sur votre site ! ».
+- Tout sur la plateforme (pas de dépendance Google Docs). Identité RER, titre « Banque de contenus », baseline « Cherchez, lisez, téléchargez, publiez sur votre site ! ».
 - **UX :** moderne, flat, agréable, très efficace (1–2 clics pour actions principales, listes scannables, filtres accessibles). Responsive, accessibilité, performance (pagination/virtualisation), feedback clair.
 
 ---

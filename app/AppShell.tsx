@@ -82,7 +82,7 @@ export function AppShell({ children }: AppShellProps) {
               </div>
               <div className="min-w-0 flex flex-col">
                 <span className="truncate text-sm font-semibold text-rer-text sm:text-base">
-                  Base de données d’articles
+                  Banque de contenus
                 </span>
               </div>
             </Link>
