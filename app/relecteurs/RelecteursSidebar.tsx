@@ -15,11 +15,6 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    href: "/admin/articles",
-    label: "File d’articles",
-    description: "Par état et actions rapides",
-  },
-  {
     href: "/admin/utilisateurs",
     label: "Utilisateurs",
     description: "Rôles et rattachements",
