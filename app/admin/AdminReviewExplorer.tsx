@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ingestDebug } from "@/lib/ingest-debug";
+import { dispatchNotificationsUpdated } from "@/lib/notifications/client-sync";
 import {
   type ArticleStatusOption,
   getArticleStatusLabel,
@@ -341,6 +342,7 @@ function AdminArticlePanel({
       }
       const updated = (await res.json()) as ArticleDetail;
       onEtatUpdated(updated.etat?.slug ?? null);
+      dispatchNotificationsUpdated();
       router.refresh();
     } finally {
       setUpdatingEtat(false);
@@ -1144,6 +1146,7 @@ export function AdminReviewExplorer({
         return;
       }
       setSelectedBulkIds([]);
+      dispatchNotificationsUpdated();
       router.refresh();
     } catch {
       alert("Erreur réseau lors de la mise à jour en masse.");

@@ -125,6 +125,8 @@ export function NotificationsClient() {
       setTotalCount(payload.totalCount ?? 0);
       setHasMore(payload.hasMore ?? false);
       setNextCursor(payload.nextCursor ?? null);
+      // Synchronise la cloche partout dans l'app meme sur un refresh manuel.
+      dispatchNotificationsUpdated({ unreadCount: nextUnreadCount });
       return nextUnreadCount;
     } catch {
       setError("Impossible de charger vos notifications.");
@@ -176,10 +178,7 @@ export function NotificationsClient() {
         throw new Error(errorMessage);
       }
       setFeedback({ tone: "success", text: successMessage });
-      const nextUnreadCount = await refresh();
-      dispatchNotificationsUpdated(
-        typeof nextUnreadCount === "number" ? { unreadCount: nextUnreadCount } : undefined
-      );
+      await refresh();
     },
     [refresh]
   );

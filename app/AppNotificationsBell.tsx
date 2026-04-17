@@ -40,10 +40,22 @@ export function AppNotificationsBell({ isActive = false }: AppNotificationsBellP
       }
       void refresh();
     });
+    const onFocus = () => {
+      void refresh();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refresh();
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       active = false;
       unsubscribe();
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       if (timer) window.clearTimeout(timer);
     };
   }, []);

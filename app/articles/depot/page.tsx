@@ -8,6 +8,7 @@ import ArticleEditorCard, {
   ArticleEditorValue,
 } from "../../components/ArticleEditorCard";
 import { ingestDebug } from "@/lib/ingest-debug";
+import { dispatchNotificationsUpdated } from "@/lib/notifications/client-sync";
 
 type Referentiels = ArticleEditorReferentiels & {
   etats: { id: string; slug: string; libelle: string }[];
@@ -316,6 +317,7 @@ export default function DepotPage() {
       setLegendePhoto("");
       setCreditPhoto("");
       setPostRs("");
+      dispatchNotificationsUpdated();
       if (newId) {
         router.push(`/mes-articles`);
       } else {
