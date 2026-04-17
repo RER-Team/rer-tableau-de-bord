@@ -182,23 +182,16 @@ export async function dispatchArticleNotificationEvent(
     adminSignature,
   };
 
-  if (event.type === "article.submitted" || event.type === "article.published") {
+  if (event.type === "article.submitted") {
     const depositorName = `${article.auteur?.prenom || ""} ${article.auteur?.nom || ""}`.trim();
-    const isSubmission = event.type === "article.submitted";
-    const contactSubject = isSubmission
-      ? `Article déposé : ${article.titre}`
-      : `Article publié : ${article.titre}`;
+    const contactSubject = `Article déposé : ${article.titre}`;
     const contactText = [
       `Bonjour,`,
       "",
-      isSubmission
-        ? `L'article "${article.titre}" vient d'être déposé par ${depositorName || "un auteur"}.`
-        : `L'article "${article.titre}" déposé par ${depositorName || "un auteur"} vient d'être publié.`,
+      `L'article "${article.titre}" vient d'être déposé par ${depositorName || "un auteur"}.`,
       `Lien : ${articleUrl}`,
     ].join("\n");
-    const contactHtml = isSubmission
-      ? `<p>Bonjour,</p><p>L'article "<strong>${article.titre}</strong>" vient d'être déposé par ${depositorName || "un auteur"}.</p><p><a href="${articleUrl}">Ouvrir l'article</a></p>`
-      : `<p>Bonjour,</p><p>L'article "<strong>${article.titre}</strong>" déposé par ${depositorName || "un auteur"} vient d'être publié.</p><p><a href="${articleUrl}">Ouvrir l'article</a></p>`;
+    const contactHtml = `<p>Bonjour,</p><p>L'article "<strong>${article.titre}</strong>" vient d'être déposé par ${depositorName || "un auteur"}.</p><p><a href="${articleUrl}">Ouvrir l'article</a></p>`;
     try {
       await retryWithTimeout(
         () =>
@@ -208,7 +201,7 @@ export async function dispatchArticleNotificationEvent(
             subject: contactSubject,
             text: contactText,
             html: contactHtml,
-            tags: [isSubmission ? "article-submitted" : "article-published", "admin-alert"],
+            tags: ["article-submitted", "admin-alert"],
             meta: {
               articleId: article.id,
               eventType: event.type,
@@ -216,7 +209,7 @@ export async function dispatchArticleNotificationEvent(
             },
           }),
         {
-          label: isSubmission ? "email-contact-submitted" : "email-contact-published",
+          label: "email-contact-submitted",
           retries: 2,
           baseDelayMs: 250,
           timeoutMs: 8000,

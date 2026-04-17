@@ -153,4 +153,20 @@ describe("dispatchArticleNotificationEvent", () => {
     });
     expect(mocks.preferenceFindUnique).not.toHaveBeenCalled();
   });
+
+  it("n'envoie pas de mail a l'adresse contact lors d'une publication", async () => {
+    await dispatchArticleNotificationEvent({
+      event: {
+        type: "article.published",
+        articleId: "article-1",
+        targetAuteurId: "auteur-1",
+      },
+    });
+
+    expect(mocks.sendMail).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "contact@reseaudesediteursderevues.org",
+      })
+    );
+  });
 });
