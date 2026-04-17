@@ -463,9 +463,7 @@ export function NotificationsClient() {
                             ) : null}
                             <span className="text-xs text-rer-subtle">{formatDate(item.createdAt)}</span>
                           </div>
-                          <p className="truncate text-sm font-semibold leading-5 text-rer-text">
-                            {scope === "adminArticles" ? "Article" : "Auteur"} - {item.title}
-                          </p>
+                          <p className="truncate text-sm font-semibold leading-5 text-rer-text">{item.title}</p>
                           <p className="line-clamp-2 text-sm leading-5 text-rer-muted">{item.body}</p>
                           {articleHref ? (
                             <Link

@@ -60,26 +60,21 @@ function resolveAuthorDisplayName(article: {
 }
 
 function resolveActionTag(eventType: ArticleNotificationEvent["type"]): string {
-  if (eventType === "article.submitted") return "Depot - À relire";
+  if (eventType === "article.submitted") return "Depot";
   if (eventType === "article.corrections_requested_or_resubmitted") {
-    return "Corrections - À relire";
+    return "Corrections";
   }
-  if (eventType === "article.published") return "Publication - Publié";
+  if (eventType === "article.published") return "Publication";
   return "Notification";
 }
 
 function buildInAppTitle(args: {
   eventType: ArticleNotificationEvent["type"];
-  baseTitle: string;
   articleTitle: string;
   authorDisplayName: string;
 }): string {
   const actionTag = resolveActionTag(args.eventType);
-  const scope = resolveInAppScope(args.eventType);
-  if (scope === "authorActions") {
-    return `${actionTag} - ${args.authorDisplayName} - ${args.articleTitle}`;
-  }
-  return `${actionTag} - ${args.baseTitle} - ${args.articleTitle}`;
+  return `${actionTag} - ${args.authorDisplayName} - ${args.articleTitle}`;
 }
 
 export async function dispatchArticleNotificationEvent(
@@ -248,7 +243,6 @@ export async function dispatchArticleNotificationEvent(
     if (!existing) {
       const inAppTitle = buildInAppTitle({
         eventType: event.type,
-        baseTitle: renderTemplate(templateBase.inAppTitle, templateVars),
         articleTitle: article.titre,
         authorDisplayName,
       });
