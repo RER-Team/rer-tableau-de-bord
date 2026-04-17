@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { dispatchNotificationsUpdated } from "@/lib/notifications/client-sync";
 
 type NotificationItem = {
   id: string;
@@ -119,12 +120,15 @@ export function NotificationsClient() {
       }
       const payload = (await response.json()) as NotificationsPayload;
       setItems(payload.items ?? []);
-      setUnreadCount(payload.unreadCount ?? 0);
+      const nextUnreadCount = payload.unreadCount ?? 0;
+      setUnreadCount(nextUnreadCount);
       setTotalCount(payload.totalCount ?? 0);
       setHasMore(payload.hasMore ?? false);
       setNextCursor(payload.nextCursor ?? null);
+      return nextUnreadCount;
     } catch {
       setError("Impossible de charger vos notifications.");
+      return null;
     } finally {
       setLoading(false);
     }
@@ -172,7 +176,10 @@ export function NotificationsClient() {
         throw new Error(errorMessage);
       }
       setFeedback({ tone: "success", text: successMessage });
-      await refresh();
+      const nextUnreadCount = await refresh();
+      dispatchNotificationsUpdated(
+        typeof nextUnreadCount === "number" ? { unreadCount: nextUnreadCount } : undefined
+      );
     },
     [refresh]
   );

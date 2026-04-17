@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { subscribeToNotificationsUpdated } from "@/lib/notifications/client-sync";
 
 type AppNotificationsBellProps = {
   isActive?: boolean;
@@ -32,9 +33,17 @@ export function AppNotificationsBell({ isActive = false }: AppNotificationsBellP
     };
 
     void refresh();
+    const unsubscribe = subscribeToNotificationsUpdated((detail) => {
+      if (typeof detail?.unreadCount === "number") {
+        setUnreadCount(detail.unreadCount);
+        return;
+      }
+      void refresh();
+    });
 
     return () => {
       active = false;
+      unsubscribe();
       if (timer) window.clearTimeout(timer);
     };
   }, []);
