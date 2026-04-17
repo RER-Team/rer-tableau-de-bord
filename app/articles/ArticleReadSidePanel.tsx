@@ -122,7 +122,7 @@ export function ArticleReadSidePanel({
       signal: controller.signal,
     })
       .then((r) => {
-        if (!r.ok) throw new Error("Article introuvable");
+        if (!r.ok) throw new Error("Contenu introuvable");
         return r.json();
       })
       .then((data: ArticleDetail) => {
@@ -215,7 +215,7 @@ export function ArticleReadSidePanel({
                     )}
                     {!article.rubrique?.libelle &&
                       !article.format?.libelle && (
-                        <span className="text-xs text-rer-muted">Article</span>
+                        <span className="text-xs text-rer-muted">Contenu</span>
                       )}
                   </div>
                   <h2 className="text-xl font-semibold text-rer-text">

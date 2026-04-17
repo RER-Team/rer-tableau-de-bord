@@ -1,0 +1,21 @@
+# TODO
+
+- Revoir la page login pour supprimer les infos liées aux comptes de test + rajouter le logo sur cette page.
+- Créer une favicon.
+- Revoir les exports HTML + copie texte + export Word.
+- Supprimer la page statistiques.
+- Limiter le nombre de notifications affichées dans la page.
+- Corriger les notifications navigateur qui ne fonctionnent pas.
+- Rendre possible l'ajout d'une photo de profil (compressée et optimisée comme les autres photos).
+- Changer l'icône notifications par du flat design.
+- Corriger le nom de l'expéditeur du mail (affiche actuellement le nom du destinataire).
+- [Phase 2] Refactor technique : renommer progressivement les symboles techniques liés à "article" vers "contenu" (types, composants, variables, fonctions, tests) avec stratégie de compatibilité.
+  - Lister les symboles ciblés (`Article*`, `article*`, `articles*`) par module.
+  - Définir la convention de renommage (`Content*`, `content*`, `contents*`).
+  - Renommer en lots (UI, API, libs, tests) avec alias transitoires si nécessaire.
+  - Vérifier build + tests après chaque lot pour limiter les régressions.
+- [Phase 3] Refactor DB/API : préparer la migration Prisma/BDD (modèles, relations, colonnes), définir la transition des routes/API (`/articles`, `/api/articles`) et adapter stockage/notifications/scripts.
+  - Concevoir le plan de migration Prisma (tables/champs/contraintes/index) + rollback.
+  - Choisir la stratégie de transition des routes (compatibilité, redirections, dépréciation).
+  - Mettre à jour stockage Supabase, notifications et scripts de maintenance.
+  - Valider sur base de données de test puis en staging avant production.

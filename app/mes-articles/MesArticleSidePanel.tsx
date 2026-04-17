@@ -172,7 +172,7 @@ export function MesArticleSidePanel({
       signal: controller.signal,
     })
       .then((r) => {
-        if (!r.ok) throw new Error("Article introuvable");
+        if (!r.ok) throw new Error("Contenu introuvable");
         return r.json();
       })
       .then((data: ArticleDetail) => {
@@ -296,7 +296,7 @@ export function MesArticleSidePanel({
           setLastSavedAt(new Date());
         }
       } catch (e) {
-        console.error("Sauvegarde article", e);
+        console.error("Sauvegarde contenu", e);
       } finally {
         setSavingContent(false);
       }
@@ -403,7 +403,7 @@ export function MesArticleSidePanel({
                     )}
                     {!article.rubrique?.libelle &&
                       !article.format?.libelle && (
-                        <span className="text-xs text-rer-muted">Article</span>
+                        <span className="text-xs text-rer-muted">Contenu</span>
                       )}
                   </div>
                   <h2 className="text-xl font-semibold text-rer-text">

@@ -131,21 +131,21 @@ export default async function AdminArticlesQueuePage({
   }));
 
   return (
-    <section aria-label="File d’articles à relire" className="space-y-4">
+    <section aria-label="File de contenus à relire" className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-rer-text">
             Relecture et correction
           </h1>
           <p className="mt-1 max-w-xl text-sm text-rer-muted">
-            Accédez à la file de relecture, changez les états et ouvrez un article pour le corriger.
+            Accédez à la file de relecture, changez les états et ouvrez un contenu pour le corriger.
           </p>
         </div>
         <Link href="/articles/depot" className="btn-cta hidden lg:inline-flex">
           <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-base leading-none">
             +
           </span>
-          <span>Nouvel article</span>
+          <span>Nouveau contenu</span>
         </Link>
       </div>
 

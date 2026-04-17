@@ -1,6 +1,6 @@
 # Utilisation – RER Tableau de bord V2
 
-Guide utilisateur pour la base de données d’articles (dépôt, relecture, consultation). À tester en local avec `npm run dev` puis http://localhost:3000.
+Guide utilisateur pour la base de données de contenus (dépôt, relecture, consultation). À tester en local avec `npm run dev` puis http://localhost:3000.
 
 ---
 
@@ -29,19 +29,19 @@ Seuls les utilisateurs connectés peuvent accéder au tableau de bord et aux act
 
 - **Page d’accueil (`/`)**  
   - Si l’utilisateur est **Relecteur** ou **Admin** : redirection automatique vers la file de relecture `/admin/articles?etat=a_relire`.  
-  - Sinon (Auteur, Lecteur ou non connecté) : redirection vers la page Articles `/articles` en vue Explorer.
+  - Sinon (Auteur, Lecteur ou non connecté) : redirection vers la page Contenus `/articles` en vue Explorer.
 
 - **Menu principal (header)**  
   En haut à droite du site, un menu permet d’accéder aux sections suivantes :
-  - **Articles** : liste complète des articles (`/articles`), avec plusieurs vues (Explorer, Cartes, Tableau).  
-  - **Mes articles** : accès rapide aux articles déposés par l’utilisateur connecté (`/mes-articles`, redirigé pour l’instant vers `/articles?mine=1`).  
+  - **Contenus** : liste complète des contenus (`/articles`), avec plusieurs vues (Explorer, Cartes, Tableau).
+  - **Mes contenus** : accès rapide aux contenus déposés par l’utilisateur connecté (`/mes-articles`, redirigé pour l’instant vers `/articles?mine=1`).
   - **Relecteurs** : entrée dédiée aux relecteurs/admin (`/relecteurs`, qui renvoie aujourd’hui vers la vue Explorer avec des paramètres spécifiques).
 
-- **Fiche article** : `/articles/[id]`  
+- **Fiche contenu** : `/articles/[id]`
   Affichage du titre, auteur, mutuelle, rubrique, format, date de publication (`datePublication ?? dateDepot ?? createdAt`), état (pour les profils autorisés), chapô, contenu, image (si présente), post RS, lien Google Doc.  
   **Relecteur / Admin** : bouton **« Corriger »** pour passer en mode édition.
 
-### 2.1. Vue Articles – Explorer / Cartes / Tableau
+### 2.1. Vue Contenus – Explorer / Cartes / Tableau
 
 Sur `/articles`, trois modes d’affichage sont disponibles :
 
@@ -77,27 +77,27 @@ En haut de la page `/articles`, une **barre de filtres** commune aux trois vues 
 
 ### 2.3. Date affichée dans les listes
 
-Dans toutes les vues de liste (Explorer, Cartes, Tableau) et sur la fiche article, la date affichée est :
+Dans toutes les vues de liste (Explorer, Cartes, Tableau) et sur la fiche contenu, la date affichée est :
 
 - Toujours sous la forme **« Publié le JJ/MM/AAAA »**.  
 - Calculée avec la règle : `datePublication ?? dateDepot ?? createdAt`, ce qui permet :
-  - D’utiliser `dateDepot` comme date de référence pour les articles importés historiques.  
-  - D’utiliser `datePublication` pour les articles validés via le workflow de relecture.  
+  - D’utiliser `dateDepot` comme date de référence pour les contenus importés historiques.
+  - D’utiliser `datePublication` pour les contenus validés via le workflow de relecture.
   - De retomber sur `createdAt` si aucune des autres n’est disponible.
 
 ---
 
-## 3. Mes articles
+## 3. Mes contenus
 
-- **URL** : `/mes-articles` (via le menu en haut à droite).  
+- **URL** : `/mes-articles` (via le menu en haut à droite, libellé "Mes contenus").
 - **Comportement actuel** : redirige vers `/articles?mine=1`.  
-- **Objectif** : afficher uniquement les articles dont l’utilisateur connecté est l’auteur (liste filtrée), avec la même ergonomie que la page Articles (vues Explorer / Cartes / Tableau, filtres, etc.).  
+- **Objectif** : afficher uniquement les contenus dont l’utilisateur connecté est l’auteur (liste filtrée), avec la même ergonomie que la page Contenus (vues Explorer / Cartes / Tableau, filtres, etc.).
   Le filtrage précis `mine=1` sera pleinement opérationnel une fois la gestion des comptes et des permissions finalisée.
-- **Voir l'article** et **Modifier** : ouvrent un **panneau latéral** (sidebar) **sur la même page** (/mes-articles), sans redirection. Le panneau propose deux onglets **Lecture** et **Édition** (type Notion) : clic sur le titre ou « Voir l'article » ouvre en lecture ; « Modifier » ou « Continuer le brouillon » ouvre en édition. La fiche article pleine page reste accessible via **« Ouvrir en pleine page »** dans le panneau (partage, impression, exports).
+- **Voir le contenu** et **Modifier** : ouvrent un **panneau latéral** (sidebar) **sur la même page** (/mes-articles), sans redirection. Le panneau propose deux onglets **Lecture** et **Édition** (type Notion) : clic sur le titre ou « Voir le contenu » ouvre en lecture ; « Modifier » ou « Continuer le brouillon » ouvre en édition. La fiche contenu pleine page reste accessible via **« Ouvrir en pleine page »** dans le panneau (partage, impression, exports).
 
 ---
 
-## 4. Nouvel article – éditeur riche
+## 4. Nouveau contenu – éditeur riche
 
 - **URL** : `/articles/depot`
 - **Accès** : tout utilisateur connecté (en pratique surtout auteurs).
@@ -117,7 +117,7 @@ Dans toutes les vues de liste (Explorer, Cartes, Tableau) et sur la fiche articl
    - Le titre, le chapô et le contenu sont pré-remplis à partir du document (1er paragraphe court = titre, 2e = chapô, reste = contenu).  
    - Ajuster si besoin puis compléter auteur et autres champs avant de déposer.
 
-L’article est créé avec l’état **« À relire »**. Le contenu est stocké à la fois en **HTML** (pour les exports et la consultation) et en **JSON structuré** (pour l’éditeur riche et les évolutions futures).
+Le contenu est créé avec l’état **« À relire »**. Le contenu est stocké à la fois en **HTML** (pour les exports et la consultation) et en **JSON structuré** (pour l’éditeur riche et les évolutions futures).
 
 ---
 
@@ -125,17 +125,17 @@ L’article est créé avec l’état **« À relire »**. Le contenu est stock�
 
 Réservé aux rôles **Relecteur** et **Admin**.
 
-- Depuis la **fiche article** : cliquer sur **« Corriger »** ouvre désormais directement la **vue Explorer** avec le panneau d’édition à droite (`/articles?view=explorer&article=[id]&back=…`).  
+- Depuis la **fiche contenu** : cliquer sur **« Corriger »** ouvre désormais directement la **vue Explorer** avec le panneau d’édition à droite (`/articles?view=explorer&article=[id]&back=…`).
 - Depuis le menu **Relecteurs** (`/relecteurs` ou `/admin/articles`) : accès à la file de relecture admin, qui utilise le même panneau d’édition intégré.
 
 - **Édition unifiée** :  
-  - Il n’existe plus de page d’édition séparée de type `/articles/[id]/edit` : toute l’édition d’un article se fait soit :
+  - Il n’existe plus de page d’édition séparée de type `/articles/[id]/edit` : toute l’édition d’un contenu se fait soit :
     - dans le **panneau de relecture admin** (`/admin/articles`),  
     - soit dans la **vue Explorer auteur** (`/articles?view=explorer&article=[id]`), qui réutilise `ArticleEditorCard`.
   - Les boutons **« Modifier » / « Corriger »** dans l’interface ne font plus qu’ouvrir ces panneaux, sans changer de page.
 
 - **Espace relecteurs / admin** : `/admin/articles`  
-  - Colonne de gauche : file d’articles filtrable par **état** (Tous, À relire, Corrigé, Validé, Publié) avec badge d’état compact, mutuelle, rubrique, format et âge de l’article.  
+  - Colonne de gauche : file de contenus filtrable par **état** (Tous, À relire, Corrigé, Validé, Publié) avec badge d’état compact, mutuelle, rubrique, format et âge du contenu.
   - Colonne de droite : panneau de relecture avec :  
     - Titre multi-ligne directement éditable.  
     - Sélecteur d’auteur (liste d’auteurs/mutuelles) modifiable.  
@@ -155,9 +155,9 @@ Deux modes principaux de récupération du contenu sont disponibles :
 1. **Depuis la vue Explorer** (`/articles`, panneau de droite) :  
    - **Copier HTML** : met dans le presse-papiers un HTML propre (titre, chapô, paragraphes, post RS) prêt à coller dans un CMS ou un éditeur riche.  
    - **Copier texte** : met dans le presse-papiers un texte simple structuré (sans syntaxe Markdown), compatible avec un collage direct dans Google Docs ou Word.  
-   - Bouton **« Exporter Word »** : ouvre un téléchargement au format Word-compatible incluant le texte de l’article.
+   - Bouton **« Exporter Word »** : ouvre un téléchargement au format Word-compatible incluant le texte du contenu.
 
-2. **Depuis la fiche article** (`/articles/[id]`, via « Ouvrir en pleine page » ou lien direct) :  
+2. **Depuis la fiche contenu** (`/articles/[id]`, via « Ouvrir en pleine page » ou lien direct) :
    - Boutons d’export **TXT**, **HTML** et **Word** restent disponibles :  
      - **TXT** : export texte brut (`.txt`) avec titre, métadonnées, chapô, contenu, post RS.  
      - **HTML** : page HTML simple (`.html`) avec structure de titres et paragraphes.  
@@ -182,7 +182,7 @@ Deux modes principaux de récupération du contenu sont disponibles :
 
 ## 8. À venir (non encore implémenté)
 
-- **Notifications** : email (accusé dépôt, article relu / publié).
+- **Notifications** : email (accusé dépôt, contenu relu / publié).
 - Améliorations UX de l’éditeur de dépôt (à retravailler plus tard).
 
 Pour l’état détaillé des sprints et des tests, voir [SUIVI.md](SUIVI.md).

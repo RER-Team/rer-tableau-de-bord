@@ -67,7 +67,7 @@ export function ArticleHistoryDrawer({
       try {
         const res = await fetch(`/api/articles/${articleId}`);
         if (!res.ok) {
-          setError("Impossible de charger l’historique de cet article.");
+          setError("Impossible de charger l’historique de ce contenu.");
           return;
         }
         const data = (await res.json()) as ArticleDetail;
@@ -191,7 +191,7 @@ export function ArticleHistoryDrawer({
                   </h3>
                   {article.historiques.length === 0 ? (
                     <p className="text-xs text-rer-muted">
-                      Aucun historique disponible pour cet article.
+                      Aucun historique disponible pour ce contenu.
                     </p>
                   ) : (
                     <ol className="space-y-2 text-xs text-rer-text">

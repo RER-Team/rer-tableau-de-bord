@@ -260,7 +260,7 @@ export default function DepotPage() {
     }
     const html = contenuHtml.trim();
     if (!html) {
-      alert("Merci de saisir le contenu de l’article.");
+      alert("Merci de saisir le contenu.");
       return;
     }
     setSubmitStatus("sending");
@@ -430,7 +430,7 @@ export default function DepotPage() {
       <form id="article-depot-form" onSubmit={handleSubmit} className="space-y-6 pb-24">
         {session?.user?.role === "auteur" && !session?.user?.auteurId && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            Votre compte n&apos;est pas lié à un profil auteur. Contactez un administrateur avant de déposer un article.
+            Votre compte n&apos;est pas lié à un profil auteur. Contactez un administrateur avant de déposer un contenu.
           </div>
         )}
         <ArticleEditorCard
@@ -474,11 +474,11 @@ export default function DepotPage() {
             disabled={submitStatus === "sending" || (session?.user?.role === "auteur" && !session?.user?.auteurId)}
             className="btn-cta disabled:opacity-50"
           >
-            {submitStatus === "sending" ? "Envoi…" : "Déposer l’article"}
+            {submitStatus === "sending" ? "Envoi…" : "Déposer le contenu"}
           </button>
           {submitStatus === "ok" && (
             <span className="text-sm text-green-600">
-              Article déposé (état « Soumis à relecture »).
+              Contenu déposé (état « Soumis à relecture »).
             </span>
           )}
           {submitStatus === "error" && (
@@ -492,7 +492,7 @@ export default function DepotPage() {
         disabled={submitStatus === "sending" || (session?.user?.role === "auteur" && !session?.user?.auteurId)}
         className="btn-cta fixed bottom-6 right-6 z-40 hidden rounded-full px-5 py-3 shadow-lg disabled:opacity-50 lg:inline-flex"
       >
-        {submitStatus === "sending" ? "Envoi…" : "Déposer l’article"}
+        {submitStatus === "sending" ? "Envoi…" : "Déposer le contenu"}
       </button>
     </div>
   );

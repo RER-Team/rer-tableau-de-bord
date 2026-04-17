@@ -490,7 +490,7 @@ function AdminArticlePanel({
   const handleDelete = async () => {
     if (!detail && !selectedArticle) return;
     const id = detail?.id ?? selectedId;
-    const titre = detail?.titre ?? selectedArticle?.titre ?? "cet article";
+    const titre = detail?.titre ?? selectedArticle?.titre ?? "ce contenu";
     const confirmed = window.confirm(
       `Voulez-vous vraiment supprimer « ${titre} » ? Cette action est définitive.`
     );
@@ -673,14 +673,14 @@ function AdminArticlePanel({
                   body: JSON.stringify(payload),
                 });
                 if (!res.ok) {
-                  console.error("Erreur lors de la sauvegarde de l’article");
+                  console.error("Erreur lors de la sauvegarde du contenu");
                 } else {
                   const updated = (await res.json()) as ArticleDetail;
                   onDetailUpdated?.(updated);
                   touchLastSaved();
                 }
               } catch (e) {
-                console.error("Erreur lors de la sauvegarde de l’article", e);
+                console.error("Erreur lors de la sauvegarde du contenu", e);
               } finally {
                 setSavingContent(false);
               }
@@ -918,7 +918,7 @@ export function AdminReviewExplorer({
     }
   };
 
-  // Chargement du détail de l’article sélectionné
+  // Chargement du détail du contenu sélectionné
   useEffect(() => {
     if (!selectedId) {
       setDetail(null);
@@ -938,7 +938,7 @@ export function AdminReviewExplorer({
         if (!res.ok) {
           const msg =
             (data && typeof data.error === "string" && data.error) ||
-            (res.status === 404 ? "Article introuvable." : "Erreur de chargement.");
+            (res.status === 404 ? "Contenu introuvable." : "Erreur de chargement.");
           return { error: msg };
         }
         if (data && typeof data === "object" && "id" in data) return { detail: data as ArticleDetail };
@@ -968,7 +968,7 @@ export function AdminReviewExplorer({
       .catch(() => {
         if (controller.signal.aborted) return;
         setDetail(null);
-        setError("Erreur lors du chargement de l’article.");
+        setError("Erreur lors du chargement du contenu.");
       })
       .finally(() => {
         if (controller.signal.aborted) return;
@@ -1142,7 +1142,7 @@ export function AdminReviewExplorer({
         )
       );
       if (responses.some((response) => !response.ok)) {
-        alert("Impossible de mettre à jour tous les articles sélectionnés.");
+        alert("Impossible de mettre à jour tous les contenus sélectionnés.");
         return;
       }
       setSelectedBulkIds([]);
@@ -1161,7 +1161,7 @@ export function AdminReviewExplorer({
     }
     setRunningBulkAction(true);
     const confirmed = window.confirm(
-      `Supprimer définitivement ${selectedBulkIds.length} article(s) sélectionné(s) ?`
+      `Supprimer définitivement ${selectedBulkIds.length} contenu(s) sélectionné(s) ?`
     );
     if (!confirmed) {
       setRunningBulkAction(false);
@@ -1288,8 +1288,8 @@ export function AdminReviewExplorer({
                     />
                     <span>
                       {selectedBulkIds.length
-                        ? `${selectedBulkIds.length} article(s) sélectionné(s)`
-                        : "Cliquez sur un article pour le sélectionner"}
+                        ? `${selectedBulkIds.length} contenu(s) sélectionné(s)`
+                        : "Cliquez sur un contenu pour le sélectionner"}
                     </span>
                   </>
                 )}
@@ -1300,7 +1300,7 @@ export function AdminReviewExplorer({
             <div className="flex flex-col items-center justify-center gap-1 py-4 text-center">
               <p className="text-[11px] font-medium text-rer-muted">Liste repliée</p>
               <p className="text-[10px] text-rer-subtle">
-                {visibleArticles.length} article{visibleArticles.length !== 1 ? "s" : ""}
+                {visibleArticles.length} contenu{visibleArticles.length !== 1 ? "s" : ""}
               </p>
               <button
                 type="button"
@@ -1312,7 +1312,7 @@ export function AdminReviewExplorer({
             </div>
           ) : visibleArticles.length === 0 ? (
             <p className="rounded-lg bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
-              Aucun article ne correspond à ces critères. Essayez d&apos;élargir
+              Aucun contenu ne correspond à ces critères. Essayez d&apos;élargir
               votre recherche ou de modifier les filtres.
             </p>
           ) : (
@@ -1418,7 +1418,7 @@ export function AdminReviewExplorer({
         <div className="hidden min-h-[260px] min-w-0 flex-col rounded-xl bg-white p-4 shadow-sm ring-1 ring-rer-border lg:flex lg:min-w-[420px]">
           {!selectedId && (
             <p className="text-sm text-rer-muted">
-              Sélectionnez un article dans la file pour le relire.
+              Sélectionnez un contenu dans la file pour le relire.
             </p>
           )}
 
@@ -1451,7 +1451,7 @@ export function AdminReviewExplorer({
           >
             <div className="flex items-center justify-between border-b border-rer-border px-4 py-3">
               <span className="text-sm font-medium text-rer-text">
-                Relecture article
+                Relecture contenu
               </span>
               <button
                 type="button"

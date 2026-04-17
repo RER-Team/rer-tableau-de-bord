@@ -81,9 +81,9 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   }
 
   if (mineParam === "1") {
-    // Mes articles : filtrer sur l'auteur lié à l'utilisateur connecté.
+    // Mes contenus : filtrer sur l'auteur lié à l'utilisateur connecté.
     if (!sessionUser?.auteurId) {
-      // Pas d'auteur associé -> aucun article à retourner
+      // Pas d'auteur associé -> aucun contenu à retourner
       where.auteurId = "__none__";
     } else {
       where.auteurId = sessionUser.auteurId;
@@ -188,10 +188,10 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-extrabold text-rer-text">
-              Liste des articles
+              Liste des contenus
             </h1>
             <p className="mt-1 max-w-xl text-sm text-rer-muted">
-              Rechercher, filtrer par état ou par mutuelle, puis ouvrir un article
+              Rechercher, filtrer par état ou par mutuelle, puis ouvrir un contenu
               pour le lire, le corriger ou l&apos;exporter.
             </p>
           </div>
@@ -202,7 +202,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-base leading-none">
               +
             </span>
-            <span>Nouvel article</span>
+            <span>Nouveau contenu</span>
           </Link>
         </header>
 
@@ -216,7 +216,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
           }
         />
 
-        <section aria-label="Liste des articles" className="mt-4 space-y-3">
+        <section aria-label="Liste des contenus" className="mt-4 space-y-3">
           {view === "table" ? (
             <ArticlesTableView
               initialArticles={articleSummaries}
@@ -274,7 +274,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
           )}
         </section>
 
-        {/* Bouton flottant mobile pour déposer un article */}
+        {/* Bouton flottant mobile pour déposer un contenu */}
         <Link
           href="/articles/depot"
           className="btn-cta fixed bottom-6 right-6 z-30 lg:hidden"
@@ -282,7 +282,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
           <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-base leading-none">
             +
           </span>
-          <span>Nouvel article</span>
+          <span>Nouveau contenu</span>
         </Link>
       </div>
     </main>

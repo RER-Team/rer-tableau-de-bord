@@ -170,7 +170,7 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
   const statusSummary =
     statusParts.length > 0
       ? statusParts.join(" · ")
-      : "Aucun article pour le moment";
+      : "Aucun contenu pour le moment";
 
   const rows = articles.map((article) => {
     const lastHistorique = article.historiques[0] ?? null;
@@ -208,7 +208,7 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
       <div className="mx-auto max-w-6xl px-4 py-8 space-y-4">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-extrabold text-rer-text">Mes articles</h1>
+            <h1 className="text-2xl font-extrabold text-rer-text">Mes contenus</h1>
             <p className="mt-1 max-w-xl text-sm text-rer-muted">{statusSummary}</p>
           </div>
           <Link
@@ -218,7 +218,7 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-base leading-none">
               +
             </span>
-            <span>Nouvel article</span>
+            <span>Nouveau contenu</span>
           </Link>
         </header>
 
@@ -233,7 +233,7 @@ export default async function MesArticlesPage({ searchParams }: PageProps) {
           currentSort={sort}
         />
 
-        <section aria-label="Mes articles" className="mt-2">
+        <section aria-label="Mes contenus" className="mt-2">
           <MesArticlesTable
             articles={rows}
             total={total}

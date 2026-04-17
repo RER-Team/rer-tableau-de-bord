@@ -32,7 +32,7 @@ export function AppMainNav() {
           isOnArticles && !isOnMesArticles ? activeClasses : inactiveClasses
         }`}
       >
-        Articles
+        Contenus
       </Link>
       <Link
         href="/mes-articles"
@@ -40,7 +40,7 @@ export function AppMainNav() {
           isOnMesArticles ? activeClasses : inactiveClasses
         }`}
       >
-        Mes articles
+        Mes contenus
       </Link>
       {canSeeRelecture && (
         <Link

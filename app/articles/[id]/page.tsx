@@ -139,7 +139,7 @@ export default function ArticleDetailPage() {
   );
 
   if (loading) return <div className="p-6">Chargement…</div>;
-  if (!article) return <div className="p-6">Article introuvable.</div>;
+  if (!article) return <div className="p-6">Contenu introuvable.</div>;
 
   const metaRubriqueFormat =
     article.rubrique || article.format
@@ -159,7 +159,7 @@ export default function ArticleDetailPage() {
       : "/articles";
   const backLabel =
     back === "mes-articles"
-      ? "← Retour à mes articles"
+      ? "← Retour à mes contenus"
       : back === "admin"
       ? "← Retour à la file admin"
       : "← Retour à la liste";
@@ -221,7 +221,7 @@ export default function ArticleDetailPage() {
         <header className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-rer-border pb-3">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wide text-rer-muted">
-              {metaRubriqueFormat ?? "Article"}
+              {metaRubriqueFormat ?? "Contenu"}
             </p>
             <h1 className="text-2xl font-extrabold text-rer-text">
               {article.titre}

@@ -238,7 +238,7 @@ export function NotificationPreferencesClient() {
       disableAuthorColumn: !pushEnabledOnServer,
     },
     {
-      label: "Depot de l'article",
+      label: "Dépôt du contenu",
       ownKey: "onSubmittedOwnArticles",
       authorKey: "onSubmittedAuthorActions",
     },
@@ -273,10 +273,10 @@ export function NotificationPreferencesClient() {
                 <tr className="bg-rer-app/60 text-rer-text">
                   <th className="px-3 py-2 text-left font-semibold">Canal / Evenement</th>
                   <th className="px-3 py-2 text-center font-semibold">
-                    Mes articles
+                    Mes contenus
                   </th>
                   <th className="px-3 py-2 text-center font-semibold">
-                    Articles auteurs
+                    Contenus auteurs
                   </th>
                 </tr>
               </thead>
@@ -360,7 +360,7 @@ export function NotificationPreferencesClient() {
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-rer-text">Evenements</h3>
             <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-              <span>Depot de l&apos;article</span>
+              <span>Dépôt du contenu</span>
               <input
                 type="checkbox"
                 checked={preferences.onSubmitted}
