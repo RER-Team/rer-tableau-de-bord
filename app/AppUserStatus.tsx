@@ -6,14 +6,18 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { AppNotificationsBell } from "./AppNotificationsBell";
+import { NotificationsPopover } from "./notifications/NotificationsPopover";
 
 export function AppUserStatus() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const notificationsRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const notificationsButtonRef = useRef<HTMLButtonElement | null>(null);
   const firstMenuItemRef = useRef<HTMLAnchorElement | null>(null);
   const menuId = "account-menu";
   const isOnPreferences = pathname.startsWith("/parametres/notifications");
@@ -31,7 +35,7 @@ export function AppUserStatus() {
   }, [email]);
 
   useEffect(() => {
-    if (!session?.user) return;
+    if (!session?.user?.email) return;
     fetch("/api/me/profile", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((payload) => {
@@ -55,17 +59,24 @@ export function AppUserStatus() {
   }, [email]);
 
   useEffect(() => {
-    if (!isMenuOpen) return;
+    if (!isMenuOpen && !isNotificationsOpen) return;
 
     const handleOutsideClick = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
+      const target = event.target as Node;
+      if (!menuRef.current?.contains(target)) setIsMenuOpen(false);
+      if (!notificationsRef.current?.contains(target)) setIsNotificationsOpen(false);
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setIsMenuOpen(false);
+        if (isMenuOpen) {
+          setIsMenuOpen(false);
+          window.setTimeout(() => menuButtonRef.current?.focus(), 0);
+        }
+        if (isNotificationsOpen) {
+          setIsNotificationsOpen(false);
+          window.setTimeout(() => notificationsButtonRef.current?.focus(), 0);
+        }
       }
     };
 
@@ -77,11 +88,16 @@ export function AppUserStatus() {
       window.removeEventListener("mousedown", handleOutsideClick);
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [isMenuOpen]);
+  }, [isMenuOpen, isNotificationsOpen]);
 
   const closeMenuAndReturnFocus = () => {
     setIsMenuOpen(false);
     window.setTimeout(() => menuButtonRef.current?.focus(), 0);
+  };
+
+  const closeNotificationsAndReturnFocus = () => {
+    setIsNotificationsOpen(false);
+    window.setTimeout(() => notificationsButtonRef.current?.focus(), 0);
   };
   // On évite d'afficher le bloc sur la page login elle-même.
   if (pathname === "/login") return null;
@@ -107,7 +123,22 @@ export function AppUserStatus() {
 
   return (
     <div className="flex items-center gap-2 text-xs text-rer-muted">
-      <AppNotificationsBell isActive={isOnNotifications} />
+      <div className="relative" ref={notificationsRef}>
+        <AppNotificationsBell
+          isActive={isOnNotifications}
+          isOpen={isNotificationsOpen}
+          buttonRef={notificationsButtonRef}
+          onToggle={() => {
+            setIsMenuOpen(false);
+            setIsNotificationsOpen((open) => !open);
+          }}
+        />
+        {isNotificationsOpen ? (
+          <div className="fixed inset-x-3 top-16 z-20 sm:absolute sm:right-0 sm:left-auto sm:top-full sm:mt-2">
+            <NotificationsPopover onNavigate={closeNotificationsAndReturnFocus} />
+          </div>
+        ) : null}
+      </div>
 
       <div className="relative" ref={menuRef}>
         <button
@@ -122,7 +153,10 @@ export function AppUserStatus() {
           aria-haspopup="menu"
           aria-controls={menuId}
           aria-label="Ouvrir le menu compte"
-          onClick={() => setIsMenuOpen((open) => !open)}
+          onClick={() => {
+            setIsNotificationsOpen(false);
+            setIsMenuOpen((open) => !open);
+          }}
         >
           <span className="relative inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-rer-blue/15 text-[11px] font-semibold text-rer-blue">
             {avatarUrl ? (

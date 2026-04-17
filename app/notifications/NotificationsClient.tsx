@@ -30,17 +30,24 @@ type FeedbackMessage = {
   text: string;
 };
 
+type NotificationsClientProps = {
+  variant?: "page" | "popover";
+  onNavigate?: () => void;
+};
+
 function buttonBaseClass(isActive = false): string {
-  const activeClass = isActive ? "bg-rer-blue text-white" : "bg-rer-app text-rer-muted hover:bg-rer-border";
-  return `rounded-full px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2 ${activeClass}`;
+  const activeClass = isActive
+    ? "bg-rer-blue text-white shadow-sm"
+    : "bg-rer-app text-rer-muted hover:bg-rer-border hover:text-rer-text";
+  return `rounded-full px-3 py-1 text-xs font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2 ${activeClass}`;
 }
 
 function actionButtonClass(kind: "default" | "danger" = "default"): string {
   const style =
     kind === "danger"
       ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-      : "border-rer-border bg-white text-rer-text hover:bg-rer-app";
-  return `rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${style}`;
+      : "border-rer-border bg-white text-rer-text hover:border-rer-blue/40 hover:bg-rer-app";
+  return `rounded-lg border px-3 py-1.5 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${style}`;
 }
 
 function formatDate(value: string): string {
@@ -90,8 +97,9 @@ function getArticleHref(metadata: unknown): string | null {
   return `/articles/${articleId}`;
 }
 
-export function NotificationsClient() {
-  const PAGE_SIZE = 20;
+export function NotificationsClient({ variant = "page", onNavigate }: NotificationsClientProps) {
+  const PAGE_SIZE = variant === "popover" ? 12 : 20;
+  const isPopover = variant === "popover";
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -114,6 +122,9 @@ export function NotificationsClient() {
         status: statusFilter,
         scope: scopeFilter,
       });
+      if (isPopover) {
+        params.set("view", "popover");
+      }
       const response = await fetch(`/api/notifications?${params.toString()}`, { cache: "no-store" });
       if (!response.ok) {
         throw new Error("Impossible de charger les notifications.");
@@ -134,7 +145,7 @@ export function NotificationsClient() {
     } finally {
       setLoading(false);
     }
-  }, [scopeFilter, statusFilter]);
+  }, [PAGE_SIZE, isPopover, scopeFilter, statusFilter]);
 
   useEffect(() => {
     void refresh();
@@ -151,6 +162,9 @@ export function NotificationsClient() {
         scope: scopeFilter,
         cursor: nextCursor,
       });
+      if (isPopover) {
+        params.set("view", "popover");
+      }
       const response = await fetch(`/api/notifications?${params.toString()}`, { cache: "no-store" });
       if (!response.ok) {
         throw new Error("Impossible de charger plus de notifications.");
@@ -164,7 +178,7 @@ export function NotificationsClient() {
     } finally {
       setLoadingMore(false);
     }
-  }, [hasMore, loadingMore, nextCursor, scopeFilter, statusFilter]);
+  }, [PAGE_SIZE, hasMore, isPopover, loadingMore, nextCursor, scopeFilter, statusFilter]);
 
   const mutateNotifications = useCallback(
     async (
@@ -322,12 +336,18 @@ export function NotificationsClient() {
   }, [items]);
 
   return (
-    <section className="rounded-2xl border border-rer-border bg-white shadow-sm">
-      <header className="flex flex-col gap-4 border-b border-rer-border px-4 py-4">
+    <section className={`border-rer-border bg-white shadow-sm ${isPopover ? "" : "rounded-2xl border"}`}>
+      <header
+        className={`flex flex-col gap-4 border-rer-border px-4 py-4 ${
+          isPopover ? "border-b bg-gradient-to-b from-rer-app/50 to-transparent" : "border-b"
+        }`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-rer-text">Centre de notifications</h2>
-            <p className="text-sm text-rer-muted">
+            <h2 className={`${isPopover ? "text-base" : "text-lg"} font-semibold text-rer-text`}>
+              {isPopover ? "Notifications" : "Centre de notifications"}
+            </h2>
+            <p className="mt-0.5 text-sm text-rer-muted">
               {unreadCount} non lue{unreadCount > 1 ? "s" : ""} à traiter sur {totalCount}
             </p>
           </div>
@@ -340,22 +360,26 @@ export function NotificationsClient() {
             >
               Marquer tout comme lu
             </button>
-            <button
-              type="button"
-              onClick={() => void purgeRead()}
-              disabled={loading}
-              className={actionButtonClass()}
-            >
-              Supprimer les notifications lues
-            </button>
-            <button
-              type="button"
-              onClick={() => void purgeAll()}
-              disabled={loading}
-              className={actionButtonClass("danger")}
-            >
-              Vider le centre de notifications
-            </button>
+            {!isPopover ? (
+              <button
+                type="button"
+                onClick={() => void purgeRead()}
+                disabled={loading}
+                className={actionButtonClass()}
+              >
+                Supprimer les notifications lues
+              </button>
+            ) : null}
+            {!isPopover ? (
+              <button
+                type="button"
+                onClick={() => void purgeAll()}
+                disabled={loading}
+                className={actionButtonClass("danger")}
+              >
+                Vider le centre de notifications
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => void refresh()}
@@ -366,10 +390,16 @@ export function NotificationsClient() {
             </button>
             <Link
               href="/parametres/notifications"
+              onClick={onNavigate}
               className={actionButtonClass()}
             >
               Gérer mes notifications
             </Link>
+            {isPopover ? (
+              <Link href="/notifications" onClick={onNavigate} className={actionButtonClass()}>
+                Voir tout
+              </Link>
+            ) : null}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrer par statut">
@@ -406,7 +436,7 @@ export function NotificationsClient() {
         </div>
       </header>
 
-      <div className="space-y-3 p-4">
+      <div className={`space-y-3 p-4 ${isPopover ? "max-h-[70vh] overflow-y-auto overscroll-contain pr-2" : ""}`}>
         {feedback ? (
           <p
             role="status"
@@ -444,7 +474,7 @@ export function NotificationsClient() {
         <div className="space-y-4">
           {groupedItems.map(([dayLabel, dayItems]) => (
             <section key={dayLabel} className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-rer-subtle">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-rer-subtle">
                 {dayLabel}
               </h3>
               <ul className="space-y-2">
@@ -460,8 +490,10 @@ export function NotificationsClient() {
                   return (
                     <li
                       key={item.id}
-                      className={`rounded-xl border px-3 py-2 transition-colors ${
-                        isRead ? "border-rer-border bg-white" : "border-rer-blue/30 bg-rer-blue/5"
+                      className={`rounded-xl border px-3 py-2 transition-all duration-150 ${
+                        isRead
+                          ? "border-rer-border bg-white hover:border-rer-border/80 hover:bg-rer-app/30"
+                          : "border-rer-blue/30 bg-rer-blue/5 shadow-[inset_0_0_0_1px_rgba(33,85,163,0.04)] hover:border-rer-blue/40"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -469,7 +501,7 @@ export function NotificationsClient() {
                           <div className="flex flex-wrap items-center gap-2">
                             <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${scopeBadgeClass}`}>
                               {scope === "adminArticles"
-                                ? "Mes articles (que j'ai publies/modifies)"
+                                ? "Mes articles (que j&apos;ai publies/modifies)"
                                 : "Articles des auteurs"}
                             </span>
                             {!isRead ? (
@@ -484,16 +516,16 @@ export function NotificationsClient() {
                               href={articleHref}
                               className="inline-flex text-xs font-medium text-rer-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
                             >
-                              Ouvrir l'article
+                              Ouvrir l&apos;article
                             </Link>
                           ) : null}
                         </div>
-                        <div className="flex shrink-0 items-center gap-1">
+                        <div className="flex shrink-0 items-center gap-1.5">
                           {!isRead ? (
                             <button
                               type="button"
                               onClick={() => void markAsRead(item.id)}
-                              className="rounded-md border border-rer-border px-2 py-1 text-xs font-medium text-rer-text hover:bg-rer-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
+                              className="rounded-md border border-rer-border px-2 py-1 text-xs font-medium text-rer-text transition-colors hover:border-rer-blue/40 hover:bg-rer-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
                             >
                               Marquer comme lue
                             </button>
@@ -501,7 +533,7 @@ export function NotificationsClient() {
                             <button
                               type="button"
                               onClick={() => void markAsUnread(item.id)}
-                              className="rounded-md border border-rer-border px-2 py-1 text-xs font-medium text-rer-text hover:bg-rer-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
+                              className="rounded-md border border-rer-border px-2 py-1 text-xs font-medium text-rer-text transition-colors hover:border-rer-blue/40 hover:bg-rer-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
                             >
                               Marquer comme non lue
                             </button>
@@ -509,7 +541,7 @@ export function NotificationsClient() {
                           <button
                             type="button"
                             onClick={() => void deleteOne(item.id)}
-                            className="rounded-md border border-rer-border px-2 py-1 text-xs font-medium text-rer-text hover:bg-rer-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
+                            className="rounded-md border border-rer-border px-2 py-1 text-xs font-medium text-rer-text transition-colors hover:border-red-200 hover:bg-red-50/70 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
                           >
                             Retirer
                           </button>

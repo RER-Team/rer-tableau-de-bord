@@ -14,6 +14,7 @@ const notificationSelect = {
 
 type NotificationStatusFilter = "all" | "read" | "unread";
 type NotificationScopeFilter = "all" | "adminArticles" | "authorActions";
+type NotificationsView = "default" | "popover";
 
 function parsePositiveInt(rawValue: string | null, fallback: number): number {
   if (!rawValue) return fallback;
@@ -34,6 +35,11 @@ function parseScopeFilter(rawValue: string | null): NotificationScopeFilter {
     return rawValue;
   }
   return "all";
+}
+
+function parseView(rawValue: string | null): NotificationsView {
+  if (rawValue === "popover") return "popover";
+  return "default";
 }
 
 function getScopeTypes(scope: NotificationScopeFilter): string[] | null {
@@ -81,7 +87,9 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const requestedTake = parsePositiveInt(searchParams.get("take"), parsePositiveInt(searchParams.get("limit"), 20));
-  const take = Math.min(50, Math.max(1, requestedTake));
+  const view = parseView(searchParams.get("view"));
+  const boundedTake = view === "popover" ? Math.min(20, requestedTake || 12) : Math.min(50, requestedTake);
+  const take = Math.max(1, boundedTake);
   const status = parseStatusFilter(searchParams.get("status"));
   const scope = parseScopeFilter(searchParams.get("scope"));
   const cursor = searchParams.get("cursor");
