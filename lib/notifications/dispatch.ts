@@ -352,7 +352,7 @@ export async function dispatchArticleNotificationEvent(
       where: { role: "admin" },
       select: {
         id: true,
-        userNotificationPreference: {
+        notificationPreference: {
           select: {
             inAppEnabled: true,
             onSubmitted: true,
@@ -366,7 +366,7 @@ export async function dispatchArticleNotificationEvent(
     });
     for (const admin of adminUsers) {
       const adminEffectivePreference =
-        admin.userNotificationPreference ?? defaultNotificationPreferences;
+        admin.notificationPreference ?? defaultNotificationPreferences;
       const shouldNotifyAdmin =
         adminEffectivePreference.inAppEnabled &&
         shouldNotifyForEvent(event.type, adminEffectivePreference) &&

@@ -17,6 +17,7 @@ export function AppUserStatus() {
   const firstMenuItemRef = useRef<HTMLAnchorElement | null>(null);
   const menuId = "account-menu";
   const isOnPreferences = pathname.startsWith("/parametres/notifications");
+  const isOnNotifications = pathname.startsWith("/notifications");
   const isOnProfile = pathname.startsWith("/mon-profil");
   const email = session?.user?.email ?? "";
   const role = session?.user?.role ?? "";
