@@ -16,7 +16,7 @@ export function AppNotificationsBell({ isActive = false }: AppNotificationsBellP
 
     const refresh = async () => {
       try {
-        const response = await fetch("/api/notifications?limit=1", { cache: "no-store" });
+        const response = await fetch("/api/notifications?take=1", { cache: "no-store" });
         if (!response.ok) return;
         const payload = (await response.json()) as { unreadCount?: number };
         if (active) {

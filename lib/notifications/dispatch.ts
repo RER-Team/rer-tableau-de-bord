@@ -42,6 +42,16 @@ function shouldNotifyForEvent(
   return false;
 }
 
+function resolveInAppScope(eventType: ArticleNotificationEvent["type"]): "adminArticles" | "authorActions" {
+  if (
+    eventType === "article.submitted" ||
+    eventType === "article.corrections_requested_or_resubmitted"
+  ) {
+    return "authorActions";
+  }
+  return "adminArticles";
+}
+
 export async function dispatchArticleNotificationEvent(
   args: DispatchArticleNotificationEventArgs
 ): Promise<void> {
@@ -213,6 +223,7 @@ export async function dispatchArticleNotificationEvent(
               articleId: article.id,
               articleTitle: article.titre,
               eventType: event.type,
+              scope: resolveInAppScope(event.type),
             },
           },
         }),
@@ -314,6 +325,7 @@ export async function dispatchArticleNotificationEvent(
               articleTitle: article.titre,
               eventType: event.type,
               publishedByAuteurId: event.targetAuteurId,
+              scope: "authorActions",
             },
           },
         }),
