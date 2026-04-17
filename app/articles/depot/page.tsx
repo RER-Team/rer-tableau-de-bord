@@ -470,9 +470,9 @@ export default function DepotPage() {
           <button
             type="submit"
             disabled={submitStatus === "sending" || (session?.user?.role === "auteur" && !session?.user?.auteurId)}
-            className="rounded-lg bg-rer-blue px-5 py-2 text-sm font-medium text-white hover:bg-[#1e3380] disabled:opacity-50"
+            className="btn-cta disabled:opacity-50"
           >
-            {submitStatus === "sending" ? "Envoi…" : "Créer l’article"}
+            {submitStatus === "sending" ? "Envoi…" : "Déposer l’article"}
           </button>
           {submitStatus === "ok" && (
             <span className="text-sm text-green-600">
@@ -488,9 +488,9 @@ export default function DepotPage() {
         type="submit"
         form="article-depot-form"
         disabled={submitStatus === "sending" || (session?.user?.role === "auteur" && !session?.user?.auteurId)}
-        className="fixed bottom-6 right-6 z-40 hidden rounded-full bg-rer-blue px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-[#1e3380] disabled:opacity-50 lg:inline-flex"
+        className="btn-cta fixed bottom-6 right-6 z-40 hidden rounded-full px-5 py-3 shadow-lg disabled:opacity-50 lg:inline-flex"
       >
-        {submitStatus === "sending" ? "Envoi…" : "Créer l’article"}
+        {submitStatus === "sending" ? "Envoi…" : "Déposer l’article"}
       </button>
     </div>
   );
