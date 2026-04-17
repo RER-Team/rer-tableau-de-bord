@@ -160,6 +160,8 @@ model UserNotificationPreference {
   onSubmitted       Boolean  @default(true) @map("on_submitted")
   onCorrections     Boolean  @default(true) @map("on_corrections")
   onPublished       Boolean  @default(true) @map("on_published")
+  onAuthorActions   Boolean  @default(true) @map("on_author_actions")
+  onOwnArticles     Boolean  @default(true) @map("on_own_articles")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 }

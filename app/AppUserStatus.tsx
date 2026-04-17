@@ -17,7 +17,6 @@ export function AppUserStatus() {
   const firstMenuItemRef = useRef<HTMLAnchorElement | null>(null);
   const menuId = "account-menu";
   const isOnPreferences = pathname.startsWith("/parametres/notifications");
-  const isOnNotifications = pathname.startsWith("/notifications");
   const isOnProfile = pathname.startsWith("/mon-profil");
   const email = session?.user?.email ?? "";
   const role = session?.user?.role ?? "";
@@ -166,18 +165,6 @@ export function AppUserStatus() {
                 onClick={() => closeMenuAndReturnFocus()}
               >
                 Mon profil
-              </Link>
-              <Link
-                href="/notifications"
-                role="menuitem"
-                className={`mt-1 block rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
-                  isOnNotifications
-                    ? "bg-rer-blue text-white"
-                    : "text-rer-muted hover:bg-rer-app/60 hover:text-rer-text"
-                }`}
-                onClick={() => closeMenuAndReturnFocus()}
-              >
-                Notifications
               </Link>
               <Link
                 href="/parametres/notifications"

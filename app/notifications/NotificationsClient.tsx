@@ -364,6 +364,12 @@ export function NotificationsClient() {
             >
               Actualiser
             </button>
+            <Link
+              href="/parametres/notifications"
+              className={actionButtonClass()}
+            >
+              Gérer mes notifications
+            </Link>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrer par statut">

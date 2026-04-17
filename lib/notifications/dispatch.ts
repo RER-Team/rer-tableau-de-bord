@@ -42,6 +42,17 @@ function shouldNotifyForEvent(
   return false;
 }
 
+function shouldNotifyForScope(
+  scope: "adminArticles" | "authorActions",
+  preference: {
+    onAuthorActions: boolean;
+    onOwnArticles: boolean;
+  }
+): boolean {
+  if (scope === "authorActions") return preference.onAuthorActions;
+  return preference.onOwnArticles;
+}
+
 function resolveInAppScope(eventType: ArticleNotificationEvent["type"]): "adminArticles" | "authorActions" {
   if (
     eventType === "article.submitted" ||
@@ -122,12 +133,16 @@ export async function dispatchArticleNotificationEvent(
           onSubmitted: true,
           onCorrections: true,
           onPublished: true,
+          onAuthorActions: true,
+          onOwnArticles: true,
         },
       })
     : null;
 
   const effectivePreference = preference ?? defaultNotificationPreferences;
   const shouldNotifyUser = shouldNotifyForEvent(event.type, effectivePreference);
+  const targetInAppScope = resolveInAppScope(event.type);
+  const shouldNotifyTargetScope = shouldNotifyForScope(targetInAppScope, effectivePreference);
 
   const customTemplate = await prisma.notificationTemplate.findUnique({
     where: { eventType: event.type },
@@ -225,7 +240,7 @@ export async function dispatchArticleNotificationEvent(
     }
   }
 
-  if (targetUser?.id && shouldNotifyUser && effectivePreference.inAppEnabled) {
+  if (targetUser?.id && shouldNotifyUser && shouldNotifyTargetScope && effectivePreference.inAppEnabled) {
     const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:in_app:${transitionKey}`;
     const existing = await prisma.notificationDelivery.findUnique({
       where: { dedupeKey },
@@ -249,7 +264,7 @@ export async function dispatchArticleNotificationEvent(
               articleId: article.id,
               articleTitle: article.titre,
               eventType: event.type,
-              scope: resolveInAppScope(event.type),
+              scope: targetInAppScope,
             },
           },
         }),
@@ -335,9 +350,29 @@ export async function dispatchArticleNotificationEvent(
     const depositorName = `${article.auteur?.prenom || ""} ${article.auteur?.nom || ""}`.trim();
     const adminUsers = await prisma.user.findMany({
       where: { role: "admin" },
-      select: { id: true },
+      select: {
+        id: true,
+        userNotificationPreference: {
+          select: {
+            inAppEnabled: true,
+            onSubmitted: true,
+            onCorrections: true,
+            onPublished: true,
+            onAuthorActions: true,
+            onOwnArticles: true,
+          },
+        },
+      },
     });
     for (const admin of adminUsers) {
+      const adminEffectivePreference =
+        admin.userNotificationPreference ?? defaultNotificationPreferences;
+      const shouldNotifyAdmin =
+        adminEffectivePreference.inAppEnabled &&
+        shouldNotifyForEvent(event.type, adminEffectivePreference) &&
+        shouldNotifyForScope("authorActions", adminEffectivePreference);
+      if (!shouldNotifyAdmin) continue;
+
       const dedupeKey = `${event.type}:${event.articleId}:${admin.id}:in_app_admin_alert:${transitionKey}`;
       const existing = await prisma.notificationDelivery.findUnique({
         where: { dedupeKey },

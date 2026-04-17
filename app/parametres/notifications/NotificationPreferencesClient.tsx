@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 
 type Preferences = {
   emailEnabled: boolean;
@@ -9,6 +10,8 @@ type Preferences = {
   onSubmitted: boolean;
   onCorrections: boolean;
   onPublished: boolean;
+  onAuthorActions: boolean;
+  onOwnArticles: boolean;
 };
 
 const defaultPreferences: Preferences = {
@@ -18,6 +21,8 @@ const defaultPreferences: Preferences = {
   onSubmitted: true,
   onCorrections: true,
   onPublished: true,
+  onAuthorActions: true,
+  onOwnArticles: true,
 };
 
 function base64UrlToUint8Array(base64String: string): Uint8Array {
@@ -36,6 +41,7 @@ function toArrayBuffer(view: Uint8Array): ArrayBuffer {
 }
 
 export function NotificationPreferencesClient() {
+  const { data: session } = useSession();
   const [preferences, setPreferences] = useState<Preferences>(defaultPreferences);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -184,6 +190,7 @@ export function NotificationPreferencesClient() {
     () => saving || loading || !pushEnabledOnServer,
     [saving, loading, pushEnabledOnServer]
   );
+  const isAdmin = session?.user?.role === "admin";
 
   return (
     <section className="space-y-4 rounded-xl border border-rer-border bg-white p-4 shadow-sm">
@@ -254,6 +261,32 @@ export function NotificationPreferencesClient() {
           />
         </label>
       </div>
+
+      {isAdmin ? (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-rer-text">Perimetre admin</h3>
+          <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+            <span>Actions auteurs (depot / publication)</span>
+            <input
+              type="checkbox"
+              checked={preferences.onAuthorActions}
+              disabled={saving || loading}
+              onChange={(event) =>
+                void patchPreferences({ onAuthorActions: event.target.checked })
+              }
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+            <span>Actions sur mes articles</span>
+            <input
+              type="checkbox"
+              checked={preferences.onOwnArticles}
+              disabled={saving || loading}
+              onChange={(event) => void patchPreferences({ onOwnArticles: event.target.checked })}
+            />
+          </label>
+        </div>
+      ) : null}
     </section>
   );
 }

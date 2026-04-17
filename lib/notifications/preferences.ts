@@ -7,6 +7,8 @@ export const notificationPreferenceSelect = {
   onSubmitted: true,
   onCorrections: true,
   onPublished: true,
+  onAuthorActions: true,
+  onOwnArticles: true,
 } as const;
 
 export type NotificationPreferencePayload = {
@@ -16,6 +18,8 @@ export type NotificationPreferencePayload = {
   onSubmitted: boolean;
   onCorrections: boolean;
   onPublished: boolean;
+  onAuthorActions: boolean;
+  onOwnArticles: boolean;
 };
 
 export const defaultNotificationPreferences: NotificationPreferencePayload = {
@@ -25,6 +29,8 @@ export const defaultNotificationPreferences: NotificationPreferencePayload = {
   onSubmitted: true,
   onCorrections: true,
   onPublished: true,
+  onAuthorActions: true,
+  onOwnArticles: true,
 };
 
 export function toNotificationPreferencePayload(
@@ -37,6 +43,8 @@ export function toNotificationPreferencePayload(
         | "onSubmitted"
         | "onCorrections"
         | "onPublished"
+        | "onAuthorActions"
+        | "onOwnArticles"
       >
     | null
     | undefined
@@ -49,6 +57,8 @@ export function toNotificationPreferencePayload(
     onSubmitted: value.onSubmitted,
     onCorrections: value.onCorrections,
     onPublished: value.onPublished,
+    onAuthorActions: value.onAuthorActions,
+    onOwnArticles: value.onOwnArticles,
   };
 }
 
@@ -62,6 +72,8 @@ export function sanitizePreferencePatch(
     "onSubmitted",
     "onCorrections",
     "onPublished",
+    "onAuthorActions",
+    "onOwnArticles",
   ];
   const out: Partial<NotificationPreferencePayload> = {};
   for (const key of keys) {
