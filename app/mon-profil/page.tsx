@@ -157,6 +157,11 @@ export default function MonProfilPage() {
       );
       await handleAvatarUpload(croppedFile);
       setPendingAvatarDataUrl(null);
+    } catch (e: any) {
+      setError(e.message || "Impossible de recadrer l'image.");
+    }
+  };
+
   const handleCropPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     dragPointerIdRef.current = event.pointerId;
     dragStartRef.current = { x: event.clientX, y: event.clientY };
@@ -184,11 +189,6 @@ export default function MonProfilPage() {
   const handleZoomChange = (nextZoom: number) => {
     setCropZoom(nextZoom);
     setCropOffset((previous) => clampCropOffset(previous, nextZoom));
-  };
-
-    } catch (e: any) {
-      setError(e.message || "Impossible de recadrer l'image.");
-    }
   };
 
   const handleRemoveAvatar = () => {
