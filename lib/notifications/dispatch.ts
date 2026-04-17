@@ -52,6 +52,36 @@ function resolveInAppScope(eventType: ArticleNotificationEvent["type"]): "adminA
   return "adminArticles";
 }
 
+function resolveAuthorDisplayName(article: {
+  auteur?: { prenom?: string | null; nom?: string | null } | null;
+}): string {
+  const fullName = `${article.auteur?.prenom || ""} ${article.auteur?.nom || ""}`.trim();
+  return fullName || "Auteur";
+}
+
+function resolveActionTag(eventType: ArticleNotificationEvent["type"]): string {
+  if (eventType === "article.submitted") return "Depot - À relire";
+  if (eventType === "article.corrections_requested_or_resubmitted") {
+    return "Corrections - À relire";
+  }
+  if (eventType === "article.published") return "Publication - Publié";
+  return "Notification";
+}
+
+function buildInAppTitle(args: {
+  eventType: ArticleNotificationEvent["type"];
+  baseTitle: string;
+  articleTitle: string;
+  authorDisplayName: string;
+}): string {
+  const actionTag = resolveActionTag(args.eventType);
+  const scope = resolveInAppScope(args.eventType);
+  if (scope === "authorActions") {
+    return `${actionTag} - ${args.authorDisplayName} - ${args.articleTitle}`;
+  }
+  return `${actionTag} - ${args.baseTitle} - ${args.articleTitle}`;
+}
+
 export async function dispatchArticleNotificationEvent(
   args: DispatchArticleNotificationEventArgs
 ): Promise<void> {
@@ -71,6 +101,7 @@ export async function dispatchArticleNotificationEvent(
   });
   if (!article) return;
   const transitionKey = article.updatedAt.toISOString();
+  const authorDisplayName = resolveAuthorDisplayName(article);
 
   const targetUser = await prisma.user.findFirst({
     where: { auteurId: event.targetAuteurId },
@@ -210,7 +241,12 @@ export async function dispatchArticleNotificationEvent(
       select: { id: true },
     });
     if (!existing) {
-      const inAppTitle = renderTemplate(templateBase.inAppTitle, templateVars);
+      const inAppTitle = buildInAppTitle({
+        eventType: event.type,
+        baseTitle: renderTemplate(templateBase.inAppTitle, templateVars),
+        articleTitle: article.titre,
+        authorDisplayName,
+      });
       const inAppBody = renderTemplate(templateBase.inAppBody, templateVars);
       await prisma.$transaction([
         prisma.notification.create({
@@ -311,7 +347,7 @@ export async function dispatchArticleNotificationEvent(
       });
       if (existing) continue;
 
-      const title = "Article publié (alerte admin)";
+      const title = `${resolveActionTag("article.published")} - ${depositorName || "Auteur"} - ${article.titre}`;
       const body = `L'article "${article.titre}" déposé par ${depositorName || "un auteur"} vient d'être publié.`;
       await prisma.$transaction([
         prisma.notification.create({
