@@ -399,8 +399,8 @@ export function NotificationsClient() {
               {value === "all"
                 ? "Toutes"
                 : value === "adminArticles"
-                  ? "Mes articles"
-                  : "Actions auteurs"}
+                  ? "Mes articles (que j'ai publies/modifies)"
+                  : "Articles des auteurs"}
             </button>
           ))}
         </div>
@@ -468,7 +468,9 @@ export function NotificationsClient() {
                         <div className="min-w-0 space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${scopeBadgeClass}`}>
-                              {scope === "adminArticles" ? "Mes articles" : "Actions auteurs"}
+                              {scope === "adminArticles"
+                                ? "Mes articles (que j'ai publies/modifies)"
+                                : "Articles des auteurs"}
                             </span>
                             {!isRead ? (
                               <span className="h-2 w-2 rounded-full bg-rer-blue" aria-label="Notification non lue" />

@@ -200,93 +200,97 @@ export function NotificationPreferencesClient() {
       {error ? <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
       {message ? <p className="rounded-lg bg-green-50 p-2 text-sm text-green-700">{message}</p> : null}
 
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-rer-text">Canaux</h3>
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-          <span>Email</span>
-          <input
-            type="checkbox"
-            checked={preferences.emailEnabled}
-            disabled={saving || loading}
-            onChange={(event) => void patchPreferences({ emailEnabled: event.target.checked })}
-          />
-        </label>
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-          <span>Notification dans l&apos;interface</span>
-          <input
-            type="checkbox"
-            checked={preferences.inAppEnabled}
-            disabled={saving || loading}
-            onChange={(event) => void patchPreferences({ inAppEnabled: event.target.checked })}
-          />
-        </label>
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-          <span>Notification navigateur</span>
-          <input
-            type="checkbox"
-            checked={preferences.browserPushEnabled}
-            disabled={isBrowserToggleDisabled}
-            onChange={(event) => void handleBrowserPushToggle(event.target.checked)}
-          />
-        </label>
-      </div>
-
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-rer-text">Evenements</h3>
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-          <span>Depot de l&apos;article</span>
-          <input
-            type="checkbox"
-            checked={preferences.onSubmitted}
-            disabled={saving || loading}
-            onChange={(event) => void patchPreferences({ onSubmitted: event.target.checked })}
-          />
-        </label>
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-          <span>Corrections effectuees</span>
-          <input
-            type="checkbox"
-            checked={preferences.onCorrections}
-            disabled={saving || loading}
-            onChange={(event) => void patchPreferences({ onCorrections: event.target.checked })}
-          />
-        </label>
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-          <span>Validation et publication</span>
-          <input
-            type="checkbox"
-            checked={preferences.onPublished}
-            disabled={saving || loading}
-            onChange={(event) => void patchPreferences({ onPublished: event.target.checked })}
-          />
-        </label>
-      </div>
-
-      {isAdmin ? (
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-rer-text">Perimetre admin</h3>
+          <h3 className="text-sm font-semibold text-rer-text">Canaux</h3>
           <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-            <span>Actions auteurs (depot / publication)</span>
+            <span>Email</span>
             <input
               type="checkbox"
-              checked={preferences.onAuthorActions}
+              checked={preferences.emailEnabled}
               disabled={saving || loading}
-              onChange={(event) =>
-                void patchPreferences({ onAuthorActions: event.target.checked })
-              }
+              onChange={(event) => void patchPreferences({ emailEnabled: event.target.checked })}
             />
           </label>
           <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
-            <span>Actions sur mes articles</span>
+            <span>Notification dans l&apos;interface</span>
             <input
               type="checkbox"
-              checked={preferences.onOwnArticles}
+              checked={preferences.inAppEnabled}
               disabled={saving || loading}
-              onChange={(event) => void patchPreferences({ onOwnArticles: event.target.checked })}
+              onChange={(event) => void patchPreferences({ inAppEnabled: event.target.checked })}
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+            <span>Notification navigateur</span>
+            <input
+              type="checkbox"
+              checked={preferences.browserPushEnabled}
+              disabled={isBrowserToggleDisabled}
+              onChange={(event) => void handleBrowserPushToggle(event.target.checked)}
             />
           </label>
         </div>
-      ) : null}
+
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-rer-text">Evenements</h3>
+          <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+            <span>Depot de l&apos;article</span>
+            <input
+              type="checkbox"
+              checked={preferences.onSubmitted}
+              disabled={saving || loading}
+              onChange={(event) => void patchPreferences({ onSubmitted: event.target.checked })}
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+            <span>Corrections effectuees</span>
+            <input
+              type="checkbox"
+              checked={preferences.onCorrections}
+              disabled={saving || loading}
+              onChange={(event) => void patchPreferences({ onCorrections: event.target.checked })}
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+            <span>Validation et publication</span>
+            <input
+              type="checkbox"
+              checked={preferences.onPublished}
+              disabled={saving || loading}
+              onChange={(event) => void patchPreferences({ onPublished: event.target.checked })}
+            />
+          </label>
+        </div>
+
+        {isAdmin ? (
+          <div className="space-y-2 md:col-span-2">
+            <h3 className="text-sm font-semibold text-rer-text">Perimetre admin</h3>
+            <div className="grid gap-2 md:grid-cols-2">
+              <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+                <span>Articles des auteurs</span>
+                <input
+                  type="checkbox"
+                  checked={preferences.onAuthorActions}
+                  disabled={saving || loading}
+                  onChange={(event) =>
+                    void patchPreferences({ onAuthorActions: event.target.checked })
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between gap-3 rounded-lg border border-rer-border p-2 text-sm">
+                <span>Mes articles (que j&apos;ai publies/modifies)</span>
+                <input
+                  type="checkbox"
+                  checked={preferences.onOwnArticles}
+                  disabled={saving || loading}
+                  onChange={(event) => void patchPreferences({ onOwnArticles: event.target.checked })}
+                />
+              </label>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }
