@@ -2,6 +2,7 @@
 
 import { type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { dispatchNotificationsUpdated } from "@/lib/notifications/client-sync";
 
 type NotificationItem = {
@@ -97,9 +98,33 @@ function getArticleHref(metadata: unknown): string | null {
   return `/articles/${articleId}`;
 }
 
+function getStatusTag(type: string): { label: string; className: string } {
+  if (type.includes("submitted")) {
+    return { label: "Depot", className: "border-amber-200 bg-amber-50 text-amber-800" };
+  }
+  if (type.includes("corrections")) {
+    return { label: "Corrections", className: "border-purple-200 bg-purple-50 text-purple-800" };
+  }
+  if (type.includes("published")) {
+    return { label: "Publication", className: "border-emerald-200 bg-emerald-50 text-emerald-800" };
+  }
+  return { label: "Notification", className: "border-slate-200 bg-slate-50 text-slate-700" };
+}
+
+function stripStatusPrefix(title: string, statusLabel: string): string {
+  const labelCandidates =
+    statusLabel === "Depot" ? [statusLabel, "Dépôt"] : statusLabel === "Dépôt" ? [statusLabel, "Depot"] : [statusLabel];
+  for (const label of labelCandidates) {
+    const prefix = `${label} - `;
+    if (title.startsWith(prefix)) return title.slice(prefix.length);
+  }
+  return title;
+}
+
 export function NotificationsClient({ variant = "page", onNavigate }: NotificationsClientProps) {
   const PAGE_SIZE = 20;
   const isPopover = variant === "popover";
+  const router = useRouter();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -326,25 +351,37 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
   const hasUnread = unreadCount > 0;
   const isInteractiveTarget = (target: EventTarget | null): boolean => {
     if (!(target instanceof HTMLElement)) return false;
-    return !!target.closest("button, a, input, textarea, select, [role='button']");
+    return !!target.closest("button, a, input, textarea, select");
   };
 
   const handleNotificationContainerClick = useCallback(
-    (event: ReactMouseEvent<HTMLElement>, id: string, isRead: boolean) => {
-      if (isRead || isInteractiveTarget(event.target)) return;
-      void markAsRead(id);
+    (event: ReactMouseEvent<HTMLElement>, id: string, isRead: boolean, articleHref: string | null) => {
+      if (isInteractiveTarget(event.target)) return;
+      if (!isRead) {
+        void markAsRead(id);
+      }
+      if (!isPopover && articleHref) {
+        router.push(articleHref);
+        onNavigate?.();
+      }
     },
-    [markAsRead]
+    [isPopover, markAsRead, onNavigate, router]
   );
 
   const handleNotificationContainerKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLElement>, id: string, isRead: boolean) => {
-      if (isRead || isInteractiveTarget(event.target)) return;
+    (event: ReactKeyboardEvent<HTMLElement>, id: string, isRead: boolean, articleHref: string | null) => {
+      if (isInteractiveTarget(event.target)) return;
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
-      void markAsRead(id);
+      if (!isRead) {
+        void markAsRead(id);
+      }
+      if (!isPopover && articleHref) {
+        router.push(articleHref);
+        onNavigate?.();
+      }
     },
-    [markAsRead]
+    [isPopover, markAsRead, onNavigate, router]
   );
 
   const groupedItems = useMemo(() => {
@@ -361,7 +398,7 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
   return (
     <section className={`border-rer-border bg-white shadow-sm ${isPopover ? "" : "rounded-2xl border"}`}>
       <header
-        className={`flex flex-col gap-4 border-rer-border px-4 py-4 ${
+        className={`flex flex-col border-rer-border px-4 ${isPopover ? "gap-3 py-2.5" : "gap-4 py-4"} ${
           isPopover ? "border-b bg-gradient-to-b from-rer-app/50 to-transparent" : "border-b"
         }`}
       >
@@ -370,7 +407,7 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
             <h2 className={`${isPopover ? "text-base" : "text-lg"} font-semibold text-rer-text`}>
               {isPopover ? "Notifications" : "Centre de notifications"}
             </h2>
-            <p className="mt-0.5 text-sm text-rer-muted">
+            <p className={`mt-0.5 text-rer-muted ${isPopover ? "text-xs" : "text-sm"}`}>
               {unreadCount} non lue{unreadCount > 1 ? "s" : ""} à traiter sur {totalCount}
             </p>
           </div>
@@ -380,7 +417,7 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                 type="button"
                 onClick={() => void purgeAll()}
                 disabled={loading}
-                className={actionButtonClass("danger")}
+                className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 transition-all duration-150 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Vider toutes les notifications
               </button>
@@ -520,57 +557,56 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                   const isRead = !!item.readAt;
                   const scope = getNotificationScope(item);
                   const articleHref = getArticleHref(item.metadata);
+                  const statusTag = getStatusTag(item.type);
+                  const cleanTitle = stripStatusPrefix(item.title, statusTag.label);
                   const scopeBadgeClass =
                     scope === "adminArticles"
-                      ? "bg-blue-100 text-blue-800 border border-blue-200"
-                      : "bg-orange-100 text-orange-800 border border-orange-200";
-                  const scopeCardClass =
-                    scope === "adminArticles"
-                      ? "border-l-4 border-l-blue-500"
-                      : "border-l-4 border-l-orange-500";
+                      ? "border-slate-200 bg-slate-50 text-slate-700"
+                      : "border-slate-200 bg-slate-50 text-slate-700";
+                  const unreadDotClass = scope === "adminArticles" ? "bg-blue-500" : "bg-orange-500";
 
                   return (
                     <li
                       key={item.id}
                       role="button"
                       tabIndex={0}
-                      onClick={(event) => handleNotificationContainerClick(event, item.id, isRead)}
-                      onKeyDown={(event) => handleNotificationContainerKeyDown(event, item.id, isRead)}
-                      className={`rounded-xl border px-3 py-2 transition-all duration-150 ${scopeCardClass} ${
+                      onClick={(event) => handleNotificationContainerClick(event, item.id, isRead, articleHref)}
+                      onKeyDown={(event) => handleNotificationContainerKeyDown(event, item.id, isRead, articleHref)}
+                      className={`rounded-xl border px-3 py-2.5 transition-all duration-150 ${
                         isRead
                           ? "border-rer-border bg-white hover:border-rer-border/80 hover:bg-rer-app/30"
                           : "cursor-pointer border-rer-blue/30 bg-rer-blue/5 shadow-[inset_0_0_0_1px_rgba(33,85,163,0.04)] hover:border-rer-blue/40"
                       }`}
+                      aria-label={articleHref ? `Ouvrir la notification ${cleanTitle}` : `Notification ${cleanTitle}`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${scopeBadgeClass}`}>
-                              {scope === "adminArticles"
-                                ? "Contenus admin"
-                                : "Contenus auteurs"}
-                            </span>
-                            {!isRead ? (
-                              <span className="h-2 w-2 rounded-full bg-rer-blue" aria-label="Notification non lue" />
-                            ) : null}
-                            <span className="text-xs text-rer-subtle">{formatDate(item.createdAt)}</span>
-                          </div>
-                          <p className="truncate text-sm font-semibold leading-5 text-rer-text">{item.title}</p>
-                          <p className="line-clamp-2 text-sm leading-5 text-rer-muted">{item.body}</p>
-                          {articleHref ? (
-                            <Link
-                              href={articleHref}
-                              className="inline-flex text-xs font-medium text-rer-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
-                            >
-                              Ouvrir le contenu
-                            </Link>
-                          ) : null}
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${scopeBadgeClass}`}>
+                            {scope === "adminArticles" ? "Contenus admin" : "Contenus auteurs"}
+                          </span>
+                          <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusTag.className}`}>
+                            {statusTag.label}
+                          </span>
+                          <span className="text-xs text-rer-subtle">{formatDate(item.createdAt)}</span>
                         </div>
-                        <div className="flex shrink-0 items-center gap-1.5">
+                        <div className="flex items-start gap-2">
+                          {!isRead ? (
+                            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${unreadDotClass}`} aria-label="Notification non lue" />
+                          ) : null}
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <p className="text-sm font-semibold leading-5 text-rer-text">{cleanTitle}</p>
+                            <p className="line-clamp-2 text-sm leading-5 text-rer-muted">{item.body}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
                           {!isRead ? (
                             <button
                               type="button"
-                              onClick={() => void markAsRead(item.id)}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                void markAsRead(item.id);
+                              }}
                               className="rounded-md border border-rer-border px-2 py-1 text-xs font-medium text-rer-text transition-colors hover:border-rer-blue/40 hover:bg-rer-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
                             >
                               Marquer comme lue
@@ -578,7 +614,11 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                           ) : (
                             <button
                               type="button"
-                              onClick={() => void markAsUnread(item.id)}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                void markAsUnread(item.id);
+                              }}
                               className="rounded-md border border-rer-border px-2 py-1 text-xs font-medium text-rer-text transition-colors hover:border-rer-blue/40 hover:bg-rer-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
                             >
                               Marquer comme non lue
@@ -587,7 +627,11 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                           {!isPopover ? (
                             <button
                               type="button"
-                              onClick={() => void deleteOne(item.id)}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                void deleteOne(item.id);
+                              }}
                               className="rounded-md border border-rer-border px-2 py-1 text-xs font-medium text-rer-text transition-colors hover:border-red-200 hover:bg-red-50/70 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
                             >
                               Retirer
