@@ -87,7 +87,6 @@ describe("POST /api/auth/forgot-password", () => {
     mocks.userFindUnique.mockResolvedValue({
       id: "u1",
       email: "u1@example.com",
-      passwordHash: "hash",
     });
 
     const response = await POST(makeRequest({ email: "u1@example.com" }));
@@ -110,7 +109,6 @@ describe("POST /api/auth/forgot-password", () => {
     mocks.userFindUnique.mockResolvedValue({
       id: "u-rate",
       email: "rate@example.com",
-      passwordHash: "hash",
     });
 
     for (let i = 0; i < 5; i += 1) {
@@ -127,5 +125,23 @@ describe("POST /api/auth/forgot-password", () => {
     expect(limited.status).toBe(200);
     expect(data.message).toBe(SUCCESS_MESSAGE);
     expect(mocks.userFindUnique).toHaveBeenCalledTimes(5);
+  });
+
+  it("envoie aussi un lien si le compte n'a jamais eu de mot de passe", async () => {
+    mocks.userFindUnique.mockResolvedValue({
+      id: "u-null-hash",
+      email: "null-hash@example.com",
+      passwordHash: null,
+    });
+
+    const response = await POST(makeRequest({ email: "null-hash@example.com" }));
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.message).toBe(SUCCESS_MESSAGE);
+    expect(mocks.tokenDeleteMany).toHaveBeenCalledWith({
+      where: { userId: "u-null-hash" },
+    });
+    expect(mocks.sendPasswordResetEmail).toHaveBeenCalledTimes(1);
   });
 });

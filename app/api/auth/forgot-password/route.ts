@@ -99,10 +99,10 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, email: true, passwordHash: true },
+      select: { id: true, email: true },
     });
 
-    if (!user?.passwordHash) {
+    if (!user) {
       logForgotPasswordEvent("user-not-eligible", {
         ip,
         email,
