@@ -17,8 +17,8 @@ const contentSecurityPolicy = [
 
 const nextConfig = {
   images: {
-    remotePatterns:
-      supabaseUrl.length > 0
+    remotePatterns: [
+      ...(supabaseUrl.length > 0
         ? [
             {
               protocol: "https",
@@ -26,7 +26,12 @@ const nextConfig = {
               pathname: "/storage/v1/object/public/**",
             },
           ]
-        : [],
+        : []),
+      // Liens ibb historiques non migrés (images 404) : déclarés pour éviter
+      // que next/image ne lève une erreur de rendu sur un hostname inconnu.
+      { protocol: "https", hostname: "i.ibb.co" },
+      { protocol: "https", hostname: "ibb.co" },
+    ],
   },
   async headers() {
     return [

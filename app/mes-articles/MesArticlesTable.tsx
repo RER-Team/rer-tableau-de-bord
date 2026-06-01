@@ -274,7 +274,6 @@ export function MesArticlesTable({
                           alt=""
                           fill
                           sizes="56px"
-                          unoptimized
                           className="object-cover object-top"
                         />
                       </div>

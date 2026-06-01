@@ -284,7 +284,6 @@ export default function ArticleDetailPage() {
                   alt={article.legendePhoto || article.titre}
                   width={1400}
                   height={900}
-                  unoptimized
                   className="h-auto w-full max-h-96 object-cover object-top"
                 />
               </div>

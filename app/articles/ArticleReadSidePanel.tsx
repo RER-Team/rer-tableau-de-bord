@@ -265,7 +265,6 @@ export function ArticleReadSidePanel({
                       alt={article.legendePhoto || article.titre}
                       width={1200}
                       height={700}
-                      unoptimized
                       onLoadingComplete={(img) => {
                         setMainImageLayout(
                           img.naturalHeight > img.naturalWidth ? "portrait" : "landscape"

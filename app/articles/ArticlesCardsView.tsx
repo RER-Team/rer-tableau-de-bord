@@ -180,7 +180,6 @@ export function ArticlesCardsView({
                   alt={article.legendePhoto || article.titre}
                   fill
                   sizes="(max-width: 640px) 100vw, 160px"
-                  unoptimized
                   className="object-cover object-top"
                 />
               ) : (

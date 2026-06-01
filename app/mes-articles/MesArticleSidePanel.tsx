@@ -433,7 +433,6 @@ export function MesArticleSidePanel({
                       alt={article.legendePhoto || article.titre}
                       width={1200}
                       height={700}
-                      unoptimized
                       className="h-auto w-full max-h-80 object-cover object-top"
                     />
                   </div>

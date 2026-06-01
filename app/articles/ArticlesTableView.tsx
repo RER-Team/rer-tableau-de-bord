@@ -218,7 +218,6 @@ export function ArticlesTableView({
                         alt={article.legendePhoto || article.titre}
                         fill
                         sizes="56px"
-                        unoptimized
                         className="object-cover object-top"
                       />
                     </div>
