@@ -36,8 +36,10 @@ vi.mock("@/lib/password-reset", () => ({
 import { POST } from "@/app/api/auth/forgot-password/route";
 
 const SUCCESS_MESSAGE =
-  "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.";
+  "Un lien de réinitialisation a été envoyé à votre adresse email.";
 const NOT_FOUND_MESSAGE = "Aucun compte n'existe avec cette adresse email.";
+const RATE_LIMIT_MESSAGE =
+  "Trop de demandes de réinitialisation. Merci de réessayer dans quelques minutes.";
 
 function makeRequest(body: unknown, ip = "1.1.1.1") {
   return {
@@ -122,8 +124,8 @@ describe("POST /api/auth/forgot-password", () => {
       makeRequest({ email: "rate@example.com" }, "2.2.2.100")
     );
     const data = await limited.json();
-    expect(limited.status).toBe(200);
-    expect(data.message).toBe(SUCCESS_MESSAGE);
+    expect(limited.status).toBe(429);
+    expect(data.error).toBe(RATE_LIMIT_MESSAGE);
     expect(mocks.userFindUnique).toHaveBeenCalledTimes(5);
   });
 

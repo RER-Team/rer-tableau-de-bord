@@ -18,6 +18,7 @@ function LoginPageInner() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMessage, setForgotMessage] = useState<string | null>(null);
+  const [forgotIsError, setForgotIsError] = useState(false);
   const { logoUrl, fallbackLogoUrl } = useSiteLogo();
   const [logoLoadFailed, setLogoLoadFailed] = useState(false);
 
@@ -56,6 +57,7 @@ function LoginPageInner() {
 
   const handleForgotPassword = async () => {
     setForgotMessage(null);
+    setForgotIsError(false);
     setForgotLoading(true);
     try {
       const res = await fetch("/api/auth/forgot-password", {
@@ -69,6 +71,7 @@ function LoginPageInner() {
           data.error ||
           "Impossible d'envoyer le lien de réinitialisation."
       );
+      setForgotIsError(!res.ok);
       if (res.ok && data.message) {
         setForgotEmail("");
       }
@@ -76,6 +79,7 @@ function LoginPageInner() {
       setForgotMessage(
         "Erreur réseau: impossible d'envoyer le lien de réinitialisation."
       );
+      setForgotIsError(true);
     } finally {
       setForgotLoading(false);
     }
@@ -196,7 +200,13 @@ function LoginPageInner() {
                 </button>
               </div>
               {forgotMessage && (
-                <p className="mt-2 text-xs text-rer-muted">{forgotMessage}</p>
+                <p
+                  className={`mt-2 text-xs ${
+                    forgotIsError ? "text-red-600" : "text-green-700"
+                  }`}
+                >
+                  {forgotMessage}
+                </p>
               )}
             </div>
           )}
