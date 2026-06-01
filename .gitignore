@@ -11,5 +11,9 @@ out/
 .env.*.local
 *.log
 .vercel
+
+# Dossier de transfert Vercel (secrets exportés)
+TRANSFER/.env*
 public/uploads/*
 !public/uploads/.gitkeep
+.env*
