@@ -19,6 +19,7 @@ function LoginPageInner() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMessage, setForgotMessage] = useState<string | null>(null);
   const [forgotIsError, setForgotIsError] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
   const { logoUrl, fallbackLogoUrl } = useSiteLogo();
   const [logoLoadFailed, setLogoLoadFailed] = useState(false);
 
@@ -74,6 +75,7 @@ function LoginPageInner() {
       setForgotIsError(!res.ok);
       if (res.ok && data.message) {
         setForgotEmail("");
+        setForgotSent(true);
       }
     } catch {
       setForgotMessage(
@@ -167,6 +169,8 @@ function LoginPageInner() {
               onClick={() => {
                 setShowForgotForm((v) => !v);
                 setForgotMessage(null);
+                setForgotIsError(false);
+                setForgotSent(false);
               }}
               className="text-xs font-medium text-rer-blue hover:underline"
             >
@@ -178,30 +182,35 @@ function LoginPageInner() {
 
           {showForgotForm && (
             <div className="rounded-lg border border-rer-border bg-rer-app/40 p-3">
-              <p className="mb-2 text-xs text-rer-muted">
-                Saisissez votre email pour recevoir un lien de réinitialisation.
-              </p>
-              <div className="space-y-2">
-                <input
-                  type="email"
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  className="w-full rounded-lg border border-rer-border bg-white px-3 py-2 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
-                  placeholder="vous@exemple.fr"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  disabled={forgotLoading}
-                  className="inline-flex w-full items-center justify-center rounded-full border border-rer-blue bg-white px-4 py-2 text-sm font-semibold text-rer-blue hover:bg-rer-app disabled:opacity-60"
-                >
-                  {forgotLoading ? "Envoi…" : "Envoyer le lien"}
-                </button>
-              </div>
+              {!forgotSent && (
+                <>
+                  <p className="mb-2 text-xs text-rer-muted">
+                    Saisissez votre email pour recevoir un lien de
+                    réinitialisation.
+                  </p>
+                  <div className="space-y-2">
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="w-full rounded-lg border border-rer-border bg-white px-3 py-2 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
+                      placeholder="vous@exemple.fr"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      disabled={forgotLoading}
+                      className="inline-flex w-full items-center justify-center rounded-full border border-rer-blue bg-white px-4 py-2 text-sm font-semibold text-rer-blue hover:bg-rer-app disabled:opacity-60"
+                    >
+                      {forgotLoading ? "Envoi…" : "Envoyer le lien"}
+                    </button>
+                  </div>
+                </>
+              )}
               {forgotMessage && (
                 <p
-                  className={`mt-2 text-xs ${
+                  className={`text-xs ${forgotSent ? "" : "mt-2"} ${
                     forgotIsError ? "text-red-600" : "text-green-700"
                   }`}
                 >
