@@ -13,8 +13,8 @@ tsconfig.tsbuildinfo
 *.log
 .vercel
 
-# Dossier de transfert Vercel (secrets exportés)
-TRANSFER/.env*
+# Dossier de transfert Vercel (secrets exportés + notes de reprise, local only)
+TRANSFER/
 public/uploads/*
 !public/uploads/.gitkeep
 .env*
