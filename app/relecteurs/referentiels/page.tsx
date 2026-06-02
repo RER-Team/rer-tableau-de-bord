@@ -359,7 +359,7 @@ export default function AdminReferentielsPage() {
   }
 
   return (
-    <section className="space-y-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-rer-border">
+    <section className="min-w-0 space-y-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-rer-border">
       <header className="space-y-1">
         <h1 className="text-lg font-semibold text-rer-text">
           Référentiels éditoriaux
@@ -408,7 +408,7 @@ export default function AdminReferentielsPage() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 md:min-w-[320px]">
+            <div className="flex w-full min-w-0 flex-col gap-2 md:w-[320px] md:max-w-[320px]">
               <input
                 key={logoInputKey}
                 type="file"
@@ -416,7 +416,7 @@ export default function AdminReferentielsPage() {
                 onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
                 className="block w-full text-sm text-rer-text file:mr-3 file:rounded-full file:border-0 file:bg-rer-blue file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-[#1e3380]"
               />
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="truncate text-xs text-rer-muted">
                   {logoFile ? logoFile.name : "PNG, JPG, WEBP…"}
                 </p>
@@ -460,13 +460,13 @@ export default function AdminReferentielsPage() {
             {mutuelles.map((m) => (
               <div
                 key={m.id}
-                className="flex items-center gap-2 rounded px-1 py-0.5 hover:bg-rer-app/60"
+                className="flex flex-wrap items-center gap-2 rounded px-1 py-0.5 hover:bg-rer-app/60"
               >
                 <input
                   type="text"
                   defaultValue={m.nom}
                   onBlur={(e) => updateMutuelle(m, e.target.value)}
-                  className="flex-1 rounded border border-transparent px-1 py-0.5 text-sm hover:border-rer-border focus:border-rer-blue focus:outline-none"
+                  className="min-w-0 flex-1 rounded border border-transparent px-1 py-0.5 text-sm hover:border-rer-border focus:border-rer-blue focus:outline-none"
                 />
                 <button
                   type="button"
@@ -512,13 +512,13 @@ export default function AdminReferentielsPage() {
             {rubriques.map((r) => (
               <div
                 key={r.id}
-                className="flex items-center gap-2 rounded px-1 py-0.5 hover:bg-rer-app/60"
+                className="flex flex-wrap items-center gap-2 rounded px-1 py-0.5 hover:bg-rer-app/60"
               >
                 <input
                   type="text"
                   defaultValue={r.libelle}
                   onBlur={(e) => updateRubrique(r, e.target.value)}
-                  className="flex-1 rounded border border-transparent px-1 py-0.5 text-sm hover:border-rer-border focus:border-rer-blue focus:outline-none"
+                  className="min-w-0 flex-1 rounded border border-transparent px-1 py-0.5 text-sm hover:border-rer-border focus:border-rer-blue focus:outline-none"
                 />
                 <button
                   type="button"
@@ -581,7 +581,7 @@ export default function AdminReferentielsPage() {
             {formats.map((f) => (
               <div
                 key={f.id}
-                className="flex items-center gap-2 rounded px-1 py-0.5 hover:bg-rer-app/60"
+                className="flex flex-wrap items-center gap-2 rounded px-1 py-0.5 hover:bg-rer-app/60"
               >
                 <input
                   type="text"
@@ -590,7 +590,7 @@ export default function AdminReferentielsPage() {
                     e.target.value !== f.libelle &&
                     updateFormat(f, { libelle: e.target.value })
                   }
-                  className="flex-1 rounded border border-transparent px-1 py-0.5 text-sm hover:border-rer-border focus:border-rer-blue focus:outline-none"
+                  className="min-w-0 flex-1 rounded border border-transparent px-1 py-0.5 text-sm hover:border-rer-border focus:border-rer-blue focus:outline-none"
                 />
                 <input
                   type="number"

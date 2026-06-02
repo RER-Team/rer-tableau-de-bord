@@ -16,7 +16,7 @@ export default async function AdminSettingsLayout({
   return (
     <div className="flex min-h-screen bg-rer-app">
       <RelecteursSidebar />
-      <main className="flex-1">
+      <main className="min-w-0 flex-1">
         <div className="mx-auto max-w-6xl px-4 py-6 lg:py-8">
           <div className="min-w-0">
             {children}

@@ -217,7 +217,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <section className="space-y-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-rer-border">
+    <section className="min-w-0 space-y-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-rer-border">
       <header className="space-y-1">
         <h1 className="text-lg font-semibold text-rer-text">
           Utilisateurs & rôles
@@ -294,8 +294,8 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-rer-border text-sm">
+      <div className="max-w-full overflow-x-auto">
+        <table className="min-w-[980px] divide-y divide-rer-border text-sm">
           <thead className="bg-rer-app text-xs font-semibold uppercase tracking-wide text-rer-muted">
             <tr>
               <th className="px-2 py-2 text-left">Personne</th>
@@ -466,7 +466,7 @@ export default function AdminUsersPage() {
                     ))}
                   </select>
                 </td>
-                <td className="px-2 py-1.5 text-right align-top space-x-2">
+                <td className="space-x-2 whitespace-nowrap px-2 py-1.5 text-right align-top">
                   <button
                     type="button"
                     disabled={savingId === `reset-${u.id}`}
