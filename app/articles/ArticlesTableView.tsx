@@ -184,34 +184,34 @@ export function ArticlesTableView({
   return (
     <>
       <div className="overflow-x-auto" aria-keyshortcuts="ArrowUp ArrowDown Enter">
-        <table className="min-w-full divide-y divide-rer-border bg-white shadow-sm ring-1 ring-rer-border">
+        <table className="w-full table-fixed divide-y divide-rer-border bg-white shadow-sm ring-1 ring-rer-border">
           <thead className="bg-rer-blue text-white">
             <tr>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-20 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Photo
               </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-[25%] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Titre
               </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-[13%] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Auteur
               </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-[12%] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Mutuelle
               </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-[10%] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Rubrique
               </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-[10%] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Format
               </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-28 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Publié le
               </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-[9%] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 État
               </th>
-              <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-24 px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Actions
               </th>
             </tr>

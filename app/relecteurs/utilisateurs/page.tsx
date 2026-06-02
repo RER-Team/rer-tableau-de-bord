@@ -295,15 +295,15 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="max-w-full overflow-x-auto">
-        <table className="min-w-[980px] divide-y divide-rer-border text-sm">
+        <table className="w-full table-fixed divide-y divide-rer-border text-sm">
           <thead className="bg-rer-app text-xs font-semibold uppercase tracking-wide text-rer-muted">
             <tr>
-              <th className="px-2 py-2 text-left">Personne</th>
-              <th className="px-2 py-2 text-left">Mutuelle</th>
-              <th className="px-2 py-2 text-left">Téléphone</th>
-              <th className="px-2 py-2 text-left">Email</th>
-              <th className="px-2 py-2 text-left">Rôle</th>
-              <th className="px-2 py-2 text-right">Actions</th>
+              <th className="w-[30%] px-2 py-2 text-left">Personne</th>
+              <th className="w-[16%] px-2 py-2 text-left">Mutuelle</th>
+              <th className="w-[12%] px-2 py-2 text-left">Téléphone</th>
+              <th className="w-[20%] px-2 py-2 text-left">Email</th>
+              <th className="w-[10%] px-2 py-2 text-left">Rôle</th>
+              <th className="w-[12%] px-2 py-2 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-rer-border bg-white">
@@ -324,7 +324,7 @@ export default function AdminUsersPage() {
                                   handleUpdate(u, { auteurId: value });
                                 }
                               }}
-                              className="h-7 min-w-[190px] rounded border border-rer-border bg-white px-2 text-xs"
+                            className="h-7 w-full min-w-0 rounded border border-rer-border bg-white px-2 text-xs"
                             >
                               <option value="">Aucun auteur associé</option>
                               {data.auteurs.map((auteur) => (
@@ -377,7 +377,7 @@ export default function AdminUsersPage() {
                             handleUpdate(u, { auteurId: value });
                           }
                         }}
-                        className="h-7 min-w-[190px] rounded border border-rer-border bg-white px-2 text-xs"
+                        className="h-7 w-full min-w-0 rounded border border-rer-border bg-white px-2 text-xs"
                       >
                         <option value="">Associer un auteur…</option>
                         {data.auteurs.map((auteur) => (
@@ -430,7 +430,7 @@ export default function AdminUsersPage() {
                               telephone: e.target.value || null,
                             })
                           }
-                          className="h-8 w-full min-w-[120px] rounded border border-transparent px-1 py-0.5 text-xs hover:border-rer-border focus:border-rer-blue focus:outline-none"
+                          className="h-8 w-full min-w-0 rounded border border-transparent px-1 py-0.5 text-xs hover:border-rer-border focus:border-rer-blue focus:outline-none"
                           placeholder="06..."
                         />
                       );
@@ -447,7 +447,7 @@ export default function AdminUsersPage() {
                       e.target.value !== u.email &&
                       handleUpdate(u, { email: e.target.value })
                     }
-                    className="w-full rounded border border-transparent px-1 py-0.5 text-sm hover:border-rer-border focus:border-rer-blue focus:outline-none"
+                    className="w-full min-w-0 rounded border border-transparent px-1 py-0.5 text-sm hover:border-rer-border focus:border-rer-blue focus:outline-none"
                   />
                 </td>
                 <td className="px-2 py-1.5 align-top">
@@ -457,7 +457,7 @@ export default function AdminUsersPage() {
                       e.target.value !== u.role &&
                       handleUpdate(u, { role: e.target.value })
                     }
-                    className="h-8 rounded border border-rer-border bg-white px-2 text-xs"
+                    className="h-8 w-full min-w-0 rounded border border-rer-border bg-white px-2 text-xs"
                   >
                     {ROLES.map((r) => (
                       <option key={r} value={r}>
@@ -466,8 +466,9 @@ export default function AdminUsersPage() {
                     ))}
                   </select>
                 </td>
-                <td className="space-x-2 whitespace-nowrap px-2 py-1.5 text-right align-top">
-                  <button
+                <td className="px-2 py-1.5 text-right align-top">
+                  <div className="flex flex-col items-end gap-1">
+                    <button
                     type="button"
                     disabled={savingId === `reset-${u.id}`}
                     onClick={async () => {
@@ -512,17 +513,18 @@ export default function AdminUsersPage() {
                       }
                     }}
                     className="text-xs font-medium text-rer-blue hover:text-rer-text disabled:opacity-60"
-                  >
-                    Réinitialiser MDP
-                  </button>
-                  <button
+                    >
+                      Réinit. MDP
+                    </button>
+                    <button
                     type="button"
                     disabled={savingId === u.id}
                     onClick={() => handleDelete(u)}
                     className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-60"
-                  >
-                    Supprimer
-                  </button>
+                    >
+                      Supprimer
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

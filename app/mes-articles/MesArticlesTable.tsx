@@ -205,26 +205,26 @@ export function MesArticlesTable({
         )}
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-rer-border bg-white shadow-sm ring-1 ring-rer-border">
+        <table className="w-full table-fixed divide-y divide-rer-border bg-white shadow-sm ring-1 ring-rer-border">
           <thead className="bg-rer-blue text-white">
             <tr>
               <th className="w-6 px-3 py-2" aria-hidden="true" />
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-20 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Photo
               </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-[31%] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Titre
               </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-[20%] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Rubrique / Format
               </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-[10%] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 État
               </th>
-              <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-[15%] px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Dernière activité
               </th>
-              <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-white/90">
+              <th className="w-[18%] px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-white/90">
                 Actions
               </th>
             </tr>
