@@ -218,10 +218,10 @@ export function ArticlesCardsView({
                 </div>
               )}
             </div>
-            <div className="flex flex-1 flex-col gap-2 p-4">
-              <span className="text-base font-semibold text-rer-text sm:text-lg">
+            <div className="min-w-0 flex flex-1 flex-col gap-2 p-4">
+              <p className="line-clamp-2 text-base font-semibold text-rer-text [overflow-wrap:anywhere] sm:text-lg">
                 {article.titre}
-              </span>
+              </p>
               {article.chapo && (
                 <p className="line-clamp-2 text-sm text-rer-muted">
                   {article.chapo}

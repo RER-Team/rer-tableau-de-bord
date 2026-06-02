@@ -635,7 +635,7 @@ export function ArticlesExplorerView({
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)]">
-        <div className="space-y-2 max-h-[calc(100vh-120px)] overflow-y-auto pr-1 border-r border-rer-border">
+        <div className="space-y-2 max-h-[calc(100vh-120px)] overflow-y-auto border-r border-rer-border pr-1 lg:max-h-[calc(100vh-32px)]">
           {visibleArticles.map((article) => {
             const isSelected = article.id === selectedId;
             return (
@@ -666,7 +666,7 @@ export function ArticlesExplorerView({
                       </div>
                     )}
                   </div>
-                    <div className="flex flex-1 flex-col gap-1 p-3">
+                    <div className="min-w-0 flex flex-1 flex-col gap-1 p-3">
                     <div className="flex flex-wrap items-center justify-end gap-1 text-[11px]">
                       {article.format && (
                         <span
@@ -700,7 +700,7 @@ export function ArticlesExplorerView({
                         </span>
                       )}
                     </div>
-                    <p className="text-sm font-semibold text-rer-text">
+                    <p className="line-clamp-2 text-sm font-semibold text-rer-text [overflow-wrap:anywhere]">
                       {article.titre}
                     </p>
                     {article.chapo && (
