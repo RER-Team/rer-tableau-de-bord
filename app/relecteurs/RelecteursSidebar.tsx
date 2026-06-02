@@ -32,6 +32,12 @@ const NAV_ITEMS: NavItem[] = [
     description: "Templates notifications",
     adminOnly: true,
   },
+  {
+    href: "/admin/statistiques",
+    label: "Stats",
+    description: "Consultation des contenus",
+    adminOnly: true,
+  },
 ];
 
 export function RelecteursSidebar() {

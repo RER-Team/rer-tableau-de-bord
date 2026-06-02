@@ -6,6 +6,10 @@ import { ArticlesExplorerView } from "./ArticlesCardsExplorer";
 import { ArticlesCardsView } from "./ArticlesCardsView";
 import { ArticlesTableView } from "./ArticlesTableView";
 import { ArticlesFiltersBar } from "./ArticlesFiltersBar";
+import {
+  buildArticleTextSearchWhere,
+  mergeArticleWhereClauses,
+} from "@/lib/article-search-where";
 
 export const dynamic = "force-dynamic";
 
@@ -67,13 +71,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
 
   const where: any = {};
 
-  if (q) {
-    where.OR = [
-      { titre: { contains: q, mode: "insensitive" } },
-      { chapo: { contains: q, mode: "insensitive" } },
-      { contenu: { contains: q, mode: "insensitive" } },
-    ];
-  }
+  const textSearchWhere = buildArticleTextSearchWhere(q);
 
   const etatWhere = getStatusWhereClause(etatSlug);
   if (etatWhere) {
@@ -135,10 +133,11 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   } else if (formatIds.length > 1) {
     where.formatId = { in: formatIds };
   }
+  const finalWhere = mergeArticleWhereClauses(where, textSearchWhere);
 
   const [articles, total] = await Promise.all([
     prisma.article.findMany({
-      where,
+      where: finalWhere,
       select: {
         id: true,
         titre: true,
@@ -168,7 +167,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
       skip,
       take,
     }),
-    prisma.article.count({ where }),
+    prisma.article.count({ where: finalWhere }),
   ]);
 
   const articleSummaries = articles.map((article) => ({

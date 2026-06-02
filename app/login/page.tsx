@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
+import Link from "next/link";
 import { useSiteLogo } from "@/lib/useSiteLogo";
 
 function LoginPageInner() {
@@ -111,6 +112,17 @@ function LoginPageInner() {
           Saisissez vos identifiants pour accéder aux articles et à l’espace
           d’administration.
         </p>
+        <div className="mt-3 rounded-lg border border-rer-border bg-rer-app/40 p-3">
+          <p className="text-xs text-rer-muted">
+            Pas encore membre ? Découvrez un aperçu de la plateforme.
+          </p>
+          <Link
+            href="/decouvrir"
+            className="mt-2 inline-flex items-center justify-center rounded-full border border-rer-blue bg-white px-3 py-1.5 text-xs font-semibold text-rer-blue hover:bg-rer-app"
+          >
+            Découvrir la plateforme
+          </Link>
+        </div>
 
         {(error || presetError) && (
           <p className="mt-3 text-sm text-red-600">

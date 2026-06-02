@@ -10,6 +10,7 @@ import {
   getFormatBadgeClasses,
   getRubriqueBadgeClasses,
 } from "../ArticlesCardsExplorer";
+import { trackArticleConsultation } from "@/lib/track-article-consultation";
 
 type Article = {
   id: string;
@@ -126,6 +127,9 @@ export default function ArticleDetailPage() {
       .then(([a, s]) => {
         setArticle(a ?? null);
         setSession(s ?? null);
+        if (a?.id) {
+          trackArticleConsultation(a.id, "full-page");
+        }
       })
       .finally(() => setLoading(false));
   }, [id]);

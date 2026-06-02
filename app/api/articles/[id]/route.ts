@@ -40,6 +40,7 @@ const articlePreviewSelect = {
   rubrique: { select: { libelle: true } },
   format: { select: { libelle: true } },
   etat: { select: { libelle: true, slug: true } },
+  isExemplePublic: true,
 };
 
 function extractFirstImageSrc(html: string | null): string | null {
@@ -85,6 +86,27 @@ export async function GET(
           },
         });
   if (!article) return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
+
+  // Contrôle d'accès : un article non publié n'est lisible que par son auteur
+  // ou par un éditeur (relecteur/admin). Les articles publiés restent lisibles
+  // par tout membre connecté.
+  const isEditor = canEditArticles(user.role);
+  const isAuthor = !!user.auteurId && user.auteurId === article.auteurId;
+  if (!isPublishedStatus(article.etat?.slug) && !isEditor && !isAuthor) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+
+  // Pour les non-éditeurs, on n'expose jamais l'email/le rôle des relecteurs
+  // présents dans l'historique des changements d'état.
+  const articleWithHistoriques = article as {
+    historiques?: Array<Record<string, unknown>>;
+  };
+  if (!isEditor && Array.isArray(articleWithHistoriques.historiques)) {
+    articleWithHistoriques.historiques = articleWithHistoriques.historiques.map(
+      (h) => ({ ...h, user: null })
+    );
+  }
+
   return NextResponse.json(article);
 }
 
@@ -126,6 +148,7 @@ export async function PATCH(
       id: true,
       auteurId: true,
       etatId: true,
+      isExemplePublic: true,
       datePublication: true,
       dateDepot: true,
       contenu: true,
@@ -149,7 +172,12 @@ export async function PATCH(
     );
   }
 
-  const body = await request.json();
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+  }
 
   ingestDebug({
     sessionId: "fb943b",
@@ -176,6 +204,7 @@ export async function PATCH(
     postRs,
     lienPhoto,
     lienGoogleDoc,
+    isExemplePublic,
   } = body;
 
   const data: Record<string, unknown> = {};
@@ -289,6 +318,15 @@ export async function PATCH(
     }
   }
   if (lienGoogleDoc !== undefined) data.lienGoogleDoc = lienGoogleDoc?.trim() || null;
+  if (isExemplePublic !== undefined) {
+    if (!isEditor) {
+      return NextResponse.json(
+        { error: "Option vitrine réservée aux relecteurs et administrateurs." },
+        { status: 403 }
+      );
+    }
+    data.isExemplePublic = Boolean(isExemplePublic);
+  }
 
   const authorResubmitted =
     !isEditor && hasEditableFieldChange && !isDraftStatus(existing.etat?.slug);

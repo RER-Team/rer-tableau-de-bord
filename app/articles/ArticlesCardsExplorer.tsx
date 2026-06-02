@@ -8,7 +8,10 @@ import {
   getArticleStatusLabel,
   normalizeArticleStatusSlug,
 } from "@/lib/article-status";
+import { transformEmbeds } from "@/lib/article-html";
+import { useInfiniteArticleList } from "@/hooks/useInfiniteArticleList";
 import { useArticleShortcuts } from "./useArticleShortcuts";
+import { trackArticleConsultation } from "@/lib/track-article-consultation";
 
 type ArticleSummary = {
   id: string;
@@ -45,74 +48,6 @@ type ArticleDetail = {
   format: { libelle: string } | null;
   etat: { libelle: string; slug: string } | null;
 };
-
-function transformEmbeds(html: string): string {
-  if (typeof window === "undefined" || !html) return html;
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-
-    const blocks = doc.querySelectorAll("figure.embed-block .embed-url");
-    blocks.forEach((p) => {
-      const figure = p.closest("figure.embed-block");
-      if (!figure) return;
-      const raw = p.textContent ?? "";
-      const url = raw.trim();
-      if (!url) return;
-
-      let iframeSrc: string | null = null;
-      let title = "Contenu embarqué";
-
-      try {
-        const parsed = new URL(url);
-        const host = parsed.hostname.toLowerCase();
-
-        // YouTube
-        if (host.includes("youtube.com") || host === "youtu.be") {
-          let videoId = "";
-          if (host === "youtu.be") {
-            videoId = parsed.pathname.replace("/", "").split(/[/?#&]/)[0] ?? "";
-          } else {
-            videoId =
-              parsed.searchParams.get("v") ||
-              parsed.pathname.split("/").filter(Boolean).pop() ||
-              "";
-          }
-          if (videoId) {
-            iframeSrc = `https://www.youtube.com/embed/${videoId}`;
-            title = "Vidéo YouTube";
-          }
-        }
-
-        // Datawrapper
-        if (!iframeSrc && host.includes("datawrapper.dwcdn.net")) {
-          const parts = parsed.pathname.split("/").filter(Boolean);
-          const slug = parts.slice(0, 2).join("/") || "";
-          if (slug) {
-            iframeSrc = `https://datawrapper.dwcdn.net/${slug}/`;
-            title = "Graphique Datawrapper";
-          }
-        }
-      } catch {
-        // URL invalide : on laisse tel quel
-      }
-
-      if (!iframeSrc) {
-        return;
-      }
-
-      figure.innerHTML = `
-<div class="embed-responsive">
-  <iframe src="${iframeSrc}" title="${title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
-</div>
-`.trim();
-    });
-
-    return doc.body.innerHTML;
-  } catch {
-    return html;
-  }
-}
 
 type ArticlesExplorerViewProps = {
   articles: ArticleSummary[];
@@ -263,6 +198,8 @@ function ArticleDetailContent({
     "idle" | "copied" | "error"
   >("idle");
   const [mainImageLayout, setMainImageLayout] = useState<"portrait" | "landscape">("landscape");
+  const copyTimeoutRef = useRef<number | null>(null);
+  const imageCopyTimeoutRef = useRef<number | null>(null);
 
   const canCopy = !!detail && !loading && !error;
 
@@ -274,6 +211,15 @@ function ArticleDetailContent({
   useEffect(() => {
     setMainImageLayout("landscape");
   }, [detail?.id, detail?.lienPhoto]);
+
+  // Nettoyage des timers de feedback « copié » pour éviter un setState après démontage.
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) window.clearTimeout(copyTimeoutRef.current);
+      if (imageCopyTimeoutRef.current) window.clearTimeout(imageCopyTimeoutRef.current);
+    };
+  }, []);
+
   const statusContext = mine === "1" ? "author" : "public";
 
   const handleCopyHtml = async () => {
@@ -296,10 +242,12 @@ function ArticleDetailContent({
         await navigator.clipboard.writeText(plainText);
       }
       setCopyState("html");
-      window.setTimeout(() => setCopyState("idle"), 2000);
+      if (copyTimeoutRef.current) window.clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = window.setTimeout(() => setCopyState("idle"), 2000);
     } catch {
       setCopyState("error");
-      window.setTimeout(() => setCopyState("idle"), 3000);
+      if (copyTimeoutRef.current) window.clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = window.setTimeout(() => setCopyState("idle"), 3000);
     }
   };
 
@@ -308,10 +256,12 @@ function ArticleDetailContent({
     try {
       await navigator.clipboard.writeText(detail.lienPhoto);
       setImageCopyState("copied");
-      window.setTimeout(() => setImageCopyState("idle"), 2000);
+      if (imageCopyTimeoutRef.current) window.clearTimeout(imageCopyTimeoutRef.current);
+      imageCopyTimeoutRef.current = window.setTimeout(() => setImageCopyState("idle"), 2000);
     } catch {
       setImageCopyState("error");
-      window.setTimeout(() => setImageCopyState("idle"), 3000);
+      if (imageCopyTimeoutRef.current) window.clearTimeout(imageCopyTimeoutRef.current);
+      imageCopyTimeoutRef.current = window.setTimeout(() => setImageCopyState("idle"), 3000);
     }
   };
 
@@ -518,42 +468,6 @@ export function ArticlesExplorerView({
     return new Date(refDate).getTime();
   };
 
-  const [visibleArticles, setVisibleArticles] = useState<ArticleSummary[]>(
-    () => [...articles].sort((a, b) => getSortTime(b) - getSortTime(a))
-  );
-  const [selectedId, setSelectedId] = useState<string | null>(
-    initialSelectedId || (articles[0]?.id ?? null)
-  );
-  const [detail, setDetail] = useState<ArticleDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [hasMore, setHasMore] = useState(articles.length < total);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const currentPageRef = useRef(initialPage);
-
-  // Quand les filtres / la recherche changent (nouvelles props côté serveur),
-  // on réinitialise la liste visible, la pagination et la sélection si nécessaire.
-  useEffect(() => {
-    const sorted = [...articles].sort((a, b) => getSortTime(b) - getSortTime(a));
-    setVisibleArticles(sorted);
-    setHasMore(articles.length < total);
-    currentPageRef.current = initialPage;
-    setSelectedId((prev) => {
-      if (prev && articles.some((a) => a.id === prev)) {
-        return prev;
-      }
-      return initialSelectedId || (articles[0]?.id ?? null);
-    });
-  }, [articles, total, initialPage, initialSelectedId]);
-
-
-  const selectedArticle = useMemo(
-    () => visibleArticles.find((a) => a.id === selectedId) || null,
-    [visibleArticles, selectedId]
-  );
-
   const buildUrl = (page: number) => {
     const params = new URLSearchParams();
     params.set("page", String(page));
@@ -571,40 +485,36 @@ export function ArticlesExplorerView({
     return `/api/articles?${params.toString()}`;
   };
 
-  const loadMore = async () => {
-    if (!hasMore || loadingMore) return;
-    setLoadingMore(true);
-    const nextPage = currentPageRef.current + 1;
-    try {
-      const res = await fetch(buildUrl(nextPage));
-      if (!res.ok) {
-        setHasMore(false);
-        return;
-      }
-      const data = await res.json();
-      const newArticles: ArticleSummary[] = data.articles ?? [];
+  const { visibleArticles, sentinelRef } = useInfiniteArticleList<ArticleSummary>({
+    initialArticles: articles,
+    total,
+    initialPage,
+    buildUrl,
+    getSortTime,
+  });
 
-      setVisibleArticles((prev) => {
-        const existingIds = new Set(prev.map((a) => a.id));
-        const merged = [
-          ...prev,
-          ...newArticles.filter((a) => !existingIds.has(a.id)),
-        ].sort((a, b) => getSortTime(b) - getSortTime(a));
-        if (merged.length >= data.total) {
-          setHasMore(false);
-        }
-        return merged;
-      });
-      currentPageRef.current = nextPage;
-      if (!newArticles.length) {
-        setHasMore(false);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initialSelectedId || (articles[0]?.id ?? null)
+  );
+  const [detail, setDetail] = useState<ArticleDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Réinitialise la sélection quand la liste serveur change (filtres, recherche…).
+  useEffect(() => {
+    setSelectedId((prev) => {
+      if (prev && articles.some((a) => a.id === prev)) {
+        return prev;
       }
-    } catch {
-      setHasMore(false);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
+      return initialSelectedId || (articles[0]?.id ?? null);
+    });
+  }, [articles, initialSelectedId]);
+
+  const selectedArticle = useMemo(
+    () => visibleArticles.find((a) => a.id === selectedId) || null,
+    [visibleArticles, selectedId]
+  );
 
   useEffect(() => {
     if (!selectedId) {
@@ -626,11 +536,13 @@ export function ArticlesExplorerView({
         return res.json();
       })
       .then((data: ArticleDetail | null) => {
+        if (controller.signal.aborted) return;
         if (!data) {
           setDetail(null);
           setError("Article introuvable ou erreur de chargement.");
         } else {
           setDetail(data);
+          trackArticleConsultation(data.id, "explorer");
         }
       })
       .catch(() => {
@@ -691,26 +603,25 @@ export function ArticlesExplorerView({
     onExportWord: handleExportWord,
   });
 
+  // Ferme le tiroir mobile dès que la sélection est vidée.
   useEffect(() => {
-    if (!hasMore) return;
-    const node = sentinelRef.current;
-    if (!node) return;
+    if (!selectedId) {
+      setIsDrawerOpen(false);
+    }
+  }, [selectedId]);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const first = entries[0];
-        if (first.isIntersecting) {
-          loadMore();
-        }
-      },
-      { rootMargin: "200px" }
-    );
-
-    observer.observe(node);
-    return () => {
-      observer.disconnect();
+  // Ferme le tiroir mobile en repassant en affichage desktop.
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsDrawerOpen(false);
+      }
     };
-  }, [hasMore, loadingMore]); // eslint-disable-line react-hooks/exhaustive-deps
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   if (!visibleArticles.length) {
     return (
@@ -740,13 +651,13 @@ export function ArticlesExplorerView({
                 }`}
               >
                 <article className="flex h-full flex-1 items-stretch gap-3 overflow-hidden rounded-2xl">
-                  <div className="relative hidden w-32 flex-none bg-rer-app sm:block">
+                  <div className="relative w-20 flex-none bg-rer-app sm:w-32">
                     {article.lienPhoto ? (
                       <Image
                         src={article.lienPhoto}
                         alt={article.legendePhoto || article.titre}
                         fill
-                        sizes="128px"
+                        sizes="(max-width: 640px) 80px, 128px"
                         className="object-cover object-top"
                       />
                     ) : (
@@ -852,6 +763,9 @@ export function ArticlesExplorerView({
           onClick={() => setIsDrawerOpen(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Prévisualisation de l’article"
             className="absolute inset-x-0 bottom-0 top-16 rounded-t-2xl bg-white shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >

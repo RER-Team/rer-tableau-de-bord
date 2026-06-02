@@ -17,6 +17,7 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isLogin = pathname === "/login";
+  const isPublicDiscover = pathname.startsWith("/decouvrir");
   const { logoUrl, fallbackLogoUrl } = useSiteLogo();
   const [logoLoadFailed, setLogoLoadFailed] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -41,7 +42,7 @@ export function AppShell({ children }: AppShellProps) {
     };
   }, [isScrolled]);
 
-  if (isLogin) {
+  if (isLogin || isPublicDiscover) {
     return <main className="flex-1">{children}</main>;
   }
 

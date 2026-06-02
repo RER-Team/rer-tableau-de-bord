@@ -9,6 +9,7 @@ import {
   getFormatBadgeClasses,
   getRubriqueBadgeClasses,
 } from "@/app/articles/ArticlesCardsExplorer";
+import { trackArticleConsultation } from "@/lib/track-article-consultation";
 
 function transformEmbeds(html: string): string {
   if (typeof window === "undefined" || !html) return html;
@@ -128,6 +129,7 @@ export function ArticleReadSidePanel({
       .then((data: ArticleDetail) => {
         setArticle(data);
         setMainImageLayout("landscape");
+        trackArticleConsultation(data.id, "side-panel");
       })
       .catch((e) => {
         if (controller.signal.aborted) return;

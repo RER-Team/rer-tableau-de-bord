@@ -2,15 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
-import { ingestDebug } from "@/lib/ingest-debug";
 import { dispatchNotificationsUpdated } from "@/lib/notifications/client-sync";
 import {
   type ArticleStatusOption,
   getArticleStatusLabel,
   normalizeArticleStatusSlug,
 } from "@/lib/article-status";
+import { buildInitialHtml, extractChapoAndBody } from "@/lib/article-html";
+import { useInfiniteArticleList } from "@/hooks/useInfiniteArticleList";
 import { getEtatBadgeClasses } from "../articles/ArticlesCardsExplorer";
 import ArticleEditorCard, {
   ArticleEditorReferentiels,
@@ -50,6 +49,7 @@ type ArticleDetail = {
   legendePhoto: string | null;
   creditPhoto: string | null;
   postRs: string | null;
+  isExemplePublic?: boolean;
   dateDepot: string | null;
   datePublication: string | null;
   createdAt: string;
@@ -68,13 +68,6 @@ type ArticleDetail = {
 };
 
 type AdminReferentiels = ArticleEditorReferentiels;
-
-type AuteurOption = {
-  id: string;
-  prenom: string;
-  nom: string;
-  mutuelle?: { nom: string | null } | null;
-};
 
 type AdminReviewExplorerProps = {
   articles: ArticleSummary[];
@@ -164,7 +157,9 @@ function AdminActionMenu({
           currentSlug,
           open
         )} ${(disabled || loading) ? "cursor-not-allowed opacity-60" : ""}`}
+        aria-haspopup="menu"
         aria-expanded={open}
+        aria-label={label}
       >
         <span>{loading ? "Action..." : label}</span>
         <svg
@@ -181,6 +176,7 @@ function AdminActionMenu({
 
       {open && (
         <div
+          role="menu"
           className={`absolute z-20 mt-2 min-w-[220px] rounded-2xl border border-rer-border bg-white p-2 shadow-xl ${
             align === "right" ? "right-0" : "left-0"
           }`}
@@ -190,6 +186,7 @@ function AdminActionMenu({
               <button
                 key={item.id}
                 type="button"
+                role="menuitem"
                 onClick={async () => {
                   setOpen(false);
                   await item.onSelect();
@@ -245,14 +242,11 @@ function AdminArticlePanel({
   const router = useRouter();
   const [updatingEtat, setUpdatingEtat] = useState(false);
   const [savingContent, setSavingContent] = useState(false);
-  const [savingMeta, setSavingMeta] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [titleDraft, setTitleDraft] = useState("");
   const [postRsDraft, setPostRsDraft] = useState("");
-  const [auteursOptions, setAuteursOptions] = useState<AuteurOption[]>([]);
-  const [auteurIdDraft, setAuteurIdDraft] = useState<string | null>(null);
   const [ref, setRef] = useState<AdminReferentiels | null>(null);
   const originalSnapshotRef = useRef<ArticleDetail | null>(null);
   const [showDiff, setShowDiff] = useState(false);
@@ -262,32 +256,15 @@ function AdminArticlePanel({
     if (detail) {
       setTitleDraft(detail.titre);
       setPostRsDraft(detail.postRs ?? "");
-      setAuteurIdDraft(detail.auteurId ?? null);
-      setLastSavedAt(new Date());
-      if (!originalSnapshotRef.current) {
+      // Réinitialise le snapshot de référence à chaque changement d'article
+      // afin que le diff compare bien à la version ouverte (et non au premier).
+      if (originalSnapshotRef.current?.id !== detail.id) {
         originalSnapshotRef.current = detail;
       }
     } else if (selectedArticle) {
       setTitleDraft(selectedArticle.titre);
     }
   }, [detail, selectedArticle]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (auteursOptions.length > 0) return;
-    fetch("/api/admin/auteurs")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!data || cancelled) return;
-        setAuteursOptions(data.auteurs as AuteurOption[]);
-      })
-      .catch(() => {
-        // silencieux pour l’instant
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [auteursOptions.length]);
 
   useEffect(() => {
     fetch("/api/referentiels")
@@ -314,27 +291,10 @@ function AdminArticlePanel({
     if (!detail || updatingEtat) return;
     setUpdatingEtat(true);
     try {
-      ingestDebug({
-        sessionId: "fb943b",
-        runId: "pre-fix",
-        hypothesisId: "H_STATE_CHANGE",
-        location: "app/admin/AdminReviewExplorer.tsx:handleChangeEtat:beforeFetch",
-        message: "handleChangeEtat called",
-        data: { articleId: detail.id, targetEtatSlug },
-      });
-
       const res = await fetch(`/api/articles/${detail.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ etatSlug: targetEtatSlug }),
-      });
-      ingestDebug({
-        sessionId: "fb943b",
-        runId: "pre-fix",
-        hypothesisId: "H_STATE_CHANGE",
-        location: "app/admin/AdminReviewExplorer.tsx:handleChangeEtat:afterFetch",
-        message: "handleChangeEtat response",
-        data: { ok: res.ok, status: res.status },
       });
 
       if (!res.ok) {
@@ -354,105 +314,7 @@ function AdminArticlePanel({
     detail?.etat?.slug ?? selectedArticle?.etat?.slug ?? null
   );
 
-  const buildInitialHtml = useMemo(() => {
-    if (!detail) return "";
-    const chapoHtml = detail.chapo
-      ? `<p class="chapo">${detail.chapo}</p>`
-      : "";
-    return `${chapoHtml}${detail.contenu ?? ""}`;
-  }, [detail]);
-
-  const extractChapoAndBody = (
-    html: string,
-    allowChapo: boolean
-  ): { chapo: string | null; body: string } => {
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, "text/html");
-      if (!allowChapo) {
-        doc.querySelectorAll("p.chapo").forEach((node) => {
-          node.classList.remove("chapo");
-          if (!node.getAttribute("class")?.trim()) {
-            node.removeAttribute("class");
-          }
-        });
-        const bodyHtml = doc.body.innerHTML.trim();
-        return { chapo: null, body: bodyHtml };
-      }
-      let chapoText: string | null = null;
-      const chapoEl =
-        doc.querySelector("p.chapo") ?? doc.querySelector("p");
-      if (chapoEl) {
-        chapoText = (chapoEl.textContent ?? "").trim() || null;
-        chapoEl.remove();
-      }
-      const bodyHtml = doc.body.innerHTML.trim();
-      return { chapo: chapoText, body: bodyHtml };
-    } catch {
-      return { chapo: detail?.chapo ?? null, body: html };
-    }
-  };
-
-  const handleSaveTitle = async () => {
-    if (!detail && !selectedArticle) return;
-    const nextTitle = titleDraft.trim();
-    const currentTitle = detail?.titre ?? selectedArticle?.titre ?? "";
-    if (!nextTitle || nextTitle === currentTitle) return;
-    setSavingMeta(true);
-    try {
-      const res = await fetch(`/api/articles/${detail?.id ?? selectedId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ titre: nextTitle }),
-      });
-      if (res.ok) {
-        touchLastSaved();
-        router.refresh();
-      }
-    } finally {
-      setSavingMeta(false);
-    }
-  };
-
-  const handleSavePostRs = async (nextValue: string) => {
-    if (!detail) return;
-    const next = nextValue.trim();
-    if ((detail.postRs ?? "") === next) return;
-    setSavingMeta(true);
-    try {
-      const res = await fetch(`/api/articles/${detail.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postRs: next || null }),
-      });
-      if (res.ok) {
-        touchLastSaved();
-        router.refresh();
-      }
-    } finally {
-      setSavingMeta(false);
-    }
-  };
-
-  const handleChangeAuteur = async (newAuteurId: string) => {
-    setAuteurIdDraft(newAuteurId);
-    if (!detail) return;
-    if (!newAuteurId || newAuteurId === detail.auteurId) return;
-    setSavingMeta(true);
-    try {
-      const res = await fetch(`/api/articles/${detail.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ auteurId: newAuteurId }),
-      });
-      if (res.ok) {
-        touchLastSaved();
-        router.refresh();
-      }
-    } finally {
-      setSavingMeta(false);
-    }
-  };
+  const initialHtml = useMemo(() => buildInitialHtml(detail), [detail]);
 
   const performMainImageUpload = async (file: File) => {
     if (!detail) return;
@@ -610,10 +472,12 @@ function AdminArticlePanel({
               creditPhoto: detail.creditPhoto ?? "",
               // On utilise le draft local pour rendre le titre vraiment éditable.
               titre: titleDraft,
-              contenuHtml: buildInitialHtml,
+              contenuHtml: initialHtml,
               contenuJson: detail.contenuJson ?? null,
               postRs: postRsDraft,
+              isExemplePublic: Boolean((detail as any).isExemplePublic),
             }}
+            showExemplePublicToggle={currentSlug === "publie"}
             referentiels={ref}
             uploadingImage={uploadingImage}
             uploadError={uploadError}
@@ -634,11 +498,13 @@ function AdminArticlePanel({
                 payload.rubriqueId = patch.rubriqueId || null;
               }
               if (patch.auteurId !== undefined) {
-                setAuteurIdDraft(patch.auteurId);
                 payload.auteurId = patch.auteurId || null;
               }
               if (patch.mutuelleId !== undefined) {
                 payload.mutuelleId = patch.mutuelleId || null;
+              }
+              if (patch.isExemplePublic !== undefined) {
+                payload.isExemplePublic = Boolean(patch.isExemplePublic);
               }
               if (patch.lienPhoto !== undefined) {
                 payload.lienPhoto = patch.lienPhoto ?? null;
@@ -653,11 +519,15 @@ function AdminArticlePanel({
                 patch.contenuHtml !== undefined ||
                 patch.contenuJson !== undefined
               ) {
-                const html = patch.contenuHtml ?? buildInitialHtml;
+                const html = patch.contenuHtml ?? initialHtml;
                 const effectiveFormatId = patch.formatId ?? detail.formatId ?? "";
                 const allowChapo =
                   ref.formats.find((f) => f.id === effectiveFormatId)?.hasChapo ?? true;
-                const { chapo, body } = extractChapoAndBody(html, allowChapo);
+                const { chapo, body } = extractChapoAndBody(
+                  html,
+                  allowChapo,
+                  detail.chapo ?? null
+                );
                 payload.chapo = chapo;
                 payload.contenuHtml = body;
                 payload.contenuJson = patch.contenuJson ?? detail.contenuJson;
@@ -825,49 +695,6 @@ export function AdminReviewExplorer({
     return new Date(refDate).getTime();
   };
 
-  const [visibleArticles, setVisibleArticles] = useState<ArticleSummary[]>(
-    () => [...articles].sort((a, b) => getSortTime(b) - getSortTime(a))
-  );
-  const [selectedId, setSelectedId] = useState<string | null>(
-    initialSelectedId || (visibleArticles[0]?.id ?? null)
-  );
-  const [detail, setDetail] = useState<ArticleDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(articles.length < total);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const currentPageRef = useRef(initialPage);
-  const [bulkMode, setBulkMode] = useState(false);
-  const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
-  const [listCollapsed, setListCollapsed] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const visibleArticlesRef = useRef<ArticleSummary[]>(visibleArticles);
-  const [runningBulkAction, setRunningBulkAction] = useState(false);
-
-  // Met à jour la liste quand les props changent
-  useEffect(() => {
-    const sorted = [...articles].sort((a, b) => getSortTime(b) - getSortTime(a));
-    setVisibleArticles(sorted);
-    setHasMore(articles.length < total);
-    currentPageRef.current = initialPage;
-    setSelectedId((prev) => {
-      if (prev && sorted.some((a) => a.id === prev)) {
-        return prev;
-      }
-      return initialSelectedId || (sorted[0]?.id ?? null);
-    });
-  }, [articles, total, initialPage, initialSelectedId]);
-
-  useEffect(() => {
-    visibleArticlesRef.current = visibleArticles;
-  }, [visibleArticles]);
-
-  const selectedArticle = useMemo(
-    () => visibleArticles.find((a) => a.id === selectedId) || null,
-    [visibleArticles, selectedId]
-  );
-
   const buildUrl = (page: number) => {
     const params = new URLSearchParams();
     params.set("page", String(page));
@@ -883,40 +710,47 @@ export function AdminReviewExplorer({
     return `/api/articles?${params.toString()}`;
   };
 
-  const loadMore = async () => {
-    if (!hasMore || loadingMore) return;
-    setLoadingMore(true);
-    const nextPage = currentPageRef.current + 1;
-    try {
-      const res = await fetch(buildUrl(nextPage));
-      if (!res.ok) {
-        setHasMore(false);
-        return;
-      }
-      const data = await res.json();
-      const newArticles: ArticleSummary[] = data.articles ?? [];
+  const {
+    visibleArticles,
+    setVisibleArticles,
+    visibleArticlesRef,
+    sentinelRef,
+  } = useInfiniteArticleList<ArticleSummary>({
+    initialArticles: articles,
+    total,
+    initialPage,
+    buildUrl,
+    getSortTime,
+  });
 
-      setVisibleArticles((prev) => {
-        const existingIds = new Set(prev.map((a) => a.id));
-        const merged = [
-          ...prev,
-          ...newArticles.filter((a) => !existingIds.has(a.id)),
-        ].sort((a, b) => getSortTime(b) - getSortTime(a));
-        if (merged.length >= data.total) {
-          setHasMore(false);
-        }
-        return merged;
-      });
-      currentPageRef.current = nextPage;
-      if (!newArticles.length) {
-        setHasMore(false);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initialSelectedId || (visibleArticles[0]?.id ?? null)
+  );
+  const [detail, setDetail] = useState<ArticleDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedBulkIds, setSelectedBulkIds] = useState<string[]>([]);
+  const [listCollapsed, setListCollapsed] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [runningBulkAction, setRunningBulkAction] = useState(false);
+  const drawerCloseButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  // Réinitialise la sélection quand la liste serveur change.
+  useEffect(() => {
+    setSelectedId((prev) => {
+      if (prev && articles.some((a) => a.id === prev)) {
+        return prev;
       }
-    } catch {
-      setHasMore(false);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
+      const sorted = [...articles].sort((a, b) => getSortTime(b) - getSortTime(a));
+      return initialSelectedId || (sorted[0]?.id ?? null);
+    });
+  }, [articles, initialSelectedId]);
+
+  const selectedArticle = useMemo(
+    () => visibleArticles.find((a) => a.id === selectedId) || null,
+    [visibleArticles, selectedId]
+  );
 
   // Chargement du détail du contenu sélectionné
   useEffect(() => {
@@ -978,7 +812,7 @@ export function AdminReviewExplorer({
     return () => {
       controller.abort();
     };
-  }, [selectedId]);
+  }, [selectedId, visibleArticlesRef]);
 
   const updateFilterUrl = (updates: Record<string, string | null>) => {
     if (!searchParams) return;
@@ -1090,27 +924,23 @@ export function AdminReviewExplorer({
     });
   };
 
-  // Scroll infini
+  // Accessibilité du tiroir mobile : focus initial, fermeture Escape, restauration du focus.
   useEffect(() => {
-    if (!hasMore) return;
-    const node = sentinelRef.current;
-    if (!node) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const first = entries[0];
-        if (first.isIntersecting) {
-          loadMore();
-        }
-      },
-      { rootMargin: "200px" }
-    );
-
-    observer.observe(node);
-    return () => {
-      observer.disconnect();
+    if (!(selectedId && isDrawerOpen)) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusTimer = window.setTimeout(() => {
+      drawerCloseButtonRef.current?.focus();
+    }, 0);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsDrawerOpen(false);
     };
-  }, [hasMore, loadingMore]); // eslint-disable-line react-hooks/exhaustive-deps
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [selectedId, isDrawerOpen]);
 
   const sortedEtats = [...etats].sort((a, b) => a.ordre - b.ordre);
 
@@ -1168,11 +998,15 @@ export function AdminReviewExplorer({
       return;
     }
     try {
-      await Promise.all(
+      const responses = await Promise.all(
         selectedBulkIds.map((id) =>
           fetch(`/api/articles/${id}`, { method: "DELETE" })
         )
       );
+      if (responses.some((response) => !response.ok)) {
+        alert("Impossible de supprimer tous les contenus sélectionnés.");
+        return;
+      }
       const remaining = visibleArticles.filter(
         (a) => !selectedBulkIds.includes(a.id)
       );
@@ -1446,6 +1280,9 @@ export function AdminReviewExplorer({
           onClick={() => setIsDrawerOpen(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Relecture contenu"
             className="absolute inset-x-0 bottom-0 top-16 rounded-t-2xl bg-white shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
@@ -1454,6 +1291,7 @@ export function AdminReviewExplorer({
                 Relecture contenu
               </span>
               <button
+                ref={drawerCloseButtonRef}
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
                 className="rounded-lg border border-rer-border bg-white px-2 py-1 text-xs text-rer-muted hover:bg-rer-app/60"

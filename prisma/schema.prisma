@@ -79,10 +79,12 @@ model Article {
   format          Format?             @relation(fields: [formatId], references: [id])
   etatId          String?
   etat            Etat?               @relation(fields: [etatId], references: [id])
+  isExemplePublic Boolean             @default(false) @map("is_exemple_public")
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
   historiques     ArticleHistorique[]
   blocs           ArticleBloc[]
+  consultations   ArticleConsultation[]
 
   @@index([dateDepot])
   @@index([etatId])
@@ -90,6 +92,7 @@ model Article {
   @@index([mutuelleId])
   @@index([rubriqueId])
   @@index([formatId])
+  @@index([isExemplePublic])
 }
 
 model ArticleBloc {
@@ -130,6 +133,7 @@ model User {
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
   historiques         ArticleHistorique[]
+  articleConsultations ArticleConsultation[]
   passwordResetTokens PasswordResetToken[]
   notificationPreference UserNotificationPreference?
   notifications       Notification[]
@@ -218,6 +222,19 @@ model NotificationDelivery {
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@index([userId, eventType])
+}
+
+model ArticleConsultation {
+  id        String   @id @default(cuid())
+  articleId String   @map("article_id")
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([articleId, createdAt])
+  @@index([articleId, userId, createdAt])
 }
 
 model NotificationTemplate {

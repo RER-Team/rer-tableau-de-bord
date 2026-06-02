@@ -1,11 +1,55 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   getFormatBadgeClasses,
   getRubriqueBadgeClasses,
 } from "@/app/articles/ArticlesCardsExplorer";
 import RichArticleEditor from "./RichArticleEditor";
+import { useFocusedDraft } from "./useFocusedDraft";
+
+/**
+ * Déclencheur + panneau d'un menu déroulant méta (format / rubrique / signature).
+ * Centralise le markup et les attributs ARIA partagés.
+ */
+function MetaDropdown({
+  open,
+  onToggle,
+  triggerClassName,
+  label,
+  arrowClassName,
+  panelClassName,
+  children,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  triggerClassName: string;
+  label: ReactNode;
+  arrowClassName: string;
+  panelClassName: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="relative inline-flex">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        className={triggerClassName}
+      >
+        <span className="truncate">{label}</span>
+        <span className={`ml-1 shrink-0 ${arrowClassName}`} aria-hidden>
+          ▾
+        </span>
+      </button>
+      {open && <div className={panelClassName}>{children}</div>}
+    </div>
+  );
+}
 
 export type ArticleEditorValue = {
   formatId: string;
@@ -19,6 +63,7 @@ export type ArticleEditorValue = {
   contenuHtml: string;
   contenuJson?: unknown | null;
   postRs?: string;
+  isExemplePublic?: boolean;
 };
 
 export type ArticleEditorReferentiels = {
@@ -37,6 +82,7 @@ type ArticleEditorCardProps = {
   editorKey?: number;
   uploadingImage?: boolean;
   uploadError?: string | null;
+  showExemplePublicToggle?: boolean;
 };
 
 export function ArticleEditorCard({
@@ -48,6 +94,7 @@ export function ArticleEditorCard({
   editorKey,
   uploadingImage = false,
   uploadError = null,
+  showExemplePublicToggle = false,
 }: ArticleEditorCardProps) {
   const {
     formatId,
@@ -61,6 +108,7 @@ export function ArticleEditorCard({
     contenuHtml,
     contenuJson,
     postRs,
+    isExemplePublic,
   } = value;
 
   const signesRef = referentiels.formats.find((f) => f.id === formatId)?.signesReference;
@@ -79,18 +127,29 @@ export function ArticleEditorCard({
   })();
 
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
+  const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const editorDebounceRef = useRef<number | null>(null);
   const lastEditorHtmlRef = useRef(contenuHtml || "");
-  const titleFocusedRef = useRef(false);
-  const postRsFocusedRef = useRef(false);
-  const legendeFocusedRef = useRef(false);
-  const creditFocusedRef = useRef(false);
+  const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const [openDropdown, setOpenDropdown] = useState<"format" | "rubrique" | "auteur" | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const [titleDraft, setTitleDraft] = useState(titre);
-  const [postRsDraft, setPostRsDraft] = useState(postRs || "");
-  const [legendeDraft, setLegendeDraft] = useState(legendePhoto || "");
-  const [creditDraft, setCreditDraft] = useState(creditPhoto || "");
+
+  const titleField = useFocusedDraft(titre, (next) => onChange({ titre: next }));
+  const postRsField = useFocusedDraft(postRs || "", (next) =>
+    onChange({ postRs: next })
+  );
+  const legendeField = useFocusedDraft(legendePhoto || "", (next) =>
+    onChange({ legendePhoto: next })
+  );
+  const creditField = useFocusedDraft(creditPhoto || "", (next) =>
+    onChange({ creditPhoto: next })
+  );
+
+  const focusEditor = () => {
+    editorContainerRef.current
+      ?.querySelector<HTMLElement>(".ProseMirror")
+      ?.focus();
+  };
 
   const hasMissingMeta = !formatId || !rubriqueId || !auteurId;
   const selectedFormat = referentiels.formats.find((fmt) => fmt.id === formatId);
@@ -112,31 +171,7 @@ export function ArticleEditorCard({
     if (!el) return;
     el.style.height = "0px";
     el.style.height = `${el.scrollHeight}px`;
-  }, [titleDraft]);
-
-  useEffect(() => {
-    if (!titleFocusedRef.current) {
-      setTitleDraft(titre);
-    }
-  }, [titre]);
-
-  useEffect(() => {
-    if (!postRsFocusedRef.current) {
-      setPostRsDraft(postRs || "");
-    }
-  }, [postRs]);
-
-  useEffect(() => {
-    if (!legendeFocusedRef.current) {
-      setLegendeDraft(legendePhoto || "");
-    }
-  }, [legendePhoto]);
-
-  useEffect(() => {
-    if (!creditFocusedRef.current) {
-      setCreditDraft(creditPhoto || "");
-    }
-  }, [creditPhoto]);
+  }, [titleField.draft]);
 
   useEffect(() => {
     lastEditorHtmlRef.current = contenuHtml || "";
@@ -225,33 +260,21 @@ export function ArticleEditorCard({
           <div className="mt-3">
             <input
               type="text"
-              value={legendeDraft}
-              onFocus={() => {
-                legendeFocusedRef.current = true;
-              }}
-              onBlur={() => {
-                legendeFocusedRef.current = false;
-                if ((legendePhoto || "") !== legendeDraft) {
-                  onChange({ legendePhoto: legendeDraft });
-                }
-              }}
-              onChange={(e) => setLegendeDraft(e.target.value)}
+              aria-label="Légende de l’image principale"
+              value={legendeField.draft}
+              onFocus={legendeField.onFocus}
+              onBlur={legendeField.onBlur}
+              onChange={(e) => legendeField.setDraft(e.target.value)}
               placeholder="Légende de l’image principale…"
               className="w-full rounded-lg border border-rer-border px-2 py-1 text-xs text-rer-text placeholder:text-rer-muted focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
             />
             <input
               type="text"
-              value={creditDraft}
-              onFocus={() => {
-                creditFocusedRef.current = true;
-              }}
-              onBlur={() => {
-                creditFocusedRef.current = false;
-                if ((creditPhoto || "") !== creditDraft) {
-                  onChange({ creditPhoto: creditDraft });
-                }
-              }}
-              onChange={(e) => setCreditDraft(e.target.value)}
+              aria-label="Crédit photo"
+              value={creditField.draft}
+              onFocus={creditField.onFocus}
+              onBlur={creditField.onBlur}
+              onChange={(e) => creditField.setDraft(e.target.value)}
               placeholder="Crédit photo (ex: © Prénom Nom)…"
               className="mt-2 w-full rounded-lg border border-rer-border px-2 py-1 text-xs italic text-rer-muted placeholder:text-rer-muted focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
             />
@@ -275,192 +298,177 @@ export function ArticleEditorCard({
             </p>
             <div className="flex flex-wrap items-center gap-3">
             {/* Format — style outline, flèche à l’intérieur, fermeture après sélection */}
-            <div className="relative inline-flex">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenDropdown(openDropdown === "format" ? null : "format");
-                }}
-                className={`inline-flex min-w-0 max-w-[240px] cursor-pointer list-none items-center rounded-lg px-3 py-1.5 text-[12px] font-medium ${
-                  formatId
-                    ? (() => {
-                        const f = referentiels.formats.find((fmt) => fmt.id === formatId);
-                        return f
-                          ? getFormatBadgeClasses(f.libelle)
-                          : "border border-rer-border bg-rer-app text-rer-muted";
-                      })()
-                    : hasMissingMeta
-                    ? "border border-amber-300 bg-white text-rer-muted"
-                    : "border border-rer-border bg-rer-app text-rer-muted"
-                }`}
-              >
-                <span className="truncate">
-                  {formatId
-                    ? (() => {
-                        const f = referentiels.formats.find((fmt) => fmt.id === formatId);
-                        if (!f) return "Choisir un format";
-                        const extra = f.signesReference != null ? ` (${f.signesReference} signes)` : "";
-                        return `${f.libelle}${extra}`;
-                      })()
-                    : "Choisir un format"}
-                </span>
-                <span className="ml-1 shrink-0 text-[9px] text-rer-muted" aria-hidden>▾</span>
-              </button>
-              {openDropdown === "format" && (
-                <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-rer-border bg-white py-1 text-[12px] shadow-lg">
-                  {referentiels.formats.map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onChange({ formatId: f.id });
-                        setOpenDropdown(null);
-                      }}
-                      className={`flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left hover:bg-rer-app ${
-                        formatId === f.id ? "font-semibold text-rer-blue bg-rer-app/50" : "text-rer-text"
-                      }`}
-                    >
-                      <span>{f.libelle}</span>
-                      {f.signesReference != null && (
-                        <span className="ml-2 text-[11px] text-rer-muted">{f.signesReference} signes</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <MetaDropdown
+              open={openDropdown === "format"}
+              onToggle={() => setOpenDropdown(openDropdown === "format" ? null : "format")}
+              arrowClassName="text-[9px] text-rer-muted"
+              panelClassName="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-rer-border bg-white py-1 text-[12px] shadow-lg"
+              triggerClassName={`inline-flex min-w-0 max-w-[240px] cursor-pointer list-none items-center rounded-lg px-3 py-1.5 text-[12px] font-medium ${
+                formatId
+                  ? (() => {
+                      const f = referentiels.formats.find((fmt) => fmt.id === formatId);
+                      return f
+                        ? getFormatBadgeClasses(f.libelle)
+                        : "border border-rer-border bg-rer-app text-rer-muted";
+                    })()
+                  : hasMissingMeta
+                  ? "border border-amber-300 bg-white text-rer-muted"
+                  : "border border-rer-border bg-rer-app text-rer-muted"
+              }`}
+              label={
+                formatId
+                  ? (() => {
+                      const f = referentiels.formats.find((fmt) => fmt.id === formatId);
+                      if (!f) return "Choisir un format";
+                      const extra = f.signesReference != null ? ` (${f.signesReference} signes)` : "";
+                      return `${f.libelle}${extra}`;
+                    })()
+                  : "Choisir un format"
+              }
+            >
+              {referentiels.formats.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onChange({ formatId: f.id });
+                    setOpenDropdown(null);
+                  }}
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left hover:bg-rer-app ${
+                    formatId === f.id ? "font-semibold text-rer-blue bg-rer-app/50" : "text-rer-text"
+                  }`}
+                >
+                  <span>{f.libelle}</span>
+                  {f.signesReference != null && (
+                    <span className="ml-2 text-[11px] text-rer-muted">{f.signesReference} signes</span>
+                  )}
+                </button>
+              ))}
+            </MetaDropdown>
 
             {/* Rubrique — style plein, flèche à l’intérieur, fermeture après sélection */}
-            <div className="relative inline-flex">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenDropdown(openDropdown === "rubrique" ? null : "rubrique");
-                }}
-                className={`inline-flex min-w-0 max-w-[220px] cursor-pointer list-none items-center rounded-lg px-3 py-1.5 text-[12px] font-medium ${
-                  rubriqueId
-                    ? (() => {
-                        const r = referentiels.rubriques.find((rb) => rb.id === rubriqueId);
-                        return r ? getRubriqueBadgeClasses(r.libelle) : "border border-rer-border bg-rer-app text-rer-muted";
-                      })()
-                    : hasMissingMeta
-                    ? "border border-amber-300 bg-white text-rer-muted"
-                    : "border border-rer-border bg-rer-app text-rer-muted"
-                }`}
-              >
-                <span className="truncate">
-                  {rubriqueId
-                    ? referentiels.rubriques.find((rb) => rb.id === rubriqueId)?.libelle ?? "Choisir une rubrique"
-                    : "Choisir une rubrique"}
-                </span>
-                <span className="ml-1 shrink-0 text-[9px] opacity-80" aria-hidden>▾</span>
-              </button>
-              {openDropdown === "rubrique" && (
-                <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border border-rer-border bg-white py-1 text-[12px] shadow-lg">
-                  {referentiels.rubriques.map((r) => (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onChange({ rubriqueId: r.id });
-                        setOpenDropdown(null);
-                      }}
-                      className={`flex w-full items-center rounded-lg px-3 py-1.5 text-left hover:bg-rer-app ${
-                        rubriqueId === r.id ? "font-semibold text-rer-blue bg-rer-app/50" : "text-rer-text"
-                      }`}
-                    >
-                      {r.libelle}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <MetaDropdown
+              open={openDropdown === "rubrique"}
+              onToggle={() => setOpenDropdown(openDropdown === "rubrique" ? null : "rubrique")}
+              arrowClassName="text-[9px] opacity-80"
+              panelClassName="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border border-rer-border bg-white py-1 text-[12px] shadow-lg"
+              triggerClassName={`inline-flex min-w-0 max-w-[220px] cursor-pointer list-none items-center rounded-lg px-3 py-1.5 text-[12px] font-medium ${
+                rubriqueId
+                  ? (() => {
+                      const r = referentiels.rubriques.find((rb) => rb.id === rubriqueId);
+                      return r ? getRubriqueBadgeClasses(r.libelle) : "border border-rer-border bg-rer-app text-rer-muted";
+                    })()
+                  : hasMissingMeta
+                  ? "border border-amber-300 bg-white text-rer-muted"
+                  : "border border-rer-border bg-rer-app text-rer-muted"
+              }`}
+              label={
+                rubriqueId
+                  ? referentiels.rubriques.find((rb) => rb.id === rubriqueId)?.libelle ?? "Choisir une rubrique"
+                  : "Choisir une rubrique"
+              }
+            >
+              {referentiels.rubriques.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onChange({ rubriqueId: r.id });
+                    setOpenDropdown(null);
+                  }}
+                  className={`flex w-full items-center rounded-lg px-3 py-1.5 text-left hover:bg-rer-app ${
+                    rubriqueId === r.id ? "font-semibold text-rer-blue bg-rer-app/50" : "text-rer-text"
+                  }`}
+                >
+                  {r.libelle}
+                </button>
+              ))}
+            </MetaDropdown>
 
             {/* Signature — flèche à l’intérieur, fermeture après sélection */}
-            <div className="relative inline-flex">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenDropdown(openDropdown === "auteur" ? null : "auteur");
-                }}
-                className={`inline-flex min-w-0 max-w-[260px] cursor-pointer list-none items-center rounded-lg border px-3 py-1.5 text-[12px] font-medium text-rer-text ${
-                  auteurId
-                    ? "border-rer-border bg-rer-app"
-                    : hasMissingMeta
-                    ? "border-amber-300 bg-white"
-                    : "border-rer-border bg-rer-app"
-                }`}
-              >
-                <span className="truncate">
-                  {auteurId
-                    ? (() => {
-                        const a = (referentiels.auteurs as any[]).find((aut) => aut.id === auteurId);
-                        if (!a) return "Choisir une signature";
-                        return selectedMutuelleName ? `${a.prenom} ${a.nom} – ${selectedMutuelleName}` : `${a.prenom} ${a.nom}`;
-                      })()
-                    : "Choisir une signature"}
-                </span>
-                <span className="ml-1 shrink-0 text-[9px] text-rer-muted" aria-hidden>▾</span>
-              </button>
-              {openDropdown === "auteur" && (
-                <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-rer-border bg-white py-1 text-[12px] shadow-lg">
-                  {referentiels.auteurs.map((a) => {
-                    const mId = (a as any).mutuelleId as string | undefined;
-                    const mutuelle = mId && referentiels.mutuelles.find((m) => m.id === mId)?.nom;
-                    const label = mutuelle ? `${a.prenom} ${a.nom} – ${mutuelle}` : `${a.prenom} ${a.nom}`;
-                    return (
-                      <button
-                        key={a.id}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onChange({ auteurId: a.id, mutuelleId: mId || undefined });
-                          setOpenDropdown(null);
-                        }}
-                        className={`flex w-full items-center rounded-lg px-3 py-1.5 text-left hover:bg-rer-app ${
-                          auteurId === a.id ? "font-semibold text-rer-blue bg-rer-app/50" : "text-rer-text"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <MetaDropdown
+              open={openDropdown === "auteur"}
+              onToggle={() => setOpenDropdown(openDropdown === "auteur" ? null : "auteur")}
+              arrowClassName="text-[9px] text-rer-muted"
+              panelClassName="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-rer-border bg-white py-1 text-[12px] shadow-lg"
+              triggerClassName={`inline-flex min-w-0 max-w-[260px] cursor-pointer list-none items-center rounded-lg border px-3 py-1.5 text-[12px] font-medium text-rer-text ${
+                auteurId
+                  ? "border-rer-border bg-rer-app"
+                  : hasMissingMeta
+                  ? "border-amber-300 bg-white"
+                  : "border-rer-border bg-rer-app"
+              }`}
+              label={
+                auteurId
+                  ? (() => {
+                      const a = (referentiels.auteurs as any[]).find((aut) => aut.id === auteurId);
+                      if (!a) return "Choisir une signature";
+                      return selectedMutuelleName ? `${a.prenom} ${a.nom} – ${selectedMutuelleName}` : `${a.prenom} ${a.nom}`;
+                    })()
+                  : "Choisir une signature"
+              }
+            >
+              {referentiels.auteurs.map((a) => {
+                const mId = (a as any).mutuelleId as string | undefined;
+                const mutuelle = mId && referentiels.mutuelles.find((m) => m.id === mId)?.nom;
+                const label = mutuelle ? `${a.prenom} ${a.nom} – ${mutuelle}` : `${a.prenom} ${a.nom}`;
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onChange({ auteurId: a.id, mutuelleId: mId || undefined });
+                      setOpenDropdown(null);
+                    }}
+                    className={`flex w-full items-center rounded-lg px-3 py-1.5 text-left hover:bg-rer-app ${
+                      auteurId === a.id ? "font-semibold text-rer-blue bg-rer-app/50" : "text-rer-text"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </MetaDropdown>
             </div>
             {hasMissingMeta && (
               <p className="mt-2 text-[11px] text-amber-800">
                 Commencez par choisir un format, une rubrique et une signature.
               </p>
             )}
+            {showExemplePublicToggle && (
+              <label className="mt-3 flex items-start gap-2 rounded-lg border border-rer-border bg-white px-2 py-2 text-xs text-rer-text">
+                <input
+                  type="checkbox"
+                  checked={Boolean(isExemplePublic)}
+                  onChange={(event) =>
+                    onChange({ isExemplePublic: event.currentTarget.checked })
+                  }
+                  className="mt-0.5 h-4 w-4 rounded border-rer-border text-rer-blue focus:ring-rer-blue"
+                />
+                <span>
+                  Pousser sur la vue exemple publique
+                  <span className="block text-[11px] text-rer-muted">
+                    Visible sur /decouvrir pour les futurs membres.
+                  </span>
+                </span>
+              </label>
+            )}
           </div>
 
           <div className="space-y-3">
             <textarea
               ref={titleRef}
-              value={titleDraft}
-              onFocus={() => {
-                titleFocusedRef.current = true;
-              }}
-              onBlur={() => {
-                titleFocusedRef.current = false;
-                if (titre !== titleDraft) {
-                  onChange({ titre: titleDraft });
-                }
-              }}
-              onChange={(e) => setTitleDraft(e.target.value)}
+              value={titleField.draft}
+              onFocus={titleField.onFocus}
+              onBlur={titleField.onBlur}
+              onChange={(e) => titleField.setDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  const proseMirror =
-                    document.querySelector<HTMLElement>(".ProseMirror");
-                  proseMirror?.focus();
+                  focusEditor();
                 }
               }}
               required
@@ -473,21 +481,17 @@ export function ArticleEditorCard({
               une image, un embed ou appliquer un style (H2, H3, citation).
             </p>
             <div
+              ref={editorContainerRef}
               className="rounded-xl border border-rer-border/40 bg-white/95 p-3"
-              onClick={() => {
-                const proseMirror =
-                  document.querySelector<HTMLElement>(".ProseMirror");
-                proseMirror?.focus();
-              }}
+              onClick={focusEditor}
               role="button"
               tabIndex={0}
+              aria-label="Zone d’édition du contenu"
               onKeyDown={(e) => {
                 if (e.currentTarget !== e.target) return;
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  const proseMirror =
-                    document.querySelector<HTMLElement>(".ProseMirror");
-                  proseMirror?.focus();
+                  focusEditor();
                 }
               }}
             >
@@ -537,17 +541,11 @@ export function ArticleEditorCard({
             Post réseaux sociaux
           </p>
           <textarea
-            value={postRsDraft}
-            onFocus={() => {
-              postRsFocusedRef.current = true;
-            }}
-            onBlur={() => {
-              postRsFocusedRef.current = false;
-              if ((postRs || "") !== postRsDraft) {
-                onChange({ postRs: postRsDraft });
-              }
-            }}
-            onChange={(e) => setPostRsDraft(e.target.value)}
+            aria-label="Post réseaux sociaux"
+            value={postRsField.draft}
+            onFocus={postRsField.onFocus}
+            onBlur={postRsField.onBlur}
+            onChange={(e) => postRsField.setDraft(e.target.value)}
             rows={4}
             placeholder="Proposition de texte pour les réseaux sociaux…"
             className="w-full resize-none rounded-lg border border-rer-border bg-white px-2 py-1 text-sm text-rer-text placeholder:text-rer-muted focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"

@@ -6,6 +6,10 @@ import { getStatusWhereClause, normalizeArticleStatusSlug } from "@/lib/article-
 import { sanitizeArticleHtml } from "@/lib/sanitizeArticleHtml";
 import { buildArticleNotificationEvents } from "@/lib/notifications/article-events";
 import { dispatchArticleNotificationEvent } from "@/lib/notifications/dispatch";
+import {
+  buildArticleTextSearchWhere,
+  mergeArticleWhereClauses,
+} from "@/lib/article-search-where";
 
 function extractFirstImageSrc(html: string | null): string | null {
   if (!html) return null;
@@ -35,24 +39,18 @@ export async function GET(request: NextRequest) {
   const mineParam = searchParams.get("mine") ?? "";
   const scopeParam = searchParams.get("scope") ?? "";
 
+  const isPublicScope = scopeParam === "public";
+  const isMine = mineParam === "1";
+
   const where: any = {};
 
-  if (q) {
-    where.OR = [
-      { titre: { contains: q, mode: "insensitive" } },
-      { chapo: { contains: q, mode: "insensitive" } },
-      { contenu: { contains: q, mode: "insensitive" } },
-    ];
-  }
+  const textSearchWhere = buildArticleTextSearchWhere(q);
 
-  const effectiveEtatSlug = scopeParam === "public" ? "publie" : etatSlug;
-  const etatWhere = getStatusWhereClause(effectiveEtatSlug);
-  if (etatWhere) {
-    where.etat = etatWhere;
-  }
-
-  // Filtre "Mes articles" : articles dont l'utilisateur connecté est l'auteur.
-  if (mineParam === "1") {
+  // --- Contrôle d'accès ---
+  // - scope public : lecture anonyme autorisée mais bornée aux articles publiés ;
+  // - "Mes articles" : auteur connecté uniquement (ses propres contenus) ;
+  // - sinon (liste complète / états non publiés) : réservé aux éditeurs.
+  if (isMine) {
     const sessionUser = await getSessionUser(request);
     if (!sessionUser?.auteurId) {
       return NextResponse.json(
@@ -61,6 +59,25 @@ export async function GET(request: NextRequest) {
       );
     }
     where.auteurId = sessionUser.auteurId;
+  } else if (!isPublicScope) {
+    const sessionUser = await getSessionUser(request);
+    if (!sessionUser) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+    if (!canEditArticles(sessionUser.role)) {
+      return NextResponse.json(
+        { error: "Accès refusé : liste réservée aux éditeurs." },
+        { status: 403 }
+      );
+    }
+  }
+
+  // En scope public, on force toujours l'état « publié » quelles que soient
+  // les valeurs d'état demandées par le client.
+  const effectiveEtatSlug = isPublicScope ? "publie" : etatSlug;
+  const etatWhere = getStatusWhereClause(effectiveEtatSlug);
+  if (etatWhere) {
+    where.etat = etatWhere;
   }
 
   const dateFilter: any = {};
@@ -75,11 +92,11 @@ export async function GET(request: NextRequest) {
   if (toDate && !Number.isNaN(toDate.getTime())) {
     dateFilter.lte = toDate;
   }
+  const dateOrClause: any[] = [];
   if (Object.keys(dateFilter).length > 0) {
     // On filtre en priorité sur la date de validation (datePublication).
     // Pour les anciens contenus non validés, on retombe sur createdAt.
-    where.OR = [
-      ...(where.OR ?? []),
+    dateOrClause.push(
       {
         AND: [
           { datePublication: { not: null } },
@@ -92,7 +109,7 @@ export async function GET(request: NextRequest) {
           { createdAt: dateFilter },
         ],
       },
-    ];
+    );
   }
 
   const mutuelleIds = mutuelleParam
@@ -124,10 +141,15 @@ export async function GET(request: NextRequest) {
   } else if (formatIds.length > 1) {
     where.formatId = { in: formatIds };
   }
+  const finalWhere = mergeArticleWhereClauses(
+    where,
+    textSearchWhere,
+    dateOrClause.length ? dateOrClause : undefined
+  );
 
   const [articles, total] = await Promise.all([
     prisma.article.findMany({
-      where,
+      where: finalWhere,
       skip,
       take: limit,
       orderBy: [
@@ -159,7 +181,7 @@ export async function GET(request: NextRequest) {
         etat: { select: { id: true, libelle: true, slug: true } },
       },
     }),
-    prisma.article.count({ where }),
+    prisma.article.count({ where: finalWhere }),
   ]);
   return NextResponse.json({ articles, total, page, limit });
 }
@@ -171,7 +193,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const body = await request.json();
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+    }
     const {
       titre,
       chapo,

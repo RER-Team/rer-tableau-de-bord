@@ -68,6 +68,19 @@ export function NotificationTemplatesAdmin() {
     () => Boolean(items.find((item) => item.eventType === activeEventType)),
     [activeEventType, items]
   );
+  const hasUnsavedChanges = useMemo(() => {
+    const current = items.find((item) => item.eventType === activeEventType);
+    if (!current) return false;
+    return (
+      current.emailSubject !== draft.emailSubject ||
+      current.emailText !== draft.emailText ||
+      current.emailHtml !== draft.emailHtml ||
+      current.inAppTitle !== draft.inAppTitle ||
+      current.inAppBody !== draft.inAppBody ||
+      current.pushTitle !== draft.pushTitle ||
+      current.pushBody !== draft.pushBody
+    );
+  }, [activeEventType, draft, items]);
 
   const updateField = (key: keyof TemplateItem, value: string) => {
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -146,6 +159,9 @@ export function NotificationTemplatesAdmin() {
 
       {error && <p className="text-sm text-red-700">{error}</p>}
       {feedback && <p className="text-sm text-green-700">{feedback}</p>}
+      {hasActiveTemplate && hasUnsavedChanges && (
+        <p className="text-xs text-amber-700">Modifications non enregistrées.</p>
+      )}
 
       {hasActiveTemplate && (
         <div className="space-y-3">
@@ -212,7 +228,7 @@ export function NotificationTemplatesAdmin() {
               disabled={saving}
               className="rounded bg-rer-blue px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
             >
-              Enregistrer
+              Enregistrer comme modèle
             </button>
             <button
               type="button"
@@ -223,6 +239,9 @@ export function NotificationTemplatesAdmin() {
               Reset par defaut
             </button>
           </div>
+          <p className="text-xs text-rer-muted">
+            Ce message remplace le modèle actif pour cet événement.
+          </p>
         </div>
       )}
     </section>
