@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
   const mutuelleParam = searchParams.get("mutuelleId") ?? "";
   const rubriqueParam = searchParams.get("rubriqueId") ?? "";
   const formatParam = searchParams.get("formatId") ?? "";
+  const auteurParam = searchParams.get("auteurId") ?? "";
   const sinceParam = searchParams.get("since") ?? "";
   const fromParam = searchParams.get("from") ?? "";
   const toParam = searchParams.get("to") ?? "";
@@ -140,6 +141,15 @@ export async function GET(request: NextRequest) {
     where.formatId = formatIds[0];
   } else if (formatIds.length > 1) {
     where.formatId = { in: formatIds };
+  }
+  const auteurIds = auteurParam
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  if (auteurIds.length === 1) {
+    where.auteurId = auteurIds[0];
+  } else if (auteurIds.length > 1) {
+    where.auteurId = { in: auteurIds };
   }
   const finalWhere = mergeArticleWhereClauses(
     where,

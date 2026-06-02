@@ -20,6 +20,7 @@ type SearchParams = {
   mutuelleId?: string;
   rubriqueId?: string;
   formatId?: string;
+  auteurId?: string;
    since?: string;
    from?: string;
    to?: string;
@@ -54,6 +55,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   const mutuelleParam = params.mutuelleId || "";
   const rubriqueParam = params.rubriqueId || "";
   const formatParam = params.formatId || "";
+  const auteurParam = params.auteurId || "";
   const sinceParam = params.since || "";
   const fromParam = params.from || "";
   const toParam = params.to || "";
@@ -132,6 +134,15 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
     where.formatId = formatIds[0];
   } else if (formatIds.length > 1) {
     where.formatId = { in: formatIds };
+  }
+  const auteurIds = auteurParam
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  if (auteurIds.length === 1) {
+    where.auteurId = auteurIds[0];
+  } else if (auteurIds.length > 1) {
+    where.auteurId = { in: auteurIds };
   }
   const finalWhere = mergeArticleWhereClauses(where, textSearchWhere);
 

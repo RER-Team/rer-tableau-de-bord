@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getStatusWhereClause } from "@/lib/article-status";
+import {
+  buildArticleTextSearchWhere,
+  mergeArticleWhereClauses,
+} from "@/lib/article-search-where";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -8,6 +12,7 @@ export async function GET(request: NextRequest) {
   const mutuelleParam = searchParams.get("mutuelleId") ?? "";
   const rubriqueParam = searchParams.get("rubriqueId") ?? "";
   const formatParam = searchParams.get("formatId") ?? "";
+  const auteurParam = searchParams.get("auteurId") ?? "";
   const sinceParam = searchParams.get("since") ?? "";
   const fromParam = searchParams.get("from") ?? "";
   const toParam = searchParams.get("to") ?? "";
@@ -15,14 +20,7 @@ export async function GET(request: NextRequest) {
   // Cet endpoint alimente la barre de filtres du site public : les comptes ne
   // doivent porter que sur les articles publiés (jamais brouillons / à relire).
   const baseWhere: any = { etat: getStatusWhereClause("publie") };
-
-  if (q) {
-    baseWhere.OR = [
-      { titre: { contains: q, mode: "insensitive" } },
-      { chapo: { contains: q, mode: "insensitive" } },
-      { contenu: { contains: q, mode: "insensitive" } },
-    ];
-  }
+  const textSearchWhere = buildArticleTextSearchWhere(q);
 
   const dateFilter: any = {};
   const fromDate = fromParam ? new Date(fromParam) : null;
@@ -36,9 +34,9 @@ export async function GET(request: NextRequest) {
   if (toDate && !Number.isNaN(toDate.getTime())) {
     dateFilter.lte = toDate;
   }
+  const dateOrClause: any[] = [];
   if (Object.keys(dateFilter).length > 0) {
-    baseWhere.OR = [
-      ...(baseWhere.OR ?? []),
+    dateOrClause.push(
       {
         AND: [
           { datePublication: { not: null } },
@@ -51,7 +49,7 @@ export async function GET(request: NextRequest) {
           { createdAt: dateFilter },
         ],
       },
-    ];
+    );
   }
 
   const mutuelleIdsFilter = mutuelleParam
@@ -86,43 +84,95 @@ export async function GET(request: NextRequest) {
       : formatIdsFilter.length > 1
       ? { in: formatIdsFilter }
       : undefined;
+  const auteurIdsFilter = auteurParam
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  const auteurFilter =
+    auteurIdsFilter.length === 1
+      ? auteurIdsFilter[0]
+      : auteurIdsFilter.length > 1
+      ? { in: auteurIdsFilter }
+      : undefined;
 
-  const fullWhere: any = { ...baseWhere };
+  const fullWhereBase: any = { ...baseWhere };
   if (mutuelleFilter !== undefined) {
-    fullWhere.mutuelleId = mutuelleFilter;
+    fullWhereBase.mutuelleId = mutuelleFilter;
   }
   if (rubriqueFilter !== undefined) {
-    fullWhere.rubriqueId = rubriqueFilter;
+    fullWhereBase.rubriqueId = rubriqueFilter;
   }
   if (formatFilter !== undefined) {
-    fullWhere.formatId = formatFilter;
+    fullWhereBase.formatId = formatFilter;
   }
+  if (auteurFilter !== undefined) {
+    fullWhereBase.auteurId = auteurFilter;
+  }
+  const fullWhere = mergeArticleWhereClauses(
+    fullWhereBase,
+    textSearchWhere,
+    dateOrClause.length ? dateOrClause : undefined
+  );
 
-  const mutuelleWhere: any = { ...baseWhere };
+  const mutuelleWhereBase: any = { ...baseWhere };
   if (rubriqueFilter !== undefined) {
-    mutuelleWhere.rubriqueId = rubriqueFilter;
+    mutuelleWhereBase.rubriqueId = rubriqueFilter;
   }
   if (formatFilter !== undefined) {
-    mutuelleWhere.formatId = formatFilter;
+    mutuelleWhereBase.formatId = formatFilter;
   }
+  if (auteurFilter !== undefined) {
+    mutuelleWhereBase.auteurId = auteurFilter;
+  }
+  const mutuelleWhere = mergeArticleWhereClauses(
+    mutuelleWhereBase,
+    textSearchWhere,
+    dateOrClause.length ? dateOrClause : undefined
+  );
 
-  const rubriqueWhere: any = { ...baseWhere };
+  const rubriqueWhereBase: any = { ...baseWhere };
   if (mutuelleFilter !== undefined) {
-    rubriqueWhere.mutuelleId = mutuelleFilter;
+    rubriqueWhereBase.mutuelleId = mutuelleFilter;
   }
   if (formatFilter !== undefined) {
-    rubriqueWhere.formatId = formatFilter;
+    rubriqueWhereBase.formatId = formatFilter;
   }
+  if (auteurFilter !== undefined) {
+    rubriqueWhereBase.auteurId = auteurFilter;
+  }
+  const rubriqueWhere = mergeArticleWhereClauses(
+    rubriqueWhereBase,
+    textSearchWhere,
+    dateOrClause.length ? dateOrClause : undefined
+  );
 
-  const formatWhere: any = { ...baseWhere };
+  const formatWhereBase: any = { ...baseWhere };
   if (mutuelleFilter !== undefined) {
-    formatWhere.mutuelleId = mutuelleFilter;
+    formatWhereBase.mutuelleId = mutuelleFilter;
   }
   if (rubriqueFilter !== undefined) {
-    formatWhere.rubriqueId = rubriqueFilter;
+    formatWhereBase.rubriqueId = rubriqueFilter;
   }
+  if (auteurFilter !== undefined) {
+    formatWhereBase.auteurId = auteurFilter;
+  }
+  const formatWhere = mergeArticleWhereClauses(
+    formatWhereBase,
+    textSearchWhere,
+    dateOrClause.length ? dateOrClause : undefined
+  );
 
-  const [total, mutuelleGroups, rubriqueGroups, formatGroups] = await Promise.all([
+  const auteurWhereBase: any = { ...baseWhere };
+  if (mutuelleFilter !== undefined) auteurWhereBase.mutuelleId = mutuelleFilter;
+  if (rubriqueFilter !== undefined) auteurWhereBase.rubriqueId = rubriqueFilter;
+  if (formatFilter !== undefined) auteurWhereBase.formatId = formatFilter;
+  const auteurWhere = mergeArticleWhereClauses(
+    auteurWhereBase,
+    textSearchWhere,
+    dateOrClause.length ? dateOrClause : undefined
+  );
+
+  const [total, mutuelleGroups, rubriqueGroups, formatGroups, auteurGroups] = await Promise.all([
     prisma.article.count({ where: fullWhere }),
     prisma.article.groupBy({
       by: ["mutuelleId"],
@@ -139,6 +189,11 @@ export async function GET(request: NextRequest) {
       where: formatWhere,
       _count: { _all: true },
     }),
+    prisma.article.groupBy({
+      by: ["auteurId"],
+      where: auteurWhere,
+      _count: { _all: true },
+    }),
   ]);
 
   const mutuelleIds = mutuelleGroups
@@ -150,8 +205,11 @@ export async function GET(request: NextRequest) {
   const formatIds = formatGroups
     .map((g) => g.formatId)
     .filter((id): id is string => Boolean(id));
+  const auteurIds = auteurGroups
+    .map((g) => g.auteurId)
+    .filter((id): id is string => Boolean(id));
 
-  const [mutuelles, rubriques, formats] = await Promise.all([
+  const [mutuelles, rubriques, formats, auteurs] = await Promise.all([
     mutuelleIds.length
       ? prisma.mutuelle.findMany({
           where: { id: { in: mutuelleIds } },
@@ -165,6 +223,12 @@ export async function GET(request: NextRequest) {
     formatIds.length
       ? prisma.format.findMany({
           where: { id: { in: formatIds } },
+        })
+      : Promise.resolve([]),
+    auteurIds.length
+      ? prisma.auteur.findMany({
+          where: { id: { in: auteurIds } },
+          select: { id: true, prenom: true, nom: true },
         })
       : Promise.resolve([]),
   ]);
@@ -207,6 +271,19 @@ export async function GET(request: NextRequest) {
     })
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
+  const auteurFacets = auteurGroups
+    .filter((g) => g.auteurId)
+    .map((g) => {
+      const a = auteurs.find((a) => a.id === g.auteurId);
+      return {
+        id: g.auteurId as string,
+        prenom: a?.prenom ?? "",
+        nom: a?.nom ?? "Inconnu",
+        count: g._count._all,
+      };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
 
   return NextResponse.json(
     {
@@ -214,6 +291,7 @@ export async function GET(request: NextRequest) {
       mutuelles: mutuelleFacets,
       rubriques: rubriqueFacets,
       formats: formatFacets,
+      auteurs: auteurFacets,
     },
     {
       headers: {
