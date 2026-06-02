@@ -9,6 +9,17 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * ATTENTION (risque d'orphelins) : `Promise.race` ne peut pas annuler `promise`.
+ * En cas de timeout, l'opération sous-jacente (ex: envoi mail / web-push)
+ * continue de s'exécuter en arrière-plan. Un retry déclenché après un timeout
+ * peut donc produire un doublon si la première tentative finit par réussir.
+ *
+ * Conséquences à connaître côté appelant :
+ * - Pour les opérations idempotentes (dédupliquées via `dedupeKey`), c'est sans danger.
+ * - Pour les envois mail NON idempotents, préférer `retries: 0` afin d'éviter
+ *   de renvoyer un email dont la première tentative pourrait avoir abouti.
+ */
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const timeoutPromise = new Promise<never>((_, reject) => {

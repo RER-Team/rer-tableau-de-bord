@@ -2,18 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
-import { ingestDebug } from "@/lib/ingest-debug";
 import { BubbleMenu, FloatingMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Paragraph from "@tiptap/extension-paragraph";
 import Image from "@tiptap/extension-image";
-type UploadResponse = {
-  path: string;
-  token: string;
-  key: string;
-  publicUrl: string | null;
-};
 
 type RichArticleEditorProps = {
   /**
@@ -248,30 +241,6 @@ export function RichArticleEditor({
       const json = editor.getJSON();
       const html = editor.getHTML();
 
-      ingestDebug({
-        sessionId: "fb943b",
-        runId: "pre-fix",
-        hypothesisId: "H_AUTOSAVE_OR_ONCHANGE",
-        location: "app/components/RichArticleEditor.tsx:onUpdate",
-        message: "RichArticleEditor onUpdate called",
-        data: { htmlLength: html.length },
-      });
-
-      // #region agent log
-      ingestDebug({
-        sessionId: "a34272",
-        runId: "pre-fix",
-        hypothesisId: "H_IMG_SCHEMA",
-        location: "app/components/RichArticleEditor.tsx:onUpdate",
-        message: "RichArticleEditor onUpdate snapshot",
-        data: {
-          htmlLength: html.length,
-          hasImgTag: html.includes("<img"),
-          hasFigureTag: html.includes("<figure"),
-        },
-      });
-      // #endregion
-
       onChangeRef.current({ json, html });
     },
   });
@@ -403,42 +372,12 @@ export function RichArticleEditor({
     if (!file || !editor) return;
 
     try {
-      // #region agent log
-      ingestDebug({
-        sessionId: "a34272",
-        runId: "pre-fix",
-        hypothesisId: "H_IMG_UPLOAD_FLOW",
-        location: "app/components/RichArticleEditor.tsx:handleFileChange:start",
-        message: "handleFileChange called",
-        data: {
-          fileName: file.name,
-          fileSize: file.size,
-          articleId: articleId ?? null,
-        },
-      });
-      // #endregion
-
       const { uploadArticleImage } = await import("@/lib/uploadArticleImage");
       const { publicUrl } = await uploadArticleImage({
         file,
         filename: file.name,
         articleId: articleId ?? null,
       });
-
-      // #region agent log
-      ingestDebug({
-        sessionId: "a34272",
-        runId: "pre-fix",
-        hypothesisId: "H_IMG_UPLOAD_FLOW",
-        location:
-          "app/components/RichArticleEditor.tsx:handleFileChange:beforeInsert",
-        message: "Inserting image into editor",
-        data: {
-          hasImgUrl: !!publicUrl,
-          imgUrlLength: publicUrl.length,
-        },
-      });
-      // #endregion
 
       editor
         .chain()
@@ -455,12 +394,6 @@ export function RichArticleEditor({
           : "Erreur lors du traitement de l’image.";
       alert(message);
     }
-  };
-
-  const handleInsertSocialPost = () => {
-    insertBlockAtSlash(
-      `<section class="social-post"><div class="social-post-label">POST RÉSEAUX SOCIAUX</div><p>Texte du post réseaux sociaux…</p></section>`
-    );
   };
 
   const handleInsertEmbed = () => {
@@ -507,15 +440,6 @@ export function RichArticleEditor({
     const nextClasses = hasChapo
       ? classes.filter((c: string) => c !== "chapo")
       : [...classes, "chapo"];
-
-    ingestDebug({
-      sessionId: "fb943b",
-      runId: "pre-fix",
-      hypothesisId: "H_CHAPO_TOGGLE",
-      location: "app/components/RichArticleEditor.tsx:handleToggleChapo",
-      message: "Toggle chapo clicked",
-      data: { beforeClasses: classes, afterClasses: nextClasses },
-    });
 
     editor
       .chain()
@@ -616,6 +540,7 @@ export function RichArticleEditor({
           <button
             type="button"
             title="Supprimer les styles (texte normal)"
+            aria-label="Supprimer les styles (texte normal)"
             onClick={handleClearStyles}
             className={`${baseButtonClasses} border-red-200 bg-red-50 text-red-700 hover:bg-red-100`}
           >
@@ -625,6 +550,7 @@ export function RichArticleEditor({
           <button
             type="button"
             title="Gras (Ctrl+B)"
+            aria-label="Gras (Ctrl+B)"
             onClick={() => editor.chain().focus().toggleBold().run()}
             className={`${baseButtonClasses} ${
               editor.isActive("bold") ? `${activeButtonClasses} font-bold` : idleButtonClasses
@@ -635,6 +561,7 @@ export function RichArticleEditor({
           <button
             type="button"
             title="Italique (Ctrl+I)"
+            aria-label="Italique (Ctrl+I)"
             onClick={() => editor.chain().focus().toggleItalic().run()}
             className={`${baseButtonClasses} ${
               editor.isActive("italic") ? `${activeButtonClasses} italic` : idleButtonClasses
@@ -646,6 +573,7 @@ export function RichArticleEditor({
           <button
             type="button"
             title="Ajouter ou modifier un lien"
+            aria-label="Ajouter ou modifier un lien"
             onClick={handleSetLink}
             className={`${baseButtonClasses} ${
               editor.isActive("link") ? activeButtonClasses : idleButtonClasses
@@ -657,6 +585,7 @@ export function RichArticleEditor({
           <button
             type="button"
             title="Titre niveau 2"
+            aria-label="Titre niveau 2"
             onClick={() =>
               editor.chain().focus().toggleHeading({ level: 2 }).run()
             }
@@ -669,6 +598,7 @@ export function RichArticleEditor({
           <button
             type="button"
             title="Titre niveau 3"
+            aria-label="Titre niveau 3"
             onClick={() =>
               editor.chain().focus().toggleHeading({ level: 3 }).run()
             }
@@ -682,6 +612,7 @@ export function RichArticleEditor({
           <button
             type="button"
             title="Liste à puces"
+            aria-label="Liste à puces"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             className={`${baseButtonClasses} ${
               editor.isActive("bulletList") ? activeButtonClasses : idleButtonClasses
@@ -692,6 +623,7 @@ export function RichArticleEditor({
           <button
             type="button"
             title="Citation"
+            aria-label="Citation"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             className={`${baseButtonClasses} ${
               editor.isActive("blockquote")
@@ -707,6 +639,7 @@ export function RichArticleEditor({
               <button
                 type="button"
                 title="Basculer le style chapô"
+                aria-label="Basculer le style chapô"
                 onClick={handleToggleChapo}
                 className={`${baseButtonClasses} ${
                   editor.isActive("paragraph", { class: "chapo" })

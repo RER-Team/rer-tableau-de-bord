@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import type { MailPayload, MailProvider } from "../types";
+import { resolveFromAddress } from "../from-address";
 
 type SmtpConfig = {
   from: string;
@@ -19,13 +20,6 @@ function resolveSecure(config: SmtpConfig): boolean {
   if (typeof config.secure === "boolean") return config.secure;
   if (typeof config.port === "number") return config.port === 465;
   return false;
-}
-
-function resolveFromAddress(baseFrom: string, fromName?: string): string {
-  if (!fromName?.trim()) return baseFrom;
-  const extracted = baseFrom.match(/<([^>]+)>/);
-  const address = (extracted?.[1] ?? baseFrom).trim();
-  return `${fromName.trim()} <${address}>`;
 }
 
 export function createSmtpProvider(config: SmtpConfig): MailProvider {

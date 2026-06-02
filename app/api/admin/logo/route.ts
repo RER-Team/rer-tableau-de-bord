@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth";
+import { isAuthFailure, requireRole } from "@/lib/api-auth";
 import { getSiteLogoPayload, saveSiteLogo } from "@/lib/siteBranding";
 
 const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
 
+// GET volontairement public : le logo/branding est affiché sur le site grand public.
 export async function GET() {
   const payload = await getSiteLogoPayload();
   return NextResponse.json(payload);
 }
 
 export async function POST(request: NextRequest) {
-  const sessionUser = await getSessionUser(request);
-  if (!sessionUser || sessionUser.role !== "admin") {
-    return NextResponse.json({ error: "Accès réservé aux administrateurs" }, { status: 403 });
-  }
+  const sessionUser = await requireRole(request, "admin", {
+    forbiddenMessage: "Accès réservé aux administrateurs",
+  });
+  if (isAuthFailure(sessionUser)) return sessionUser;
 
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("multipart/form-data")) {

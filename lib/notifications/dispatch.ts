@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import type { ArticleNotificationEvent } from "./article-events";
-import { defaultNotificationPreferences } from "./preferences";
+import {
+  defaultNotificationPreferences,
+  notificationPreferenceSelect,
+} from "./preferences";
 import { sendMail } from "@/lib/mail";
 import { sendWebPushNotification } from "./web-push";
 import { retryWithTimeout } from "./reliability";
 import {
+  escapeHtml,
   getDefaultNotificationTemplate,
   renderTemplate,
 } from "./templates";
@@ -14,6 +18,38 @@ type DispatchArticleNotificationEventArgs = {
 };
 
 const MAIL_SENDER_NAME = process.env.MAIL_SENDER_NAME?.trim() || "Constance et Léa";
+const DEFAULT_ADMIN_ALERT_EMAIL = "contact@reseaudesediteursderevues.org";
+
+/**
+ * Détecte une violation de contrainte d'unicité Prisma (code P2002),
+ * utilisée pour rendre la déduplication atomique : on tente la création du
+ * `NotificationDelivery` et on ignore l'erreur si la clé `dedupeKey` existe déjà.
+ */
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "P2002"
+  );
+}
+
+/**
+ * Récupère le code HTTP d'une erreur web-push (champ `statusCode` exposé par la
+ * lib `web-push`). Sert à détecter les abonnements expirés (404/410) de façon
+ * fiable, avec repli sur l'analyse textuelle du message.
+ */
+function getWebPushStatusCode(error: unknown): number | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "statusCode" in error &&
+    typeof (error as { statusCode?: unknown }).statusCode === "number"
+  ) {
+    return (error as { statusCode: number }).statusCode;
+  }
+  return undefined;
+}
 
 function buildAdminSignature(args: {
   prenom?: string | null;
@@ -149,7 +185,8 @@ export async function dispatchArticleNotificationEvent(
   args: DispatchArticleNotificationEventArgs
 ): Promise<void> {
   const { event } = args;
-  const adminAlertRecipientEmail = "contact@reseaudesediteursderevues.org";
+  const adminAlertRecipientEmail =
+    process.env.ADMIN_ALERT_EMAIL?.trim() || DEFAULT_ADMIN_ALERT_EMAIL;
 
   const article = await prisma.article.findUnique({
     where: { id: event.articleId },
@@ -166,9 +203,13 @@ export async function dispatchArticleNotificationEvent(
   const transitionKey = article.updatedAt.toISOString();
   const authorDisplayName = resolveAuthorDisplayName(article);
 
+  // Un auteur peut théoriquement être lié à plusieurs comptes User. On rend la
+  // sélection déterministe (le compte le plus ancien) plutôt que de dépendre de
+  // l'ordre arbitraire de la base. Le schéma Prisma n'est volontairement pas modifié.
   const targetUser = await prisma.user.findFirst({
     where: { auteurId: event.targetAuteurId },
     select: { id: true, email: true, role: true },
+    orderBy: { createdAt: "asc" },
   });
   const targetAuteur = await prisma.auteur.findUnique({
     where: { id: event.targetAuteurId },
@@ -183,28 +224,7 @@ export async function dispatchArticleNotificationEvent(
   const preference = targetUser?.id
     ? await prisma.userNotificationPreference.findUnique({
         where: { userId: targetUser.id },
-        select: {
-          emailEnabled: true,
-          inAppEnabled: true,
-          browserPushEnabled: true,
-          onSubmitted: true,
-          onCorrections: true,
-          onPublished: true,
-          onAuthorActions: true,
-          onOwnArticles: true,
-          emailOwnArticles: true,
-          emailAuthorActions: true,
-          inAppOwnArticles: true,
-          inAppAuthorActions: true,
-          browserPushOwnArticles: true,
-          browserPushAuthorActions: true,
-          onSubmittedOwnArticles: true,
-          onSubmittedAuthorActions: true,
-          onCorrectionsOwnArticles: true,
-          onCorrectionsAuthorActions: true,
-          onPublishedOwnArticles: true,
-          onPublishedAuthorActions: true,
-        },
+        select: notificationPreferenceSelect,
       })
     : null;
 
@@ -277,7 +297,10 @@ export async function dispatchArticleNotificationEvent(
       `L'article "${article.titre}" vient d'être déposé par ${depositorName || "un auteur"}.`,
       `Lien : ${articleUrl}`,
     ].join("\n");
-    const contactHtml = `<p>Bonjour,</p><p>L'article "<strong>${article.titre}</strong>" vient d'être déposé par ${depositorName || "un auteur"}.</p><p><a href="${articleUrl}">Ouvrir l'article</a></p>`;
+    const safeTitle = escapeHtml(article.titre);
+    const safeDepositor = escapeHtml(depositorName || "un auteur");
+    const safeArticleUrl = escapeHtml(articleUrl);
+    const contactHtml = `<p>Bonjour,</p><p>L'article "<strong>${safeTitle}</strong>" vient d'être déposé par ${safeDepositor}.</p><p><a href="${safeArticleUrl}">Ouvrir l'article</a></p>`;
     try {
       await retryWithTimeout(
         () =>
@@ -318,17 +341,21 @@ export async function dispatchArticleNotificationEvent(
     isChannelEnabledForScope("in_app", targetInAppScope, effectivePreference)
   ) {
     const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:in_app:${transitionKey}`;
-    const existing = await prisma.notificationDelivery.findUnique({
-      where: { dedupeKey },
-      select: { id: true },
-    });
-    if (!existing) {
-      const inAppTitle = buildInAppTitle({
+    const renderedInAppTitle = renderTemplate(
+      templateBase.inAppTitle,
+      templateVars
+    ).trim();
+    const inAppTitle =
+      renderedInAppTitle ||
+      buildInAppTitle({
         eventType: event.type,
         articleTitle: article.titre,
         authorDisplayName,
       });
-      const inAppBody = renderTemplate(templateBase.inAppBody, templateVars);
+    const inAppBody = renderTemplate(templateBase.inAppBody, templateVars);
+    // Déduplication atomique : la contrainte @unique sur dedupeKey rejette la
+    // seconde transaction concurrente (P2002), qu'on ignore pour éviter le doublon.
+    try {
       await prisma.$transaction([
         prisma.notification.create({
           data: {
@@ -359,6 +386,8 @@ export async function dispatchArticleNotificationEvent(
         eventType: event.type,
         userId: targetUser.id,
       });
+    } catch (error) {
+      if (!isUniqueConstraintError(error)) throw error;
     }
   }
 
@@ -370,39 +399,15 @@ export async function dispatchArticleNotificationEvent(
     targetUser.email
   ) {
     const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:email:${transitionKey}`;
-    const existing = await prisma.notificationDelivery.findUnique({
-      where: { dedupeKey },
-      select: { id: true },
-    });
 
-    if (!existing) {
-      const emailSubject = renderTemplate(templateBase.emailSubject, templateVars);
-      const emailText = renderTemplate(templateBase.emailText, templateVars);
-      const emailHtml = renderTemplate(templateBase.emailHtml, templateVars);
-
-      await retryWithTimeout(
-        () =>
-          sendMail({
-            to: targetUser.email,
-            fromName: MAIL_SENDER_NAME,
-            subject: emailSubject,
-            text: emailText,
-            html: emailHtml,
-            tags: ["article-notification", event.type],
-            meta: {
-              articleId: article.id,
-              eventType: event.type,
-              channel: "email",
-            },
-          }),
-        {
-          label: "email-send",
-          retries: 2,
-          baseDelayMs: 250,
-          timeoutMs: 8000,
-        }
-      );
-
+    // On "réserve" l'envoi en créant le NotificationDelivery AVANT l'envoi du
+    // mail. La contrainte @unique sur dedupeKey garantit l'atomicité : si un
+    // autre dispatch a déjà réservé (P2002), on s'arrête sans renvoyer.
+    // Conséquence assumée (faute de colonne `status` au schéma) : sémantique
+    // at-most-once. Si l'envoi échoue ensuite, le mail n'est pas réémis (pas de
+    // doublon) — l'erreur est journalisée pour suivi.
+    let reserved = true;
+    try {
       await prisma.notificationDelivery.create({
         data: {
           userId: targetUser.id,
@@ -412,11 +417,57 @@ export async function dispatchArticleNotificationEvent(
           dedupeKey,
         },
       });
-      console.info("[notifications] email sent", {
-        articleId: article.id,
-        eventType: event.type,
-        userId: targetUser.id,
+    } catch (error) {
+      if (!isUniqueConstraintError(error)) throw error;
+      reserved = false;
+    }
+
+    if (reserved) {
+      const emailSubject = renderTemplate(templateBase.emailSubject, templateVars);
+      const emailText = renderTemplate(templateBase.emailText, templateVars);
+      const emailHtml = renderTemplate(templateBase.emailHtml, templateVars, {
+        html: true,
       });
+
+      try {
+        await retryWithTimeout(
+          () =>
+            sendMail({
+              to: targetUser.email,
+              fromName: MAIL_SENDER_NAME,
+              subject: emailSubject,
+              text: emailText,
+              html: emailHtml,
+              tags: ["article-notification", event.type],
+              meta: {
+                articleId: article.id,
+                eventType: event.type,
+                channel: "email",
+              },
+            }),
+          {
+            label: "email-send",
+            // Pas de retry : la réservation a déjà eu lieu et `withTimeout` ne
+            // peut pas annuler un envoi en cours (cf. reliability.ts). Réessayer
+            // risquerait un doublon plutôt qu'un simple échec journalisé.
+            retries: 0,
+            baseDelayMs: 250,
+            timeoutMs: 8000,
+          }
+        );
+        console.info("[notifications] email sent", {
+          articleId: article.id,
+          eventType: event.type,
+          userId: targetUser.id,
+        });
+      } catch (error) {
+        console.error("[notifications] email send error (delivery déjà réservé, pas de renvoi)", {
+          articleId: article.id,
+          eventType: event.type,
+          userId: targetUser.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 
@@ -429,81 +480,74 @@ export async function dispatchArticleNotificationEvent(
       where: { role: "admin" },
       select: {
         id: true,
+        // Réutilise la source unique de vérité des préférences (preferences.ts)
+        // plutôt que de redupliquer la liste des colonnes ici.
         notificationPreference: {
-          select: {
-            inAppEnabled: true,
-            onSubmitted: true,
-            onCorrections: true,
-            onPublished: true,
-            onAuthorActions: true,
-            onOwnArticles: true,
-            emailOwnArticles: true,
-            emailAuthorActions: true,
-            inAppOwnArticles: true,
-            inAppAuthorActions: true,
-            browserPushOwnArticles: true,
-            browserPushAuthorActions: true,
-            onSubmittedOwnArticles: true,
-            onSubmittedAuthorActions: true,
-            onCorrectionsOwnArticles: true,
-            onCorrectionsAuthorActions: true,
-            onPublishedOwnArticles: true,
-            onPublishedAuthorActions: true,
-          },
+          select: notificationPreferenceSelect,
         },
       },
     });
-    for (const admin of adminUsers) {
-      const adminEffectivePreference =
-        admin.notificationPreference ?? defaultNotificationPreferences;
-      const shouldNotifyAdmin =
-        adminEffectivePreference.inAppEnabled &&
-        shouldNotifyForEvent(event.type, adminEffectivePreference) &&
-        shouldNotifyForScope("authorActions", adminEffectivePreference) &&
-        isEventEnabledForScope(event.type, "authorActions", adminEffectivePreference) &&
-        isChannelEnabledForScope("in_app", "authorActions", adminEffectivePreference);
-      if (!shouldNotifyAdmin) continue;
+    const title = `${resolveActionTag(event.type)} - ${depositorName || "Auteur"} - ${article.titre}`;
+    const body = isSubmission
+      ? `L'article "${article.titre}" vient d'être déposé par ${depositorName || "un auteur"}.`
+      : `L'article "${article.titre}" déposé par ${depositorName || "un auteur"} vient d'être publié.`;
 
-      const dedupeKey = `${event.type}:${event.articleId}:${admin.id}:in_app_admin_alert:${transitionKey}`;
-      const existing = await prisma.notificationDelivery.findUnique({
-        where: { dedupeKey },
-        select: { id: true },
-      });
-      if (existing) continue;
+    // Traitement parallèle des admins, avec gestion d'erreur par item.
+    await Promise.allSettled(
+      adminUsers.map(async (admin) => {
+        const adminEffectivePreference =
+          admin.notificationPreference ?? defaultNotificationPreferences;
+        const shouldNotifyAdmin =
+          adminEffectivePreference.inAppEnabled &&
+          shouldNotifyForEvent(event.type, adminEffectivePreference) &&
+          shouldNotifyForScope("authorActions", adminEffectivePreference) &&
+          isEventEnabledForScope(event.type, "authorActions", adminEffectivePreference) &&
+          isChannelEnabledForScope("in_app", "authorActions", adminEffectivePreference);
+        if (!shouldNotifyAdmin) return;
 
-      const title = `${resolveActionTag(event.type)} - ${depositorName || "Auteur"} - ${article.titre}`;
-      const body = isSubmission
-        ? `L'article "${article.titre}" vient d'être déposé par ${depositorName || "un auteur"}.`
-        : `L'article "${article.titre}" déposé par ${depositorName || "un auteur"} vient d'être publié.`;
-      await prisma.$transaction([
-        prisma.notification.create({
-          data: {
-            userId: admin.id,
-            type: isSubmission
-              ? "article.submitted.admin_alert"
-              : "article.published.admin_alert",
-            title,
-            body,
-            metadata: {
+        const dedupeKey = `${event.type}:${event.articleId}:${admin.id}:in_app_admin_alert:${transitionKey}`;
+        // Déduplication atomique via la contrainte @unique (P2002 ignoré).
+        try {
+          await prisma.$transaction([
+            prisma.notification.create({
+              data: {
+                userId: admin.id,
+                type: isSubmission
+                  ? "article.submitted.admin_alert"
+                  : "article.published.admin_alert",
+                title,
+                body,
+                metadata: {
+                  articleId: article.id,
+                  articleTitle: article.titre,
+                  eventType: event.type,
+                  publishedByAuteurId: event.targetAuteurId,
+                  scope: "authorActions",
+                },
+              },
+            }),
+            prisma.notificationDelivery.create({
+              data: {
+                userId: admin.id,
+                articleId: article.id,
+                eventType: event.type,
+                channel: "in_app",
+                dedupeKey,
+              },
+            }),
+          ]);
+        } catch (error) {
+          if (!isUniqueConstraintError(error)) {
+            console.error("[notifications] admin in-app alert error", {
               articleId: article.id,
-              articleTitle: article.titre,
               eventType: event.type,
-              publishedByAuteurId: event.targetAuteurId,
-              scope: "authorActions",
-            },
-          },
-        }),
-        prisma.notificationDelivery.create({
-          data: {
-            userId: admin.id,
-            articleId: article.id,
-            eventType: event.type,
-            channel: "in_app",
-            dedupeKey,
-          },
-        }),
-      ]);
-    }
+              adminId: admin.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+      })
+    );
   }
 
   if (
@@ -522,65 +566,80 @@ export async function dispatchArticleNotificationEvent(
       body: renderTemplate(templateBase.pushBody, templateVars),
       url: pushUrl,
     };
-    for (const subscription of subscriptions) {
-      const dedupeKey = `${event.type}:${event.articleId}:${targetUser.id}:push:${subscription.id}:${transitionKey}`;
-      const existing = await prisma.notificationDelivery.findUnique({
-        where: { dedupeKey },
-        select: { id: true },
-      });
-      if (existing) continue;
+    const pushUserId = targetUser.id;
+    // Traitement parallèle des abonnements push, avec gestion d'erreur par item.
+    await Promise.allSettled(
+      subscriptions.map(async (subscription) => {
+        const dedupeKey = `${event.type}:${event.articleId}:${pushUserId}:push:${subscription.id}:${transitionKey}`;
 
-      try {
-        await retryWithTimeout(
-          () =>
-            sendWebPushNotification(
-              {
-                endpoint: subscription.endpoint,
-                keys: {
-                  p256dh: subscription.p256dh,
-                  auth: subscription.auth,
-                },
-              },
-              pushPayload
-            ),
-          {
-            label: "web-push-send",
-            retries: 2,
-            baseDelayMs: 250,
-            timeoutMs: 6000,
-          }
-        );
-        await prisma.notificationDelivery.create({
-          data: {
-            userId: targetUser.id,
-            articleId: article.id,
-            eventType: event.type,
-            channel: "push",
-            dedupeKey,
-          },
-        });
-        console.info("[notifications] push sent", {
-          articleId: article.id,
-          eventType: event.type,
-          userId: targetUser.id,
-          subscriptionId: subscription.id,
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message.includes("410") || message.includes("404")) {
-          await prisma.pushSubscription.delete({
-            where: { id: subscription.id },
+        // Réservation idempotente AVANT envoi (cf. canal email) : la contrainte
+        // @unique évite tout doublon de notification push sur dispatch concurrent.
+        try {
+          await prisma.notificationDelivery.create({
+            data: {
+              userId: pushUserId,
+              articleId: article.id,
+              eventType: event.type,
+              channel: "push",
+              dedupeKey,
+            },
           });
-        } else {
-          console.error("[notifications] sendWebPushNotification error", {
-            articleId: article.id,
-            eventType: event.type,
-            userId: targetUser.id,
-            subscriptionId: subscription.id,
-            error: message,
-          });
+        } catch (error) {
+          if (isUniqueConstraintError(error)) return;
+          throw error;
         }
-      }
-    }
+
+        try {
+          await retryWithTimeout(
+            () =>
+              sendWebPushNotification(
+                {
+                  endpoint: subscription.endpoint,
+                  keys: {
+                    p256dh: subscription.p256dh,
+                    auth: subscription.auth,
+                  },
+                },
+                pushPayload
+              ),
+            {
+              label: "web-push-send",
+              retries: 2,
+              baseDelayMs: 250,
+              timeoutMs: 6000,
+            }
+          );
+          console.info("[notifications] push sent", {
+            articleId: article.id,
+            eventType: event.type,
+            userId: pushUserId,
+            subscriptionId: subscription.id,
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          // Abonnement expiré/invalide : on s'appuie sur le statusCode renvoyé
+          // par web-push (404 = introuvable, 410 = parti), avec repli sur le texte.
+          const statusCode = getWebPushStatusCode(error);
+          const isExpired =
+            statusCode === 404 ||
+            statusCode === 410 ||
+            message.includes("410") ||
+            message.includes("404");
+          if (isExpired) {
+            await prisma.pushSubscription.delete({
+              where: { id: subscription.id },
+            });
+          } else {
+            console.error("[notifications] sendWebPushNotification error", {
+              articleId: article.id,
+              eventType: event.type,
+              userId: pushUserId,
+              subscriptionId: subscription.id,
+              error: message,
+            });
+          }
+        }
+      })
+    );
   }
 }

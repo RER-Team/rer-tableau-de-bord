@@ -85,6 +85,7 @@ describe("dispatchArticleNotificationEvent", () => {
       event: {
         type: "article.submitted",
         articleId: "article-1",
+        actorUserId: null,
         targetAuteurId: "auteur-1",
       },
     });
@@ -102,13 +103,40 @@ describe("dispatchArticleNotificationEvent", () => {
       event: {
         type: "article.submitted",
         articleId: "article-1",
+        actorUserId: null,
         targetAuteurId: "auteur-1",
       },
     });
 
     expect(mocks.userFindMany).toHaveBeenCalledWith({
       where: { role: "admin" },
-      select: { id: true },
+      select: {
+        id: true,
+        notificationPreference: {
+          select: {
+            emailEnabled: true,
+            inAppEnabled: true,
+            browserPushEnabled: true,
+            onSubmitted: true,
+            onCorrections: true,
+            onPublished: true,
+            onAuthorActions: true,
+            onOwnArticles: true,
+            emailOwnArticles: true,
+            emailAuthorActions: true,
+            inAppOwnArticles: true,
+            inAppAuthorActions: true,
+            browserPushOwnArticles: true,
+            browserPushAuthorActions: true,
+            onSubmittedOwnArticles: true,
+            onSubmittedAuthorActions: true,
+            onCorrectionsOwnArticles: true,
+            onCorrectionsAuthorActions: true,
+            onPublishedOwnArticles: true,
+            onPublishedAuthorActions: true,
+          },
+        },
+      },
     });
     expect(mocks.notificationCreate).toHaveBeenCalledTimes(2);
     expect(mocks.notificationCreate).toHaveBeenNthCalledWith(
@@ -138,6 +166,7 @@ describe("dispatchArticleNotificationEvent", () => {
       event: {
         type: "article.submitted",
         articleId: "article-1",
+        actorUserId: null,
         targetAuteurId: "auteur-1",
       },
     });
@@ -147,10 +176,17 @@ describe("dispatchArticleNotificationEvent", () => {
         to: "contact@reseaudesediteursderevues.org",
       })
     );
-    expect(mocks.userFindMany).toHaveBeenCalledWith({
-      where: { role: "admin" },
-      select: { id: true },
-    });
+    expect(mocks.userFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { role: "admin" },
+        select: expect.objectContaining({
+          id: true,
+          notificationPreference: expect.objectContaining({
+            select: expect.objectContaining({ inAppEnabled: true }),
+          }),
+        }),
+      })
+    );
     expect(mocks.preferenceFindUnique).not.toHaveBeenCalled();
   });
 
@@ -159,6 +195,7 @@ describe("dispatchArticleNotificationEvent", () => {
       event: {
         type: "article.published",
         articleId: "article-1",
+        actorUserId: null,
         targetAuteurId: "auteur-1",
       },
     });

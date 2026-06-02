@@ -27,7 +27,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  const body = ((await request.json()) ?? {}) as PushSubscriptionPayload;
+  let body: PushSubscriptionPayload;
+  try {
+    body = ((await request.json()) ?? {}) as PushSubscriptionPayload;
+  } catch {
+    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+  }
   const endpoint = typeof body.endpoint === "string" ? body.endpoint.trim() : "";
   const p256dh = typeof body.keys?.p256dh === "string" ? body.keys.p256dh.trim() : "";
   const auth = typeof body.keys?.auth === "string" ? body.keys.auth.trim() : "";
@@ -61,7 +66,12 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  const body = ((await request.json()) ?? {}) as { endpoint?: unknown };
+  let body: { endpoint?: unknown };
+  try {
+    body = ((await request.json()) ?? {}) as { endpoint?: unknown };
+  } catch {
+    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+  }
   const endpoint = typeof body.endpoint === "string" ? body.endpoint.trim() : "";
   if (!endpoint) {
     return NextResponse.json({ error: "Endpoint requis." }, { status: 400 });

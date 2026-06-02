@@ -6,6 +6,7 @@ Thumbs.db
 node_modules/
 .next/
 out/
+tsconfig.tsbuildinfo
 .env
 .env.local
 .env.*.local

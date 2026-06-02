@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/auth";
+import { isAuthFailure, requireRole } from "@/lib/api-auth";
 import {
   getDefaultNotificationTemplate,
   isArticleNotificationEventType,
@@ -33,17 +33,22 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ eventType: string }> }
 ) {
-  const user = await getSessionUser(request);
-  if (!user || user.role !== "admin") {
-    return NextResponse.json({ error: "Accès réservé aux administrateurs" }, { status: 403 });
-  }
+  const user = await requireRole(request, "admin", {
+    forbiddenMessage: "Accès réservé aux administrateurs",
+  });
+  if (isAuthFailure(user)) return user;
 
   const { eventType } = await params;
   if (!isArticleNotificationEventType(eventType)) {
     return NextResponse.json({ error: "eventType invalide" }, { status: 400 });
   }
 
-  const payload = ((await request.json()) ?? {}) as Record<string, unknown>;
+  let payload: Record<string, unknown>;
+  try {
+    payload = ((await request.json()) ?? {}) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+  }
   if (payload.resetToDefault === true) {
     const defaults = getDefaultNotificationTemplate(eventType);
     const { eventType: _ignoredEventType, ...restDefaults } = defaults;

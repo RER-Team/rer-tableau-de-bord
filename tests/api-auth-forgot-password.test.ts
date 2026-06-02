@@ -37,7 +37,6 @@ import { POST } from "@/app/api/auth/forgot-password/route";
 
 const SUCCESS_MESSAGE =
   "Un lien de réinitialisation a été envoyé à votre adresse email.";
-const NOT_FOUND_MESSAGE = "Aucun compte n'existe avec cette adresse email.";
 const RATE_LIMIT_MESSAGE =
   "Trop de demandes de réinitialisation. Merci de réessayer dans quelques minutes.";
 
@@ -73,14 +72,15 @@ describe("POST /api/auth/forgot-password", () => {
     expect(mocks.userFindUnique).not.toHaveBeenCalled();
   });
 
-  it("retourne 404 si utilisateur introuvable", async () => {
+  it("ne révèle pas l'absence de compte (réponse générique 200)", async () => {
     mocks.userFindUnique.mockResolvedValue(null);
 
     const response = await POST(makeRequest({ email: "absent@example.com" }));
     const data = await response.json();
 
-    expect(response.status).toBe(404);
-    expect(data.error).toBe(NOT_FOUND_MESSAGE);
+    // Anti-énumération : même réponse que pour un compte existant.
+    expect(response.status).toBe(200);
+    expect(data.message).toBe(SUCCESS_MESSAGE);
     expect(mocks.tokenCreate).not.toHaveBeenCalled();
     expect(mocks.sendPasswordResetEmail).not.toHaveBeenCalled();
   });

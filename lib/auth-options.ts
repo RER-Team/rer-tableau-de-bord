@@ -15,6 +15,8 @@ declare module "next-auth" {
     /** Présent quand on simule un autre utilisateur : permet d’afficher le footer et "Revenir à mon compte" */
     originalUserId?: string | null;
     originalUserEmail?: string | null;
+    /** Empreinte du mot de passe au moment de l'émission du token (invalidation de session). */
+    passwordVersion?: string | null;
   }
 }
 
@@ -56,7 +58,24 @@ const baseCredentialsProvider = CredentialsProvider({
 
 const providers: NextAuthOptions["providers"] = [baseCredentialsProvider];
 
-const enableImpersonate = process.env.NEXTAUTH_ENABLE_IMPERSONATE === "1";
+const isProduction = process.env.NODE_ENV === "production";
+
+// Fail-fast : en production, NEXTAUTH_SECRET est obligatoire (sinon les JWT ne
+// sont pas signés de façon sûre). On évite de throw en dev/test pour ne pas
+// gêner le développement et l'exécution des tests.
+if (isProduction && !process.env.NEXTAUTH_SECRET?.trim()) {
+  throw new Error(
+    "NEXTAUTH_SECRET est requis en production. Définissez la variable d'environnement."
+  );
+}
+
+// Impersonation : réservée au dev par défaut. En production, elle nécessite un
+// opt-in explicite supplémentaire (NEXTAUTH_ALLOW_IMPERSONATE_IN_PROD=1) en plus
+// de NEXTAUTH_ENABLE_IMPERSONATE=1.
+const enableImpersonate =
+  process.env.NEXTAUTH_ENABLE_IMPERSONATE === "1" &&
+  (!isProduction ||
+    process.env.NEXTAUTH_ALLOW_IMPERSONATE_IN_PROD === "1");
 
 // Provider d'impersonation pour la phase de bêta, activable uniquement
 // via variable d'environnement serveur.
@@ -120,6 +139,7 @@ export const authOptions: NextAuthOptions = {
       }
       session.originalUserEmail = token.originalUserEmail ?? null;
       session.originalUserId = token.originalUserId ?? null;
+      session.passwordVersion = token.passwordVersion ?? null;
       return session;
     },
   },

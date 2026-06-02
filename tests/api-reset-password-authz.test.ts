@@ -43,7 +43,7 @@ describe("POST /api/admin/users/[id]/reset-password", () => {
       {
         json: async () => ({ password: "motdepasse123" }),
       } as any,
-      { params: { id: "target-user-id" } }
+      { params: Promise.resolve({ id: "target-user-id" }) }
     );
 
     expect(response.status).toBe(403);
@@ -60,7 +60,7 @@ describe("POST /api/admin/users/[id]/reset-password", () => {
       {
         json: async () => ({ password: "court" }),
       } as any,
-      { params: { id: "target-user-id" } }
+      { params: Promise.resolve({ id: "target-user-id" }) }
     );
 
     expect(response.status).toBe(400);
@@ -77,7 +77,7 @@ describe("POST /api/admin/users/[id]/reset-password", () => {
       {
         json: async () => ({ password: "motdepasseTresFort123" }),
       } as any,
-      { params: { id: "target-user-id" } }
+      { params: Promise.resolve({ id: "target-user-id" }) }
     );
 
     expect(response.status).toBe(200);

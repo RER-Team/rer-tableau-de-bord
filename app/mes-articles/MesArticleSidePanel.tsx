@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ArticleEditorCard, {
   type ArticleEditorReferentiels,
   type ArticleEditorValue,
@@ -14,61 +14,11 @@ import {
   getRubriqueBadgeClasses,
 } from "@/app/articles/ArticlesCardsExplorer";
 import { getArticleStatusLabel } from "@/lib/article-status";
-
-function transformEmbeds(html: string): string {
-  if (typeof window === "undefined" || !html) return html;
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-    const blocks = doc.querySelectorAll("figure.embed-block .embed-url");
-    blocks.forEach((p) => {
-      const figure = p.closest("figure.embed-block");
-      if (!figure) return;
-      const raw = p.textContent ?? "";
-      const url = raw.trim();
-      if (!url) return;
-      let iframeSrc: string | null = null;
-      let title = "Contenu embarqué";
-      try {
-        const parsed = new URL(url);
-        const host = parsed.hostname.toLowerCase();
-        if (host.includes("youtube.com") || host === "youtu.be") {
-          let videoId = "";
-          if (host === "youtu.be") {
-            videoId = parsed.pathname.replace("/", "").split(/[/?#&]/)[0] ?? "";
-          } else {
-            videoId =
-              parsed.searchParams.get("v") ||
-              parsed.pathname.split("/").filter(Boolean).pop() ||
-              "";
-          }
-          if (videoId) {
-            iframeSrc = `https://www.youtube.com/embed/${videoId}`;
-            title = "Vidéo YouTube";
-          }
-        }
-        if (!iframeSrc && host.includes("datawrapper.dwcdn.net")) {
-          const parts = parsed.pathname.split("/").filter(Boolean);
-          const slug = parts.slice(0, 2).join("/") || "";
-          if (slug) {
-            iframeSrc = `https://datawrapper.dwcdn.net/${slug}/`;
-            title = "Graphique Datawrapper";
-          }
-        }
-      } catch {
-        // URL invalide
-      }
-      if (!iframeSrc) return;
-      figure.innerHTML = `
-<div class="embed-responsive">
-  <iframe src="${iframeSrc}" title="${title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
-</div>`.trim();
-    });
-    return doc.body.innerHTML;
-  } catch {
-    return html;
-  }
-}
+import {
+  buildInitialHtml,
+  extractChapoAndBody,
+  transformEmbeds,
+} from "@/lib/article-html";
 
 type ArticleDetail = {
   id: string;
@@ -91,36 +41,6 @@ type ArticleDetail = {
   format: { libelle: string } | null;
   etat: { libelle: string; slug: string } | null;
 };
-
-function extractChapoAndBody(
-  html: string,
-  allowChapo: boolean
-): { chapo: string | null; body: string } {
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-    if (!allowChapo) {
-      doc.querySelectorAll("p.chapo").forEach((node) => {
-        node.classList.remove("chapo");
-        if (!node.getAttribute("class")?.trim()) {
-          node.removeAttribute("class");
-        }
-      });
-      const bodyHtml = doc.body.innerHTML.trim();
-      return { chapo: null, body: bodyHtml };
-    }
-    let chapoText: string | null = null;
-    const chapoEl = doc.querySelector("p.chapo") ?? doc.querySelector("p");
-    if (chapoEl) {
-      chapoText = (chapoEl.textContent ?? "").trim() || null;
-      chapoEl.remove();
-    }
-    const bodyHtml = doc.body.innerHTML.trim();
-    return { chapo: chapoText, body: bodyHtml };
-  } catch {
-    return { chapo: null, body: html };
-  }
-}
 
 type MesArticleSidePanelProps = {
   articleId: string | null;
@@ -148,6 +68,7 @@ export function MesArticleSidePanel({
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const panelCloseButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!article) return;
@@ -155,13 +76,7 @@ export function MesArticleSidePanel({
     setPostRsDraft(article.postRs ?? "");
   }, [article]);
 
-  const buildInitialHtml = useMemo(() => {
-    if (!article) return "";
-    const chapoHtml = article.chapo
-      ? `<p class="chapo">${article.chapo}</p>`
-      : "";
-    return `${chapoHtml}${article.contenu ?? ""}`;
-  }, [article]);
+  const initialHtml = useMemo(() => buildInitialHtml(article), [article]);
 
   useEffect(() => {
     if (!open || !articleId) return;
@@ -207,13 +122,22 @@ export function MesArticleSidePanel({
       .catch(() => setRef(null));
   }, [open, mode]);
 
+  // Accessibilité du panneau : fermeture Escape, focus initial et restauration.
   useEffect(() => {
     if (!open) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusTimer = window.setTimeout(() => {
+      panelCloseButtonRef.current?.focus();
+    }, 0);
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused?.focus?.();
+    };
   }, [open, onClose]);
 
   const performMainImageUpload = useCallback(
@@ -273,7 +197,7 @@ export function MesArticleSidePanel({
         patch.contenuHtml !== undefined ||
         patch.contenuJson !== undefined
       ) {
-        const html = patch.contenuHtml ?? buildInitialHtml;
+        const html = patch.contenuHtml ?? initialHtml;
         const effectiveFormatId = patch.formatId ?? article.formatId ?? "";
         const allowChapo =
           ref?.formats.find((f) => f.id === effectiveFormatId)?.hasChapo ?? true;
@@ -301,7 +225,7 @@ export function MesArticleSidePanel({
         setSavingContent(false);
       }
     },
-    [article, buildInitialHtml, ref, router]
+    [article, initialHtml, ref]
   );
 
   const contenuHtml = useMemo(
@@ -322,6 +246,9 @@ export function MesArticleSidePanel({
         aria-label="Fermer le panneau"
       />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Détail du contenu"
         className="flex h-full w-full flex-col bg-white shadow-xl ring-1 ring-rer-border sm:min-w-[560px] sm:w-[55%] sm:max-w-2xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -361,6 +288,7 @@ export function MesArticleSidePanel({
               </span>
             )}
             <button
+              ref={panelCloseButtonRef}
               type="button"
               onClick={onClose}
               className="rounded-lg border border-rer-border bg-white px-3 py-1.5 text-xs font-medium text-rer-muted hover:bg-rer-app"
@@ -532,7 +460,7 @@ export function MesArticleSidePanel({
                   legendePhoto: article.legendePhoto ?? "",
                   creditPhoto: article.creditPhoto ?? "",
                   titre: titleDraft,
-                  contenuHtml: buildInitialHtml,
+                  contenuHtml: initialHtml,
                   contenuJson: article.contenuJson ?? null,
                   postRs: postRsDraft,
                 }}
