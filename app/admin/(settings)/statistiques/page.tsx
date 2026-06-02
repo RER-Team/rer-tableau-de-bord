@@ -1,8 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 export const dynamic = "force-dynamic";
+
+function pluralize(count: number, singular: string, plural: string): string {
+  return `${count} ${count > 1 ? plural : singular}`;
+}
 
 type TopArticle = {
   articleId: string;
@@ -104,13 +109,19 @@ export default function AdminStatistiquesPage() {
               )}
               {stats.topArticles.map((item) => (
                 <li key={item.articleId} className="rounded-lg border border-rer-border p-2">
-                  <p className="font-medium text-rer-text">{item.titre}</p>
+                  <Link
+                    href={`/articles/${item.articleId}`}
+                    className="font-medium text-rer-blue underline-offset-2 hover:underline"
+                  >
+                    {item.titre}
+                  </Link>
                   <p className="text-xs text-rer-muted">
                     {item.auteur ?? "Auteur inconnu"}
                     {item.mutuelle ? ` · ${item.mutuelle}` : ""}
                   </p>
                   <p className="mt-1 text-xs text-rer-muted">
-                    {item.totalViews} vues · {item.uniqueReaders} lecteurs uniques
+                    {pluralize(item.totalViews, "vue", "vues")} ·{" "}
+                    {pluralize(item.uniqueReaders, "lecteur unique", "lecteurs uniques")}
                   </p>
                 </li>
               ))}

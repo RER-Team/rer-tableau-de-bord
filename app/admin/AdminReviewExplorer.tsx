@@ -477,7 +477,7 @@ function AdminArticlePanel({
               postRs: postRsDraft,
               isExemplePublic: Boolean((detail as any).isExemplePublic),
             }}
-            showExemplePublicToggle={currentSlug === "publie"}
+            showExemplePublicToggle={true}
             referentiels={ref}
             uploadingImage={uploadingImage}
             uploadError={uploadError}
