@@ -72,6 +72,14 @@ export function transformEmbeds(html: string): string {
 `.trim();
     });
 
+    // Différer le chargement des images du corps (souvent plusieurs par article,
+    // servies en pleine résolution depuis Supabase) pour accélérer le rendu
+    // initial. S'applique à tout le contenu existant, sans réédition.
+    doc.querySelectorAll("img").forEach((img) => {
+      if (!img.getAttribute("loading")) img.setAttribute("loading", "lazy");
+      if (!img.getAttribute("decoding")) img.setAttribute("decoding", "async");
+    });
+
     return doc.body.innerHTML;
   } catch {
     return html;

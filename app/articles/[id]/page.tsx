@@ -11,6 +11,7 @@ import {
   getRubriqueBadgeClasses,
 } from "../ArticlesCardsExplorer";
 import { trackArticleConsultation } from "@/lib/track-article-consultation";
+import { transformEmbeds } from "@/lib/article-html";
 
 type Article = {
   id: string;
@@ -40,74 +41,6 @@ function getFormatLabelWithIcon(libelle?: string | null): string {
 }
 
 type Session = { user?: { role?: string } } | null;
-
-function transformEmbeds(html: string): string {
-  if (typeof window === "undefined" || !html) return html;
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-
-    const blocks = doc.querySelectorAll("figure.embed-block .embed-url");
-    blocks.forEach((p) => {
-      const figure = p.closest("figure.embed-block");
-      if (!figure) return;
-      const raw = p.textContent ?? "";
-      const url = raw.trim();
-      if (!url) return;
-
-      let iframeSrc: string | null = null;
-      let title = "Contenu embarqué";
-
-      try {
-        const parsed = new URL(url);
-        const host = parsed.hostname.toLowerCase();
-
-        // YouTube
-        if (host.includes("youtube.com") || host === "youtu.be") {
-          let videoId = "";
-          if (host === "youtu.be") {
-            videoId = parsed.pathname.replace("/", "").split(/[/?#&]/)[0] ?? "";
-          } else {
-            videoId =
-              parsed.searchParams.get("v") ||
-              parsed.pathname.split("/").filter(Boolean).pop() ||
-              "";
-          }
-          if (videoId) {
-            iframeSrc = `https://www.youtube.com/embed/${videoId}`;
-            title = "Vidéo YouTube";
-          }
-        }
-
-        // Datawrapper
-        if (!iframeSrc && host.includes("datawrapper.dwcdn.net")) {
-          const parts = parsed.pathname.split("/").filter(Boolean);
-          const slug = parts.slice(0, 2).join("/") || "";
-          if (slug) {
-            iframeSrc = `https://datawrapper.dwcdn.net/${slug}/`;
-            title = "Graphique Datawrapper";
-          }
-        }
-      } catch {
-        // URL invalide : on laisse tel quel
-      }
-
-      if (!iframeSrc) {
-        return;
-      }
-
-      figure.innerHTML = `
-<div class="embed-responsive">
-  <iframe src="${iframeSrc}" title="${title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
-</div>
-`.trim();
-    });
-
-    return doc.body.innerHTML;
-  } catch {
-    return html;
-  }
-}
 
 export default function ArticleDetailPage() {
   const params = useParams();
@@ -288,6 +221,8 @@ export default function ArticleDetailPage() {
                   alt={article.legendePhoto || article.titre}
                   width={1400}
                   height={900}
+                  priority
+                  sizes="(max-width: 896px) 100vw, 896px"
                   className="h-auto w-full max-h-96 object-cover object-top"
                 />
               </div>

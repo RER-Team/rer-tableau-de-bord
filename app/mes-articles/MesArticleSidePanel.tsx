@@ -361,6 +361,7 @@ export function MesArticleSidePanel({
                       alt={article.legendePhoto || article.titre}
                       width={1200}
                       height={700}
+                      sizes="(max-width: 1024px) 100vw, 720px"
                       className="h-auto w-full max-h-80 object-cover object-top"
                     />
                   </div>

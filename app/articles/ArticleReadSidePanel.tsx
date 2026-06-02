@@ -10,61 +10,7 @@ import {
   getRubriqueBadgeClasses,
 } from "@/app/articles/ArticlesCardsExplorer";
 import { trackArticleConsultation } from "@/lib/track-article-consultation";
-
-function transformEmbeds(html: string): string {
-  if (typeof window === "undefined" || !html) return html;
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-    const blocks = doc.querySelectorAll("figure.embed-block .embed-url");
-    blocks.forEach((p) => {
-      const figure = p.closest("figure.embed-block");
-      if (!figure) return;
-      const raw = p.textContent ?? "";
-      const url = raw.trim();
-      if (!url) return;
-      let iframeSrc: string | null = null;
-      let title = "Contenu embarqué";
-      try {
-        const parsed = new URL(url);
-        const host = parsed.hostname.toLowerCase();
-        if (host.includes("youtube.com") || host === "youtu.be") {
-          let videoId = "";
-          if (host === "youtu.be") {
-            videoId = parsed.pathname.replace("/", "").split(/[/?#&]/)[0] ?? "";
-          } else {
-            videoId =
-              parsed.searchParams.get("v") ||
-              parsed.pathname.split("/").filter(Boolean).pop() ||
-              "";
-          }
-          if (videoId) {
-            iframeSrc = `https://www.youtube.com/embed/${videoId}`;
-            title = "Vidéo YouTube";
-          }
-        }
-        if (!iframeSrc && host.includes("datawrapper.dwcdn.net")) {
-          const parts = parsed.pathname.split("/").filter(Boolean);
-          const slug = parts.slice(0, 2).join("/") || "";
-          if (slug) {
-            iframeSrc = `https://datawrapper.dwcdn.net/${slug}/`;
-            title = "Graphique Datawrapper";
-          }
-        }
-      } catch {
-        // URL invalide
-      }
-      if (!iframeSrc) return;
-      figure.innerHTML = `
-<div class="embed-responsive">
-  <iframe src="${iframeSrc}" title="${title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
-</div>`.trim();
-    });
-    return doc.body.innerHTML;
-  } catch {
-    return html;
-  }
-}
+import { transformEmbeds } from "@/lib/article-html";
 
 type ArticleDetail = {
   id: string;
@@ -267,7 +213,10 @@ export function ArticleReadSidePanel({
                       alt={article.legendePhoto || article.titre}
                       width={1200}
                       height={700}
-                      onLoadingComplete={(img) => {
+                      priority
+                      sizes="(max-width: 1024px) 100vw, 720px"
+                      onLoad={(e) => {
+                        const img = e.currentTarget;
                         setMainImageLayout(
                           img.naturalHeight > img.naturalWidth ? "portrait" : "landscape"
                         );

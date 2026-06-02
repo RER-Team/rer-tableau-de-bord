@@ -132,6 +132,7 @@ export default function DecouvrirPage() {
                       src={detail.lienPhoto}
                       alt={detail.legendePhoto || detail.titre}
                       fill
+                      priority
                       sizes="(max-width: 1024px) 100vw, 720px"
                       className="object-contain"
                     />

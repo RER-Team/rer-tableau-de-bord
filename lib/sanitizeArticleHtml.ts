@@ -94,7 +94,12 @@ export function sanitizeArticleHtml(input: string): string {
           const { src: _droppedSrc, ...rest } = attribs;
           return { tagName, attribs: rest };
         }
-        return { tagName, attribs };
+        // Différer par défaut le chargement des images du corps pour accélérer
+        // le rendu initial (les valeurs explicites de l'éditeur restent prioritaires).
+        return {
+          tagName,
+          attribs: { loading: "lazy", decoding: "async", ...attribs },
+        };
       },
       a: (tagName, attribs) => {
         const out: Record<string, string> = {};

@@ -17,6 +17,11 @@ const contentSecurityPolicy = [
 
 const nextConfig = {
   images: {
+    // AVIF en premier (≈20–30 % plus léger que WebP), WebP en repli.
+    formats: ["image/avif", "image/webp"],
+    // Garde les variantes optimisées en cache plus longtemps (les images
+    // d'articles ne changent quasiment jamais après publication).
+    minimumCacheTTL: 60 * 60 * 24 * 30,
     remotePatterns: [
       ...(supabaseUrl.length > 0
         ? [

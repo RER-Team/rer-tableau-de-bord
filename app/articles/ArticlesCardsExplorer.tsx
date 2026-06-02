@@ -368,7 +368,10 @@ function ArticleDetailContent({
                   alt={detail.legendePhoto || detail.titre}
                   width={1200}
                   height={700}
-                  onLoadingComplete={(img) => {
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 720px"
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
                     setMainImageLayout(
                       img.naturalHeight > img.naturalWidth ? "portrait" : "landscape"
                     );
