@@ -258,6 +258,12 @@ export function ArticlesFiltersBar({
     const currentQ = params.get("q") ?? "";
     const qToApply = debouncedQ && !isFacetLabel(debouncedQ) ? debouncedQ : "";
     if (qToApply === currentQ) return;
+    // Si on a déjà appliqué cette valeur de q nous-mêmes (ex : sélection d'une
+    // facette via la recherche, qui vide q et pose le filtre dans l'URL),
+    // ne pas relancer une navigation concurrente. Sinon cet effet s'exécute
+    // avec un `searchParams` périmé (sans le filtre tout juste posé) et
+    // écraserait l'URL, faisant disparaître la facette sélectionnée.
+    if (qToApply === appliedQRef.current) return;
     // Marque ce push comme le nôtre pour que l'effet de resynchronisation
     // ne réécrive pas la saisie texte.
     appliedQRef.current = qToApply;
@@ -533,6 +539,11 @@ export function ArticlesFiltersBar({
     if (type === "rubrique") setActiveRubriqueIds(nextArray);
     if (type === "format") setActiveFormatIds(nextArray);
     if (type === "auteur") setActiveAuteurIds(nextArray);
+
+    // On vide q ici même : on marque donc q comme « déjà appliqué » pour que
+    // l'effet de mise à jour de q ne relance pas une navigation concurrente
+    // (à partir d'un searchParams périmé) qui écraserait le filtre posé.
+    appliedQRef.current = "";
 
     const params = new URLSearchParams(searchParams.toString());
     params.delete("q");
