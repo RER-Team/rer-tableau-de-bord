@@ -15,6 +15,10 @@ tsconfig.tsbuildinfo
 
 # Dossier de transfert Vercel (secrets exportés + notes de reprise, local only)
 TRANSFER/
+
+# Skills Impeccable (outil de dev local, réinstallable via `npx impeccable skills install`)
+.cursor/skills/
+.github/skills/
 public/uploads/*
 !public/uploads/.gitkeep
 .env*
