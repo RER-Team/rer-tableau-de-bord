@@ -1,8 +1,7 @@
 "use client";
 
-import { type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { dispatchNotificationsUpdated } from "@/lib/notifications/client-sync";
 
 type NotificationItem = {
@@ -124,7 +123,12 @@ function stripStatusPrefix(title: string, statusLabel: string): string {
 export function NotificationsClient({ variant = "page", onNavigate }: NotificationsClientProps) {
   const PAGE_SIZE = 20;
   const isPopover = variant === "popover";
-  const router = useRouter();
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -137,43 +141,55 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
   const [scopeFilter, setScopeFilter] = useState<NotificationScopeFilter>("all");
   const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setFeedback(null);
-    try {
-      const params = new URLSearchParams({
-        take: String(PAGE_SIZE),
-        status: isPopover ? "all" : statusFilter,
-        scope: isPopover ? "all" : scopeFilter,
-      });
-      if (isPopover) {
-        params.set("view", "popover");
+  const refresh = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true);
+      setError(null);
+      setFeedback(null);
+      try {
+        const params = new URLSearchParams({
+          take: String(PAGE_SIZE),
+          status: isPopover ? "all" : statusFilter,
+          scope: isPopover ? "all" : scopeFilter,
+        });
+        if (isPopover) {
+          params.set("view", "popover");
+        }
+        const response = await fetch(`/api/notifications?${params.toString()}`, {
+          cache: "no-store",
+          signal,
+        });
+        if (!response.ok) {
+          throw new Error("Impossible de charger les notifications.");
+        }
+        const payload = (await response.json()) as NotificationsPayload;
+        if (signal?.aborted) return null;
+        setItems(payload.items ?? []);
+        const nextUnreadCount = payload.unreadCount ?? 0;
+        setUnreadCount(nextUnreadCount);
+        setTotalCount(payload.totalCount ?? 0);
+        setHasMore(payload.hasMore ?? false);
+        setNextCursor(payload.nextCursor ?? null);
+        // Synchronise la cloche partout dans l'app meme sur un refresh manuel.
+        dispatchNotificationsUpdated({ unreadCount: nextUnreadCount });
+        return nextUnreadCount;
+      } catch {
+        if (signal?.aborted) return null;
+        setError("Impossible de charger vos notifications.");
+        return null;
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
       }
-      const response = await fetch(`/api/notifications?${params.toString()}`, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("Impossible de charger les notifications.");
-      }
-      const payload = (await response.json()) as NotificationsPayload;
-      setItems(payload.items ?? []);
-      const nextUnreadCount = payload.unreadCount ?? 0;
-      setUnreadCount(nextUnreadCount);
-      setTotalCount(payload.totalCount ?? 0);
-      setHasMore(payload.hasMore ?? false);
-      setNextCursor(payload.nextCursor ?? null);
-      // Synchronise la cloche partout dans l'app meme sur un refresh manuel.
-      dispatchNotificationsUpdated({ unreadCount: nextUnreadCount });
-      return nextUnreadCount;
-    } catch {
-      setError("Impossible de charger vos notifications.");
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [PAGE_SIZE, isPopover, scopeFilter, statusFilter]);
+    },
+    [PAGE_SIZE, isPopover, scopeFilter, statusFilter]
+  );
 
   useEffect(() => {
-    void refresh();
+    const controller = new AbortController();
+    void refresh(controller.signal);
+    return () => controller.abort();
   }, [refresh]);
 
   const loadMore = useCallback(async () => {
@@ -195,16 +211,22 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
         throw new Error("Impossible de charger plus de notifications.");
       }
       const payload = (await response.json()) as NotificationsPayload;
+      if (!mountedRef.current) return;
       setItems((prev) => [...prev, ...(payload.items ?? [])]);
       setHasMore(payload.hasMore ?? false);
       setNextCursor(payload.nextCursor ?? null);
     } catch {
-      setError("Impossible de charger plus de notifications.");
+      if (mountedRef.current) {
+        setError("Impossible de charger plus de notifications.");
+      }
     } finally {
-      setLoadingMore(false);
+      if (mountedRef.current) {
+        setLoadingMore(false);
+      }
     }
   }, [PAGE_SIZE, hasMore, isPopover, loadingMore, nextCursor, scopeFilter, statusFilter]);
 
+  // Centralise l'appel réseau + le feedback succès/erreur pour toutes les mutations.
   const mutateNotifications = useCallback(
     async (
       request: () => Promise<Response>,
@@ -212,98 +234,97 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
       errorMessage: string
     ) => {
       setFeedback(null);
-      const response = await request();
-      if (!response.ok) {
-        throw new Error(errorMessage);
+      try {
+        const response = await request();
+        if (!response.ok) {
+          throw new Error(errorMessage);
+        }
+        setFeedback({ tone: "success", text: successMessage });
+        await refresh();
+      } catch {
+        setFeedback({ tone: "error", text: errorMessage });
       }
-      setFeedback({ tone: "success", text: successMessage });
-      await refresh();
     },
     [refresh]
   );
 
   const markAsRead = useCallback(
     async (id: string) => {
-      try {
-        await mutateNotifications(
-          () =>
-            fetch("/api/notifications", {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ids: [id] }),
-            }),
-          "Notification marquée comme lue.",
-          "Impossible de marquer la notification comme lue."
-        );
-      } catch {
-        setFeedback({ tone: "error", text: "Impossible de marquer la notification comme lue." });
-      }
+      await mutateNotifications(
+        () =>
+          fetch("/api/notifications", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: [id] }),
+          }),
+        "Notification marquée comme lue.",
+        "Impossible de marquer la notification comme lue."
+      );
     },
     [mutateNotifications]
   );
 
+  // Marquage optimiste local (utilisé avant une navigation, sans refetch global).
+  const markReadOptimistic = useCallback((id: string) => {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === id ? { ...it, readAt: it.readAt ?? new Date().toISOString() } : it
+      )
+    );
+    setUnreadCount((count) => Math.max(0, count - 1));
+    void fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [id] }),
+    })
+      .then(() => dispatchNotificationsUpdated())
+      .catch(() => {});
+  }, []);
+
   const markAsUnread = useCallback(
     async (id: string) => {
-      try {
-        await mutateNotifications(
-          () =>
-            fetch("/api/notifications", {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ids: [id], markUnread: true }),
-            }),
-          "Notification marquée comme non lue.",
-          "Impossible de marquer la notification comme non lue."
-        );
-      } catch {
-        setFeedback({
-          tone: "error",
-          text: "Impossible de marquer la notification comme non lue.",
-        });
-      }
+      await mutateNotifications(
+        () =>
+          fetch("/api/notifications", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: [id], markUnread: true }),
+          }),
+        "Notification marquée comme non lue.",
+        "Impossible de marquer la notification comme non lue."
+      );
     },
     [mutateNotifications]
   );
 
   const markAllAsRead = useCallback(async () => {
     if (unreadCount === 0) return;
-    try {
-      await mutateNotifications(
-        () =>
-          fetch("/api/notifications", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ markAllRead: true }),
-          }),
-        "Toutes les notifications non lues ont été marquées comme lues.",
-        "Impossible de marquer toutes les notifications comme lues."
-      );
-    } catch {
-      setFeedback({
-        tone: "error",
-        text: "Impossible de marquer toutes les notifications comme lues.",
-      });
-    }
+    await mutateNotifications(
+      () =>
+        fetch("/api/notifications", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ markAllRead: true }),
+        }),
+      "Toutes les notifications non lues ont été marquées comme lues.",
+      "Impossible de marquer toutes les notifications comme lues."
+    );
   }, [mutateNotifications, unreadCount]);
 
   const deleteOne = useCallback(
     async (id: string) => {
       const confirmed = window.confirm("Supprimer cette notification ?");
       if (!confirmed) return;
-      try {
-        await mutateNotifications(
-          () =>
-            fetch("/api/notifications", {
-              method: "DELETE",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ids: [id] }),
-            }),
-          "Notification supprimée.",
-          "Impossible de supprimer la notification."
-        );
-      } catch {
-        setFeedback({ tone: "error", text: "Impossible de supprimer la notification." });
-      }
+      await mutateNotifications(
+        () =>
+          fetch("/api/notifications", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: [id] }),
+          }),
+        "Notification supprimée.",
+        "Impossible de supprimer la notification."
+      );
     },
     [mutateNotifications]
   );
@@ -311,20 +332,16 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
   const purgeRead = useCallback(async () => {
     const confirmed = window.confirm("Supprimer toutes les notifications lues ?");
     if (!confirmed) return;
-    try {
-      await mutateNotifications(
-        () =>
-          fetch("/api/notifications", {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ readOnly: true }),
-          }),
-        "Les notifications lues ont été supprimées.",
-        "Impossible de purger les notifications lues."
-      );
-    } catch {
-      setFeedback({ tone: "error", text: "Impossible de purger les notifications lues." });
-    }
+    await mutateNotifications(
+      () =>
+        fetch("/api/notifications", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ readOnly: true }),
+        }),
+      "Les notifications lues ont été supprimées.",
+      "Impossible de purger les notifications lues."
+    );
   }, [mutateNotifications]);
 
   const purgeAll = useCallback(async () => {
@@ -332,57 +349,19 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
       "Tout supprimer ? Cette action est irréversible (notifications lues et non lues)."
     );
     if (!confirmed) return;
-    try {
-      await mutateNotifications(
-        () =>
-          fetch("/api/notifications", {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ all: true }),
-          }),
-        "Toutes les notifications ont été supprimées.",
-        "Impossible de supprimer toutes les notifications."
-      );
-    } catch {
-      setFeedback({ tone: "error", text: "Impossible de supprimer toutes les notifications." });
-    }
+    await mutateNotifications(
+      () =>
+        fetch("/api/notifications", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ all: true }),
+        }),
+      "Toutes les notifications ont été supprimées.",
+      "Impossible de supprimer toutes les notifications."
+    );
   }, [mutateNotifications]);
 
   const hasUnread = unreadCount > 0;
-  const isInteractiveTarget = (target: EventTarget | null): boolean => {
-    if (!(target instanceof HTMLElement)) return false;
-    return !!target.closest("button, a, input, textarea, select");
-  };
-
-  const handleNotificationContainerClick = useCallback(
-    (event: ReactMouseEvent<HTMLElement>, id: string, isRead: boolean, articleHref: string | null) => {
-      if (isInteractiveTarget(event.target)) return;
-      if (!isRead) {
-        void markAsRead(id);
-      }
-      if (!isPopover && articleHref) {
-        router.push(articleHref);
-        onNavigate?.();
-      }
-    },
-    [isPopover, markAsRead, onNavigate, router]
-  );
-
-  const handleNotificationContainerKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLElement>, id: string, isRead: boolean, articleHref: string | null) => {
-      if (isInteractiveTarget(event.target)) return;
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      if (!isRead) {
-        void markAsRead(id);
-      }
-      if (!isPopover && articleHref) {
-        router.push(articleHref);
-        onNavigate?.();
-      }
-    },
-    [isPopover, markAsRead, onNavigate, router]
-  );
 
   const groupedItems = useMemo(() => {
     const map = new Map<string, NotificationItem[]>();
@@ -470,7 +449,6 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                 Gérer mes notifications
               </Link>
             ) : null}
-            {isPopover ? null : null}
           </div>
         </div>
         {!isPopover ? (
@@ -559,25 +537,18 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                   const articleHref = getArticleHref(item.metadata);
                   const statusTag = getStatusTag(item.type);
                   const cleanTitle = stripStatusPrefix(item.title, statusTag.label);
-                  const scopeBadgeClass =
-                    scope === "adminArticles"
-                      ? "border-slate-200 bg-slate-50 text-slate-700"
-                      : "border-slate-200 bg-slate-50 text-slate-700";
+                  const scopeBadgeClass = "border-slate-200 bg-slate-50 text-slate-700";
                   const unreadDotClass = scope === "adminArticles" ? "bg-blue-500" : "bg-orange-500";
+                  const canNavigate = !isPopover && !!articleHref;
 
                   return (
                     <li
                       key={item.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={(event) => handleNotificationContainerClick(event, item.id, isRead, articleHref)}
-                      onKeyDown={(event) => handleNotificationContainerKeyDown(event, item.id, isRead, articleHref)}
                       className={`rounded-xl border px-3 py-2.5 transition-all duration-150 ${
                         isRead
                           ? "border-rer-border bg-white hover:border-rer-border/80 hover:bg-rer-app/30"
-                          : "cursor-pointer border-rer-blue/30 bg-rer-blue/5 shadow-[inset_0_0_0_1px_rgba(33,85,163,0.04)] hover:border-rer-blue/40"
+                          : "border-rer-blue/30 bg-rer-blue/5 shadow-[inset_0_0_0_1px_rgba(33,85,163,0.04)] hover:border-rer-blue/40"
                       }`}
-                      aria-label={articleHref ? `Ouvrir la notification ${cleanTitle}` : `Notification ${cleanTitle}`}
                     >
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
@@ -594,7 +565,20 @@ export function NotificationsClient({ variant = "page", onNavigate }: Notificati
                             <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${unreadDotClass}`} aria-label="Notification non lue" />
                           ) : null}
                           <div className="min-w-0 flex-1 space-y-1">
-                            <p className="text-sm font-semibold leading-5 text-rer-text">{cleanTitle}</p>
+                            {canNavigate && articleHref ? (
+                              <Link
+                                href={articleHref}
+                                onClick={() => {
+                                  if (!isRead) markReadOptimistic(item.id);
+                                  onNavigate?.();
+                                }}
+                                className="block rounded text-sm font-semibold leading-5 text-rer-text hover:text-rer-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2"
+                              >
+                                {cleanTitle}
+                              </Link>
+                            ) : (
+                              <p className="text-sm font-semibold leading-5 text-rer-text">{cleanTitle}</p>
+                            )}
                             <p className="line-clamp-2 text-sm leading-5 text-rer-muted">{item.body}</p>
                           </div>
                         </div>

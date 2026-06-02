@@ -28,7 +28,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  const body = ((await request.json()) ?? {}) as Record<string, unknown>;
+  let body: Record<string, unknown>;
+  try {
+    body = ((await request.json()) ?? {}) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+  }
   const patch = sanitizePreferencePatch(body);
   if (Object.keys(patch).length === 0) {
     return NextResponse.json(

@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { getSessionUser } from "@/lib/auth";
+import { canEditArticles, getSessionUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { getUploadUrl } from "@/lib/storage";
 
 const MAX_IMAGE_SIZE_BYTES = 6 * 1024 * 1024; // filet de sécu (~6 Mo après compression)
+
+// Whitelist stricte de types MIME image (SVG exclu : vecteur d'injection script).
+const ALLOWED_IMAGE_MIME = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 
 type Body = {
   filename?: string;
@@ -26,7 +35,7 @@ export async function POST(request: NextRequest) {
   }
 
   const filename = (body.filename ?? "").trim();
-  const contentType = (body.contentType ?? "").trim();
+  const contentType = (body.contentType ?? "").trim().toLowerCase();
   const articleId = body.articleId?.trim() || null;
   const size = typeof body.size === "number" ? body.size : undefined;
 
@@ -37,9 +46,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!contentType.startsWith("image/")) {
+  if (!ALLOWED_IMAGE_MIME.has(contentType)) {
     return NextResponse.json(
-      { error: "Seuls les fichiers image sont autorisés." },
+      { error: "Type d'image non autorisé (formats acceptés : JPEG, PNG, WebP, GIF)." },
       { status: 400 }
     );
   }
@@ -61,11 +70,24 @@ export async function POST(request: NextRequest) {
       ? extensionFromName
       : inferExtensionFromMime(contentType) ?? "jpg";
 
-  const id = randomUUID();
-  const safeArticlePart = articleId && /^[a-zA-Z0-9_-]+$/.test(articleId)
-    ? articleId
-    : "misc";
+  // L'utilisateur ne peut ranger l'image dans articles/{articleId}/ que s'il est
+  // éditeur ou l'auteur de cet article. Sinon, on retombe sur le dossier "misc".
+  let safeArticlePart = "misc";
+  if (articleId && /^[a-zA-Z0-9_-]+$/.test(articleId)) {
+    if (canEditArticles(user.role)) {
+      safeArticlePart = articleId;
+    } else if (user.auteurId) {
+      const article = await prisma.article.findUnique({
+        where: { id: articleId },
+        select: { auteurId: true },
+      });
+      if (article && article.auteurId === user.auteurId) {
+        safeArticlePart = articleId;
+      }
+    }
+  }
 
+  const id = randomUUID();
   const objectKey = `articles/${safeArticlePart}/${id}.${safeExt}`;
 
   try {
@@ -73,6 +95,7 @@ export async function POST(request: NextRequest) {
       key: objectKey,
       contentType,
       maxSizeBytes: MAX_IMAGE_SIZE_BYTES,
+      size,
     });
 
     return NextResponse.json(
@@ -85,16 +108,10 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (e) {
+    // Détail loggé côté serveur uniquement ; message générique côté client.
     console.error("Erreur création URL upload Supabase", e);
-    const details =
-      e instanceof Error && e.message
-        ? e.message
-        : "Erreur inconnue côté serveur.";
     return NextResponse.json(
-      {
-        error: "Impossible de générer l’URL d’upload.",
-        details,
-      },
+      { error: "Impossible de générer l’URL d’upload." },
       { status: 500 }
     );
   }

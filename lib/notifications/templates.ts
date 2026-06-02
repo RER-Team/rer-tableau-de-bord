@@ -105,17 +105,66 @@ export function getDefaultNotificationTemplate(
   };
 }
 
+export function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+/**
+ * Normalise une URL destinée à un contexte HTML (attribut href).
+ * Seuls les schémas http(s) sont acceptés afin d'éviter les injections
+ * de type `javascript:` ; toute valeur invalide retombe sur "#".
+ */
+export function sanitizeHttpUrl(value: string): string {
+  const trimmed = value.trim();
+  // URL relative interne (ex: "/articles/123") : acceptée telle quelle.
+  if (trimmed.startsWith("/")) return trimmed;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.toString();
+    }
+  } catch {
+    // URL non parsable : on retombe sur le fallback.
+  }
+  return "#";
+}
+
+type RenderTemplateOptions = {
+  /**
+   * Lorsque true, les variables interpolées sont échappées pour un contexte
+   * HTML (corps d'email HTML) et `articleUrl` est validée/normalisée.
+   * Laisser à false pour les contextes texte (sujet, corps texte, push, in-app).
+   */
+  html?: boolean;
+};
+
 export function renderTemplate(
   template: string,
-  variables: TemplateVariables
+  variables: TemplateVariables,
+  options: RenderTemplateOptions = {}
 ): string {
+  const htmlContext = options.html === true;
+  const articleTitle = htmlContext
+    ? escapeHtml(variables.articleTitle)
+    : variables.articleTitle;
+  const articleUrl = htmlContext
+    ? escapeHtml(sanitizeHttpUrl(variables.articleUrl))
+    : variables.articleUrl;
+  const prenom = variables.Prenom?.trim() || "à toi";
+  const adminSignature = variables.adminSignature?.trim() || "Constance et Léa";
+
   return template
-    .replaceAll("{{articleTitle}}", variables.articleTitle)
-    .replaceAll("{{articleUrl}}", variables.articleUrl)
-    .replaceAll("{{Prenom}}", variables.Prenom?.trim() || "à toi")
+    .replaceAll("{{articleTitle}}", articleTitle)
+    .replaceAll("{{articleUrl}}", articleUrl)
+    .replaceAll("{{Prenom}}", htmlContext ? escapeHtml(prenom) : prenom)
     .replaceAll(
       "{{adminSignature}}",
-      variables.adminSignature?.trim() || "Constance et Léa"
+      htmlContext ? escapeHtml(adminSignature) : adminSignature
     );
 }
 

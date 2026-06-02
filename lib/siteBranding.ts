@@ -1,9 +1,8 @@
 import { getPublicUrl } from "./storage";
 import { supabaseAdmin } from "./supabase-server";
+import { STORAGE_BUCKET } from "./storage-bucket";
 
 export const LEGACY_LOGO_PUBLIC_PATH = "/default-logo.svg";
-const STORAGE_BUCKET =
-  process.env.SUPABASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "articles";
 const SITE_LOGO_KEY = "branding/admin-logo";
 
 export type SiteLogoPayload = {

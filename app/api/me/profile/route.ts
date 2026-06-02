@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isSafeAvatarUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    // https uniquement : on refuse http, javascript:, data:, etc.
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 const profileUserSelect = {
   id: true,
   email: true,
@@ -51,7 +63,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  const body = (await request.json()) as {
+  let body: {
     email?: string;
     prenom?: string;
     nom?: string;
@@ -59,6 +71,11 @@ export async function PATCH(request: NextRequest) {
     telephone?: string | null;
     avatarUrl?: string | null;
   };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+  }
 
   const email = body.email?.trim().toLowerCase();
   const prenom = body.prenom?.trim();
@@ -70,11 +87,32 @@ export async function PATCH(request: NextRequest) {
   if (!email) {
     return NextResponse.json({ error: "Email obligatoire" }, { status: 400 });
   }
+  if (!EMAIL_RE.test(email)) {
+    return NextResponse.json({ error: "Format d'email invalide" }, { status: 400 });
+  }
   if (!prenom || !nom) {
     return NextResponse.json({ error: "Prénom et nom obligatoires" }, { status: 400 });
   }
+  if (avatarUrl && !isSafeAvatarUrl(avatarUrl)) {
+    return NextResponse.json(
+      { error: "L'avatar doit être une URL https valide." },
+      { status: 400 }
+    );
+  }
   if (!mutuelleId) {
     return NextResponse.json({ error: "Mutuelle obligatoire" }, { status: 400 });
+  }
+
+  // Unicité de l'email : refuse si déjà pris par un autre compte.
+  const emailOwner = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  if (emailOwner && emailOwner.id !== sessionUser.id) {
+    return NextResponse.json(
+      { error: "Cet email est déjà utilisé par un autre utilisateur." },
+      { status: 409 }
+    );
   }
 
   const existingMutuelle = await prisma.mutuelle.findUnique({

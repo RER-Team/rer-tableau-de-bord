@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/auth";
+import { isAuthFailure, requireRole } from "@/lib/api-auth";
+
+const ADMIN_ONLY = { forbiddenMessage: "Accès réservé aux administrateurs" };
 
 export async function GET(request: NextRequest) {
-  const sessionUser = await getSessionUser(request);
-  if (!sessionUser) {
-    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-  }
-  if (sessionUser.role !== "admin") {
-    return NextResponse.json({ error: "Accès réservé aux administrateurs" }, { status: 403 });
-  }
+  const sessionUser = await requireRole(request, "admin", ADMIN_ONLY);
+  if (isAuthFailure(sessionUser)) return sessionUser;
 
   const formats = await prisma.format.findMany({
     orderBy: { libelle: "asc" },
@@ -18,13 +15,16 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const sessionUser = await getSessionUser(request);
-  if (!sessionUser || sessionUser.role !== "admin") {
-    return NextResponse.json({ error: "Accès réservé aux administrateurs" }, { status: 403 });
-  }
+  const sessionUser = await requireRole(request, "admin", ADMIN_ONLY);
+  if (isAuthFailure(sessionUser)) return sessionUser;
 
-  const body = await request.json();
-  const { libelle, signesReference, hasChapo } = body as {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+  }
+  const { libelle, signesReference, hasChapo } = (body ?? {}) as {
     libelle?: string;
     signesReference?: number | null;
     hasChapo?: boolean;

@@ -1,16 +1,12 @@
 import type { MailPayload, MailProvider } from "../types";
+import { resolveFromAddress } from "../from-address";
 
 type ResendConfig = {
   apiKey: string;
   from: string;
 };
 
-function resolveFromAddress(baseFrom: string, fromName?: string): string {
-  if (!fromName?.trim()) return baseFrom;
-  const extracted = baseFrom.match(/<([^>]+)>/);
-  const address = (extracted?.[1] ?? baseFrom).trim();
-  return `${fromName.trim()} <${address}>`;
-}
+const RESEND_TIMEOUT_MS = 10000;
 
 export function createResendProvider(config: ResendConfig): MailProvider {
   return {
@@ -30,6 +26,7 @@ export function createResendProvider(config: ResendConfig): MailProvider {
           html: payload.html,
           tags: (payload.tags ?? []).map((value) => ({ name: "tag", value })),
         }),
+        signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
       });
 
       if (!response.ok) {

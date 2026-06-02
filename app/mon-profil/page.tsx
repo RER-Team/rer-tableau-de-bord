@@ -267,9 +267,12 @@ export default function MonProfilPage() {
                 onPointerUp={handleCropPointerUp}
                 onPointerCancel={handleCropPointerUp}
               >
-                <img
+                <Image
                   src={pendingAvatarDataUrl}
                   alt="Aperçu recadrage"
+                  width={320}
+                  height={320}
+                  unoptimized
                   draggable={false}
                   className="h-full w-full object-cover"
                   style={{

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getStatusWhereClause } from "@/lib/article-status";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -11,7 +12,9 @@ export async function GET(request: NextRequest) {
   const fromParam = searchParams.get("from") ?? "";
   const toParam = searchParams.get("to") ?? "";
 
-  const baseWhere: any = {};
+  // Cet endpoint alimente la barre de filtres du site public : les comptes ne
+  // doivent porter que sur les articles publiés (jamais brouillons / à relire).
+  const baseWhere: any = { etat: getStatusWhereClause("publie") };
 
   if (q) {
     baseWhere.OR = [

@@ -143,11 +143,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  const body = ((await request.json()) ?? {}) as {
-    ids?: unknown;
-    markAllRead?: unknown;
-    markUnread?: unknown;
-  };
+  let body: { ids?: unknown; markAllRead?: unknown; markUnread?: unknown };
+  try {
+    body = ((await request.json()) ?? {}) as typeof body;
+  } catch {
+    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+  }
 
   if (body.markUnread === true) {
     if (!Array.isArray(body.ids) || body.ids.length === 0) {
@@ -203,11 +204,12 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  const body = ((await request.json()) ?? {}) as {
-    ids?: unknown;
-    readOnly?: unknown;
-    all?: unknown;
-  };
+  let body: { ids?: unknown; readOnly?: unknown; all?: unknown };
+  try {
+    body = ((await request.json()) ?? {}) as typeof body;
+  } catch {
+    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+  }
 
   const modeCount = Number(body.all === true) + Number(body.readOnly === true) + Number(!!body.ids);
   if (modeCount !== 1) {

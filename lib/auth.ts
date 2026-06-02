@@ -52,6 +52,20 @@ export async function getSessionUser(req?: NextRequest): Promise<SessionUser | n
   }
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return null;
+  // Même contrôle que la branche API : on invalide les sessions obsolètes
+  // (mot de passe modifié / réinitialisé depuis l'émission du token).
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { passwordHash: true },
+  });
+  if (!dbUser?.passwordHash) return null;
+  const currentPasswordVersion = computePasswordSessionVersion(dbUser.passwordHash);
+  if (
+    !session.passwordVersion ||
+    session.passwordVersion !== currentPasswordVersion
+  ) {
+    return null;
+  }
   return {
     id: session.user.id,
     email: session.user.email ?? null,

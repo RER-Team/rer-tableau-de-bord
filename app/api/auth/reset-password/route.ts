@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
       userId: true,
       usedAt: true,
       expiresAt: true,
+      user: { select: { email: true } },
     },
   });
 
@@ -50,6 +51,16 @@ export async function POST(request: NextRequest) {
       tokenPreview: token.slice(0, 8),
     });
     return NextResponse.json({ error: "Lien invalide ou expiré" }, { status: 400 });
+  }
+
+  // Vérification complémentaire : le mot de passe ne doit pas être identique à
+  // l'email du compte (on connaît l'email une fois le token résolu).
+  if (!isPasswordValid(password, resetToken.user?.email)) {
+    logResetPasswordEvent("invalid-password", { tokenPreview: token.slice(0, 8) });
+    return NextResponse.json(
+      { error: getPasswordPolicyMessage() },
+      { status: 400 }
+    );
   }
 
   const passwordHash = await bcrypt.hash(password, 10);

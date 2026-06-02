@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser, isValidRole } from "@/lib/auth";
+import { isValidRole } from "@/lib/auth";
+import { isAuthFailure, requireRole } from "@/lib/api-auth";
+
+const ADMIN_ONLY = { forbiddenMessage: "Accès réservé aux administrateurs" };
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const userSafeSelect = {
   id: true,
@@ -12,13 +17,8 @@ const userSafeSelect = {
 };
 
 export async function GET(request: NextRequest) {
-  const sessionUser = await getSessionUser(request);
-  if (!sessionUser) {
-    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-  }
-  if (sessionUser.role !== "admin") {
-    return NextResponse.json({ error: "Accès réservé aux administrateurs" }, { status: 403 });
-  }
+  const sessionUser = await requireRole(request, "admin", ADMIN_ONLY);
+  if (isAuthFailure(sessionUser)) return sessionUser;
 
   const users = await prisma.user.findMany({
     orderBy: { email: "asc" },
@@ -43,13 +43,16 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const sessionUser = await getSessionUser(request);
-  if (!sessionUser || sessionUser.role !== "admin") {
-    return NextResponse.json({ error: "Accès réservé aux administrateurs" }, { status: 403 });
-  }
+  const sessionUser = await requireRole(request, "admin", ADMIN_ONLY);
+  if (isAuthFailure(sessionUser)) return sessionUser;
 
-  const body = await request.json();
-  const { email, role, auteurId, prenom, nom, mutuelleId } = body as {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Corps JSON invalide" }, { status: 400 });
+  }
+  const { email, role, auteurId, prenom, nom, mutuelleId } = (body ?? {}) as {
     email?: string;
     role?: string;
     auteurId?: string | null;
@@ -61,6 +64,10 @@ export async function POST(request: NextRequest) {
   if (!email || typeof email !== "string") {
     return NextResponse.json({ error: "Email obligatoire" }, { status: 400 });
   }
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!EMAIL_RE.test(normalizedEmail)) {
+    return NextResponse.json({ error: "Format d'email invalide" }, { status: 400 });
+  }
   if (role !== undefined && (!role || typeof role !== "string" || !isValidRole(role))) {
     return NextResponse.json({ error: "Rôle invalide" }, { status: 400 });
   }
@@ -69,6 +76,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Mutuelle obligatoire pour créer un utilisateur" },
       { status: 400 }
+    );
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: { id: true },
+  });
+  if (existingUser) {
+    return NextResponse.json(
+      { error: "Un utilisateur existe déjà avec cet email." },
+      { status: 409 }
     );
   }
 
@@ -87,7 +105,7 @@ export async function POST(request: NextRequest) {
         data: {
           prenom: trimmedPrenom,
           nom: trimmedNom,
-          email: email.trim().toLowerCase(),
+          email: normalizedEmail,
           telephone: null,
           mutuelleId,
         },
@@ -103,7 +121,7 @@ export async function POST(request: NextRequest) {
 
   const user = await prisma.user.create({
     data: {
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       role: role && typeof role === "string" ? role : "auteur",
       auteurId: finalAuteurId,
     },

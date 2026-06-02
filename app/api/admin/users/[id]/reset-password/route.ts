@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/auth";
+import { isAuthFailure, requireRole } from "@/lib/api-auth";
 import { getPasswordPolicyMessage, isPasswordValid } from "@/lib/password-policy";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const sessionUser = await getSessionUser(request);
-  if (!sessionUser || sessionUser.role !== "admin") {
-    return NextResponse.json(
-      { error: "Accès réservé aux administrateurs" },
-      { status: 403 }
-    );
-  }
+  const sessionUser = await requireRole(request, "admin", {
+    forbiddenMessage: "Accès réservé aux administrateurs",
+  });
+  if (isAuthFailure(sessionUser)) return sessionUser;
 
   const { id } = await params;
   let body: { password?: string };

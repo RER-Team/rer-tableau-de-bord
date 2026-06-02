@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import mammoth from "mammoth";
+import { getSessionUser } from "@/lib/auth";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export async function POST(request: NextRequest) {
+  const user = await getSessionUser(request);
+  if (!user) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  }
+
   try {
     const contentType = request.headers.get("content-type") ?? "";
     if (!contentType.includes("multipart/form-data")) {

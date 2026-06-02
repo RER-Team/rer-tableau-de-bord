@@ -62,6 +62,26 @@ function computeSinceForMonths(months: number): string {
   return `${year}-${month}-${day}`;
 }
 
+type DatePreset = "1m" | "3m" | "6m" | "custom" | null;
+
+/**
+ * Détermine le préréglage de date actif à partir des paramètres d'URL.
+ * Une période personnalisée prime ; sinon on tente de reconnaître un préréglage
+ * connu (1, 3 ou 6 mois) à partir de la valeur `since`.
+ */
+function detectDatePreset(since: string, from: string, to: string): DatePreset {
+  if (from || to) return "custom";
+  if (!since) return null;
+  if (since === computeSinceForMonths(1)) return "1m";
+  if (since === computeSinceForMonths(3)) return "3m";
+  if (since === computeSinceForMonths(6)) return "6m";
+  return null;
+}
+
+function sameIds(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
 export function ArticlesFiltersBar({
   total,
   lastCreatedAt,
@@ -82,6 +102,12 @@ export function ArticlesFiltersBar({
   const initialFrom = searchParams.get("from") ?? "";
   const initialTo = searchParams.get("to") ?? "";
 
+  // Paramètres de date dérivés de l'URL : utilisés comme dépendances stables
+  // (évite de re-déclencher des effets sur des params non pertinents comme `article`).
+  const sinceParam = searchParams.get("since") ?? "";
+  const fromParam = searchParams.get("from") ?? "";
+  const toParam = searchParams.get("to") ?? "";
+
   const [inputValue, setInputValue] = useState(initialQ);
   const [debouncedQ, setDebouncedQ] = useState(initialQ);
   const [activeMutuelleIds, setActiveMutuelleIds] =
@@ -91,11 +117,15 @@ export function ArticlesFiltersBar({
   const [activeFormatIds, setActiveFormatIds] =
     useState<string[]>(initialFormatIds);
 
-  const [datePreset, setDatePreset] = useState<"1m" | "3m" | "6m" | "custom" | null>(
-    initialFrom || initialTo ? "custom" : initialSince ? null : null
+  const [datePreset, setDatePreset] = useState<DatePreset>(() =>
+    detectDatePreset(initialSince, initialFrom, initialTo)
   );
   const [customFrom, setCustomFrom] = useState(initialFrom);
   const [customTo, setCustomTo] = useState(initialTo);
+
+  // Mémorise la dernière valeur `q` poussée dans l'URL afin de ne pas écraser
+  // une saisie en cours lors de la resynchronisation depuis searchParams.
+  const appliedQRef = useRef(initialQ);
 
   const [facets, setFacets] = useState<FacetsResponse | null>(null);
   const [loadingFacets, setLoadingFacets] = useState(false);
@@ -115,6 +145,29 @@ export function ArticlesFiltersBar({
 
   const isFacetLabel = (s: string) =>
     /^(Mutuelle|Rubrique|Format)\s*:\s*\S+$/.test((s ?? "").trim());
+
+  // Resynchronise l'UI avec l'URL (navigation arrière/avant). On préserve les
+  // références d'array inchangées et on n'écrase pas une saisie texte en cours.
+  useEffect(() => {
+    const q = searchParams.get("q") ?? "";
+    if (q !== appliedQRef.current) {
+      appliedQRef.current = q;
+      setInputValue(q);
+      setDebouncedQ(q);
+    }
+    const nextMutuelles =
+      searchParams.get("mutuelleId")?.split(",").filter(Boolean) ?? [];
+    const nextRubriques =
+      searchParams.get("rubriqueId")?.split(",").filter(Boolean) ?? [];
+    const nextFormats =
+      searchParams.get("formatId")?.split(",").filter(Boolean) ?? [];
+    setActiveMutuelleIds((prev) => (sameIds(prev, nextMutuelles) ? prev : nextMutuelles));
+    setActiveRubriqueIds((prev) => (sameIds(prev, nextRubriques) ? prev : nextRubriques));
+    setActiveFormatIds((prev) => (sameIds(prev, nextFormats) ? prev : nextFormats));
+    setCustomFrom(fromParam);
+    setCustomTo(toParam);
+    setDatePreset(detectDatePreset(sinceParam, fromParam, toParam));
+  }, [searchParams, sinceParam, fromParam, toParam]);
 
   // Charger les suggestions (facettes filtrées localement) quand on tape
   useEffect(() => {
@@ -185,6 +238,9 @@ export function ArticlesFiltersBar({
     const currentQ = params.get("q") ?? "";
     const qToApply = debouncedQ && !isFacetLabel(debouncedQ) ? debouncedQ : "";
     if (qToApply === currentQ) return;
+    // Marque ce push comme le nôtre pour que l'effet de resynchronisation
+    // ne réécrive pas la saisie texte.
+    appliedQRef.current = qToApply;
     const next = buildSearchParams(params, {
       q: qToApply || null,
       display: null,
@@ -209,9 +265,6 @@ export function ArticlesFiltersBar({
         if (activeFormatIds.length) {
           params.set("formatId", activeFormatIds.join(","));
         }
-        const sinceParam = searchParams.get("since");
-        const fromParam = searchParams.get("from");
-        const toParam = searchParams.get("to");
         if (sinceParam) params.set("since", sinceParam);
         if (fromParam) params.set("from", fromParam);
         if (toParam) params.set("to", toParam);
@@ -224,7 +277,7 @@ export function ArticlesFiltersBar({
         }
         const data = (await res.json()) as FacetsResponse;
         setFacets(data);
-      } catch (e) {
+      } catch {
         if (controller.signal.aborted) return;
         setFacets(null);
       } finally {
@@ -235,7 +288,15 @@ export function ArticlesFiltersBar({
     };
     fetchFacets();
     return () => controller.abort();
-  }, [debouncedQ, activeMutuelleIds, activeRubriqueIds, activeFormatIds, searchParams]);
+  }, [
+    debouncedQ,
+    activeMutuelleIds,
+    activeRubriqueIds,
+    activeFormatIds,
+    sinceParam,
+    fromParam,
+    toParam,
+  ]);
 
   const derivedTotal = useMemo(() => {
     if (facets && debouncedQ.trim()) {
@@ -735,6 +796,7 @@ export function ArticlesFiltersBar({
               <span>Période personnalisée :</span>
               <input
                 type="date"
+                aria-label="Date de début"
                 value={customFrom}
                 onChange={(e) => handleCustomDateChange("from", e.target.value)}
                 className="h-6 rounded border border-rer-border bg-white px-1 text-[11px]"
@@ -742,6 +804,7 @@ export function ArticlesFiltersBar({
               <span>au</span>
               <input
                 type="date"
+                aria-label="Date de fin"
                 value={customTo}
                 onChange={(e) => handleCustomDateChange("to", e.target.value)}
                 className="h-6 rounded border border-rer-border bg-white px-1 text-[11px]"

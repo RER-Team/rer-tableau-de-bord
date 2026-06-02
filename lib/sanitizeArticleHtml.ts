@@ -33,6 +33,9 @@ const ALLOWED_IFRAME_HOSTNAMES = [
   "datawrapper.dwcdn.net",
 ];
 
+// data: URIs autorisées sur <img> : uniquement des images bitmap sûres.
+const SAFE_DATA_IMAGE_RE = /^data:image\/(?:png|jpeg|jpg|gif|webp);base64,/i;
+
 export function sanitizeArticleHtml(input: string): string {
   return sanitizeHtml(input, {
     allowedTags: ALLOWED_TAGS,
@@ -83,6 +86,16 @@ export function sanitizeArticleHtml(input: string): string {
     allowProtocolRelative: false,
     disallowedTagsMode: "discard",
     transformTags: {
+      img: (tagName, attribs) => {
+        const src = attribs.src ?? "";
+        // Les data: URIs ne sont autorisées que pour des images bitmap sûres
+        // (pas de SVG, qui peut embarquer du script).
+        if (/^data:/i.test(src) && !SAFE_DATA_IMAGE_RE.test(src)) {
+          const { src: _droppedSrc, ...rest } = attribs;
+          return { tagName, attribs: rest };
+        }
+        return { tagName, attribs };
+      },
       a: (tagName, attribs) => {
         const out: Record<string, string> = {};
         if (attribs.href) out.href = attribs.href;

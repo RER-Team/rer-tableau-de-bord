@@ -1,9 +1,11 @@
 import { supabaseAdmin } from "./supabase-server";
+import { STORAGE_BUCKET } from "./storage-bucket";
 
 type GetUploadUrlParams = {
   key: string;
   contentType: string;
   maxSizeBytes?: number;
+  size?: number;
 };
 
 export type UploadUrlResult = {
@@ -13,8 +15,7 @@ export type UploadUrlResult = {
   publicUrl: string | null;
 };
 
-const STORAGE_BUCKET =
-  process.env.SUPABASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "articles";
+export { STORAGE_BUCKET };
 
 export function getPublicUrl(key: string): string | null {
   if (!supabaseAdmin) return null;
@@ -26,6 +27,7 @@ export async function getUploadUrl({
   key,
   contentType,
   maxSizeBytes,
+  size,
 }: GetUploadUrlParams): Promise<UploadUrlResult> {
   if (!supabaseAdmin) {
     throw new Error(
@@ -39,6 +41,10 @@ export async function getUploadUrl({
 
   if (maxSizeBytes != null && maxSizeBytes <= 0) {
     throw new Error("Taille maximale invalide.");
+  }
+
+  if (maxSizeBytes != null && size != null && size > maxSizeBytes) {
+    throw new Error("Fichier trop volumineux.");
   }
 
   const { data, error } = await supabaseAdmin.storage
