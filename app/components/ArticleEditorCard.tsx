@@ -127,7 +127,6 @@ export function ArticleEditorCard({
   })();
 
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
-  const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const editorDebounceRef = useRef<number | null>(null);
   const lastEditorHtmlRef = useRef(contenuHtml || "");
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
@@ -472,6 +471,7 @@ export function ArticleEditorCard({
                 }
               }}
               required
+              aria-label="Titre de l’article"
               placeholder="Titre de l’article"
               rows={1}
               className="w-full resize-none border-none bg-transparent text-3xl font-semibold leading-tight text-rer-text placeholder:text-rer-muted focus:outline-none focus:ring-0"
