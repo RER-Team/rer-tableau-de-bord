@@ -135,6 +135,12 @@ export function ArticlesFiltersBar({
   // une saisie en cours lors de la resynchronisation depuis searchParams.
   const appliedQRef = useRef(initialQ);
 
+  // Cache des libellés de facettes (clé `${type}:${id}`). Permet d'afficher la
+  // puce d'un filtre actif même quand l'élément ne fait plus partie du top‑N
+  // renvoyé par l'API (ex. on sélectionne un auteur via la recherche, puis la
+  // recherche texte est effacée et cet auteur sort du classement par volume).
+  const facetLabelsRef = useRef<Record<string, string>>({});
+
   const [facets, setFacets] = useState<FacetsResponse | null>(null);
   const [loadingFacets, setLoadingFacets] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -328,26 +334,81 @@ export function ArticlesFiltersBar({
     [lastCreatedAt]
   );
 
-  const activeMutuelleFacets = useMemo(
+  // Mémorise les libellés des facettes actuellement connues, afin de pouvoir
+  // afficher les puces actives même si l'élément sélectionné n'est plus dans le
+  // top‑N renvoyé par l'API.
+  useEffect(() => {
+    if (!facets) return;
+    const map = facetLabelsRef.current;
+    facets.mutuelles.forEach((m) => {
+      map[`mutuelle:${m.id}`] = m.nom;
+    });
+    facets.rubriques.forEach((r) => {
+      map[`rubrique:${r.id}`] = r.libelle;
+    });
+    facets.formats.forEach((f) => {
+      map[`format:${f.id}`] = f.libelle;
+    });
+    facets.auteurs.forEach((a) => {
+      map[`auteur:${a.id}`] = `${a.prenom} ${a.nom}`.trim();
+    });
+  }, [facets]);
+
+  // Puces des filtres actifs : construites à partir des IDs sélectionnés (source
+  // de vérité), avec libellé issu des facettes courantes ou du cache, et compte
+  // affiché uniquement lorsqu'il est disponible dans le top‑N courant.
+  const activeMutuelleChips = useMemo(
     () =>
-      facets?.mutuelles.filter((m) => activeMutuelleIds.includes(m.id)) ?? [],
+      activeMutuelleIds.map((id) => {
+        const f = facets?.mutuelles.find((m) => m.id === id);
+        return {
+          id,
+          label: f?.nom ?? facetLabelsRef.current[`mutuelle:${id}`] ?? "Mutuelle",
+          count: f?.count,
+        };
+      }),
     [facets, activeMutuelleIds]
   );
 
-  const activeRubriqueFacets = useMemo(
+  const activeRubriqueChips = useMemo(
     () =>
-      facets?.rubriques.filter((r) => activeRubriqueIds.includes(r.id)) ?? [],
+      activeRubriqueIds.map((id) => {
+        const f = facets?.rubriques.find((r) => r.id === id);
+        return {
+          id,
+          label:
+            f?.libelle ?? facetLabelsRef.current[`rubrique:${id}`] ?? "Rubrique",
+          count: f?.count,
+        };
+      }),
     [facets, activeRubriqueIds]
   );
 
-  const activeFormatFacets = useMemo(
+  const activeFormatChips = useMemo(
     () =>
-      facets?.formats.filter((f) => activeFormatIds.includes(f.id)) ?? [],
+      activeFormatIds.map((id) => {
+        const f = facets?.formats.find((f) => f.id === id);
+        return {
+          id,
+          label: f?.libelle ?? facetLabelsRef.current[`format:${id}`] ?? "Format",
+          count: f?.count,
+        };
+      }),
     [facets, activeFormatIds]
   );
-  const activeAuteurFacets = useMemo(
+
+  const activeAuteurChips = useMemo(
     () =>
-      facets?.auteurs.filter((a) => activeAuteurIds.includes(a.id)) ?? [],
+      activeAuteurIds.map((id) => {
+        const f = facets?.auteurs.find((a) => a.id === id);
+        return {
+          id,
+          label: f
+            ? `${f.prenom} ${f.nom}`.trim()
+            : facetLabelsRef.current[`auteur:${id}`] ?? "Auteur",
+          count: f?.count,
+        };
+      }),
     [facets, activeAuteurIds]
   );
 
@@ -465,6 +526,9 @@ export function ArticlesFiltersBar({
         ? activeFormatIds
         : activeAuteurIds;
     const nextArray = current.includes(id) ? current : [...current, id];
+    // Mémorise le libellé propre (sans le préfixe « Type : ») pour que la puce
+    // reste affichée même après l'effacement de la recherche texte.
+    facetLabelsRef.current[`${type}:${id}`] = label.replace(/^[^:]*:\s*/, "");
     if (type === "mutuelle") setActiveMutuelleIds(nextArray);
     if (type === "rubrique") setActiveRubriqueIds(nextArray);
     if (type === "format") setActiveFormatIds(nextArray);
@@ -722,53 +786,55 @@ export function ArticlesFiltersBar({
         </div>
       </div>
 
-      {(activeMutuelleFacets.length > 0 ||
-        activeRubriqueFacets.length > 0 ||
-        activeFormatFacets.length > 0 ||
-        activeAuteurFacets.length > 0) && (
+      {(activeMutuelleChips.length > 0 ||
+        activeRubriqueChips.length > 0 ||
+        activeFormatChips.length > 0 ||
+        activeAuteurChips.length > 0) && (
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-          {activeMutuelleFacets.map((m) => (
+          {activeMutuelleChips.map((m) => (
             <button
               key={`active-mutuelle-${m.id}`}
               type="button"
               onClick={() => handleFacetToggle("mutuelle", m.id)}
               className="chip-filter chip-filter--active inline-flex items-center gap-1"
             >
-              <span>{m.nom}</span>
-              <span className="text-[10px] opacity-80">· {m.count}</span>
+              <span>{m.label}</span>
+              {typeof m.count === "number" && (
+                <span className="text-[10px] opacity-80">· {m.count}</span>
+              )}
               <span className="text-[11px] leading-none">×</span>
             </button>
           ))}
-          {activeRubriqueFacets.map((r) => (
+          {activeRubriqueChips.map((r) => (
             <button
               key={`active-rubrique-${r.id}`}
               type="button"
               onClick={() => handleFacetToggle("rubrique", r.id)}
               className="chip-filter chip-filter--active inline-flex items-center gap-1"
             >
-              <span>{r.libelle}</span>
+              <span>{r.label}</span>
               <span className="text-[11px] leading-none">×</span>
             </button>
           ))}
-          {activeFormatFacets.map((f) => (
+          {activeFormatChips.map((f) => (
             <button
               key={`active-format-${f.id}`}
               type="button"
               onClick={() => handleFacetToggle("format", f.id)}
               className="chip-filter chip-filter--active inline-flex items-center gap-1"
             >
-              <span>{f.libelle}</span>
+              <span>{f.label}</span>
               <span className="text-[11px] leading-none">×</span>
             </button>
           ))}
-          {activeAuteurFacets.map((a) => (
+          {activeAuteurChips.map((a) => (
             <button
               key={`active-auteur-${a.id}`}
               type="button"
               onClick={() => handleFacetToggle("auteur", a.id)}
               className="chip-filter chip-filter--active inline-flex items-center gap-1"
             >
-              <span>{a.prenom} {a.nom}</span>
+              <span>{a.label}</span>
               <span className="text-[11px] leading-none">×</span>
             </button>
           ))}
