@@ -69,6 +69,8 @@ type ArticlesExplorerViewProps = {
   back?: string;
   showEtat: boolean;
   canOpenAdminEdit?: boolean;
+  /** Lecture anonyme (/decouvrir) : APIs scope=public, pas de suivi consultation. */
+  publicMode?: boolean;
 };
 
 export function getEtatBadgeClasses(slug?: string, active?: boolean): string {
@@ -180,6 +182,7 @@ type ArticleDetailContentProps = {
   back?: string;
   mine?: string;
   canOpenAdminEdit?: boolean;
+  publicMode?: boolean;
 };
 
 function ArticleDetailContent({
@@ -192,6 +195,7 @@ function ArticleDetailContent({
   back,
   mine,
   canOpenAdminEdit = false,
+  publicMode = false,
 }: ArticleDetailContentProps) {
   const [copyState, setCopyState] = useState<
     "idle" | "html" | "error"
@@ -463,6 +467,7 @@ export function ArticlesExplorerView({
   back = "",
   showEtat,
   canOpenAdminEdit = false,
+  publicMode = false,
 }: ArticlesExplorerViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -477,7 +482,7 @@ export function ArticlesExplorerView({
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(pageSize));
-    if (mine !== "1") params.set("scope", "public");
+    if (publicMode || mine !== "1") params.set("scope", "public");
     if (q) params.set("q", q);
     if (etatSlug) params.set("etat", etatSlug);
     if (mutuelleId) params.set("mutuelleId", mutuelleId);
@@ -533,9 +538,12 @@ export function ArticlesExplorerView({
     setError(null);
     setDetail(null);
 
-    fetch(`/api/articles/${selectedId}?scope=preview`, {
+    fetch(
+      `/api/articles/${selectedId}?scope=${publicMode ? "public" : "preview"}`,
+      {
       signal: controller.signal,
-    })
+    }
+    )
       .then((res) => {
         if (!res.ok) return null;
         return res.json();
@@ -547,7 +555,9 @@ export function ArticlesExplorerView({
           setError("Article introuvable ou erreur de chargement.");
         } else {
           setDetail(data);
-          trackArticleConsultation(data.id, "explorer");
+          if (!publicMode) {
+            trackArticleConsultation(data.id, "explorer");
+          }
         }
       })
       .catch(() => {
@@ -563,7 +573,7 @@ export function ArticlesExplorerView({
     return () => {
       controller.abort();
     };
-  }, [selectedId]);
+  }, [selectedId, publicMode]);
 
   const updateUrlSelection = (id: string | null) => {
     if (typeof window === "undefined") return;
@@ -589,6 +599,10 @@ export function ArticlesExplorerView({
   };
 
   const handleOpenFull = (id: string) => {
+    if (publicMode) {
+      handleSelect(id);
+      return;
+    }
     const params = new URLSearchParams();
     if (back) params.set("back", back);
     if (mine === "1") params.set("mine", "1");
@@ -748,6 +762,7 @@ export function ArticlesExplorerView({
               back={back}
               mine={mine}
               canOpenAdminEdit={canOpenAdminEdit}
+              publicMode={publicMode}
             />
           )}
         </div>
@@ -788,6 +803,7 @@ export function ArticlesExplorerView({
                 back={back}
                 mine={mine}
                 canOpenAdminEdit={canOpenAdminEdit}
+                publicMode={publicMode}
               />
             </div>
           </div>

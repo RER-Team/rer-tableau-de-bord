@@ -44,6 +44,7 @@ type ArticleReadSidePanelProps = {
   /** Lien "Ouvrir en pleine page" : back param pour le retour (ex: articles, mes-articles). */
   backParam?: string;
   canOpenAdminEdit?: boolean;
+  publicMode?: boolean;
 };
 
 export function ArticleReadSidePanel({
@@ -52,6 +53,7 @@ export function ArticleReadSidePanel({
   onClose,
   backParam = "articles",
   canOpenAdminEdit = false,
+  publicMode = false,
 }: ArticleReadSidePanelProps) {
   const statusContext = backParam === "mes-articles" ? "author" : "public";
   const [article, setArticle] = useState<ArticleDetail | null>(null);
@@ -65,9 +67,12 @@ export function ArticleReadSidePanel({
     setLoading(true);
     setError(null);
     setArticle(null);
-    fetch(`/api/articles/${articleId}?scope=preview`, {
+    fetch(
+      `/api/articles/${articleId}?scope=${publicMode ? "public" : "preview"}`,
+      {
       signal: controller.signal,
-    })
+    }
+    )
       .then((r) => {
         if (!r.ok) throw new Error("Contenu introuvable");
         return r.json();
@@ -75,7 +80,9 @@ export function ArticleReadSidePanel({
       .then((data: ArticleDetail) => {
         setArticle(data);
         setMainImageLayout("landscape");
-        trackArticleConsultation(data.id, "side-panel");
+        if (!publicMode) {
+          trackArticleConsultation(data.id, "side-panel");
+        }
       })
       .catch((e) => {
         if (controller.signal.aborted) return;
@@ -88,7 +95,7 @@ export function ArticleReadSidePanel({
     return () => {
       controller.abort();
     };
-  }, [articleId, open]);
+  }, [articleId, open, publicMode]);
 
   useEffect(() => {
     if (!open) return;

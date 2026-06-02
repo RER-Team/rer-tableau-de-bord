@@ -35,6 +35,7 @@ type ArticlesCardsViewProps = {
   to?: string;
   mine?: string;
   canOpenAdminEdit?: boolean;
+  publicMode?: boolean;
 };
 
 export function ArticlesCardsView({
@@ -52,6 +53,7 @@ export function ArticlesCardsView({
   to = "",
   mine = "",
   canOpenAdminEdit = false,
+  publicMode = false,
 }: ArticlesCardsViewProps) {
   const [articles, setArticles] = useState<ArticleSummary[]>(initialArticles);
   const [hasMore, setHasMore] = useState(initialArticles.length < total);
@@ -101,7 +103,7 @@ export function ArticlesCardsView({
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(pageSize));
-    if (mine !== "1") params.set("scope", "public");
+    if (publicMode || mine !== "1") params.set("scope", "public");
     if (q) params.set("q", q);
     if (etatSlug) params.set("etat", etatSlug);
     if (mutuelleId) params.set("mutuelleId", mutuelleId);
@@ -274,8 +276,9 @@ export function ArticlesCardsView({
         articleId={selectedArticleId}
         open={panelOpen}
         onClose={closeArticlePanel}
-        backParam="articles"
+        backParam={publicMode ? "decouvrir" : "articles"}
         canOpenAdminEdit={canOpenAdminEdit}
+        publicMode={publicMode}
       />
     </>
   );

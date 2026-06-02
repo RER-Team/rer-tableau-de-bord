@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import sanitizeHtml from "sanitize-html";
 import { canEditArticles, getSessionUser } from "@/lib/auth";
 import { isPublishedStatus } from "@/lib/article-status";
+import { isPublicReadableArticle } from "@/lib/public-article-read";
 
 function slugify(input: string): string {
   const base = input
@@ -173,10 +174,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getSessionUser(request);
-  if (!user) {
-    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-  }
-
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const format = (searchParams.get("format") || "txt").toLowerCase();
@@ -196,12 +193,18 @@ export async function GET(
     return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
   }
 
-  // Même politique que la lecture : un article non publié n'est exportable que
-  // par son auteur ou un éditeur.
-  const isEditor = canEditArticles(user.role);
-  const isAuthor = !!user.auteurId && user.auteurId === article.auteurId;
-  if (!isPublishedStatus(article.etat?.slug) && !isEditor && !isAuthor) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  if (!user) {
+    if (!isPublicReadableArticle(article.etat?.slug)) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+  } else {
+    // Même politique que la lecture : un article non publié n'est exportable que
+    // par son auteur ou un éditeur.
+    const isEditor = canEditArticles(user.role);
+    const isAuthor = !!user.auteurId && user.auteurId === article.auteurId;
+    if (!isPublishedStatus(article.etat?.slug) && !isEditor && !isAuthor) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
   }
 
   const baseName = slugify(article.titre || "article");

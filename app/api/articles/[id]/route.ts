@@ -7,6 +7,7 @@ import {
   isPublishedStatus,
   normalizeArticleStatusSlug,
 } from "@/lib/article-status";
+import { isPublicReadableArticle } from "@/lib/public-article-read";
 import { sanitizeArticleHtml } from "@/lib/sanitizeArticleHtml";
 import { buildArticleNotificationEvents } from "@/lib/notifications/article-events";
 import { dispatchArticleNotificationEvent } from "@/lib/notifications/dispatch";
@@ -59,33 +60,41 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getSessionUser(request);
-  if (!user) {
+  const { id } = await params;
+  const scope = request.nextUrl.searchParams.get("scope");
+
+  if (!user && scope !== "public") {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  const { id } = await params;
-  const scope = request.nextUrl.searchParams.get("scope");
-  const article =
-    scope === "preview"
-      ? await prisma.article.findUnique({
-          where: { id },
-          select: articlePreviewSelect,
-        })
-      : await prisma.article.findUnique({
-          where: { id },
-          include: {
-            auteur: true,
-            mutuelle: true,
-            rubrique: true,
-            format: true,
-            etat: true,
-            historiques: {
-              orderBy: { createdAt: "desc" },
-              include: { etat: true, user: { select: historiqueUserSelect } },
-            },
+  const usePreviewSelect = scope === "preview" || scope === "public";
+  const article = usePreviewSelect
+    ? await prisma.article.findUnique({
+        where: { id },
+        select: articlePreviewSelect,
+      })
+    : await prisma.article.findUnique({
+        where: { id },
+        include: {
+          auteur: true,
+          mutuelle: true,
+          rubrique: true,
+          format: true,
+          etat: true,
+          historiques: {
+            orderBy: { createdAt: "desc" },
+            include: { etat: true, user: { select: historiqueUserSelect } },
           },
-        });
+        },
+      });
   if (!article) return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
+
+  if (!user) {
+    if (!isPublicReadableArticle(article.etat?.slug)) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+    return NextResponse.json(article);
+  }
 
   // Contrôle d'accès : un article non publié n'est lisible que par son auteur
   // ou par un éditeur (relecteur/admin). Les articles publiés restent lisibles

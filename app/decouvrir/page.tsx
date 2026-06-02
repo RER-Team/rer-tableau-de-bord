@@ -1,172 +1,272 @@
-"use client";
-
-import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { transformEmbeds } from "@/lib/article-html";
+import { Suspense } from "react";
+import { prisma } from "@/lib/prisma";
+import { getStatusWhereClause } from "@/lib/article-status";
+import { ArticlesExplorerView } from "@/app/articles/ArticlesCardsExplorer";
+import { ArticlesCardsView } from "@/app/articles/ArticlesCardsView";
+import { ArticlesTableView } from "@/app/articles/ArticlesTableView";
+import { ArticlesFiltersBar } from "@/app/articles/ArticlesFiltersBar";
+import {
+  buildArticleTextSearchWhere,
+  mergeArticleWhereClauses,
+} from "@/lib/article-search-where";
 
-type PublicArticleSummary = {
-  id: string;
-  titre: string;
-  chapo: string | null;
-  lienPhoto: string | null;
-  legendePhoto: string | null;
-  rubrique: { libelle: string } | null;
-  format: { libelle: string } | null;
-  mutuelle: { nom: string } | null;
-  datePublication: string | null;
-  createdAt: string;
+export const dynamic = "force-dynamic";
+
+type SearchParams = {
+  q?: string;
+  page?: string;
+  mutuelleId?: string;
+  rubriqueId?: string;
+  formatId?: string;
+  auteurId?: string;
+  since?: string;
+  from?: string;
+  to?: string;
+  article?: string;
+  view?: string;
 };
 
-type PublicArticleDetail = PublicArticleSummary & {
-  contenu: string;
-  creditPhoto: string | null;
+type PageProps = {
+  searchParams?: Promise<SearchParams>;
 };
 
-export default function DecouvrirPage() {
-  const [articles, setArticles] = useState<PublicArticleSummary[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<PublicArticleDetail | null>(null);
-  const [loadingList, setLoadingList] = useState(true);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export default async function DecouvrirPage({ searchParams }: PageProps) {
+  const params = (await searchParams) ?? {};
 
-  useEffect(() => {
-    fetch("/api/public/articles?limit=50")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        const list = (data?.articles ?? []) as PublicArticleSummary[];
-        setArticles(list);
-        if (list.length > 0) setSelectedId(list[0].id);
-      })
-      .catch(() => setError("Impossible de charger les exemples."))
-      .finally(() => setLoadingList(false));
-  }, []);
+  const lastArticle = await prisma.article.findFirst({
+    where: { etat: getStatusWhereClause("publie") },
+    orderBy: [{ dateDepot: "desc" }, { createdAt: "desc" }],
+    select: { dateDepot: true, createdAt: true },
+  });
 
-  useEffect(() => {
-    if (!selectedId) {
-      setDetail(null);
-      return;
-    }
-    setLoadingDetail(true);
-    fetch(`/api/public/articles/${selectedId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setDetail(data as PublicArticleDetail | null))
-      .finally(() => setLoadingDetail(false));
-  }, [selectedId]);
+  const q = params.q?.trim() || "";
+  const page = Math.max(Number(params.page) || 1, 1);
+  const mutuelleParam = params.mutuelleId || "";
+  const rubriqueParam = params.rubriqueId || "";
+  const formatParam = params.formatId || "";
+  const auteurParam = params.auteurId || "";
+  const sinceParam = params.since || "";
+  const fromParam = params.from || "";
+  const toParam = params.to || "";
+  const selectedArticleId = params.article || "";
+  const rawView = params.view;
+  const view: "cards" | "explorer" | "table" =
+    rawView === "table" || rawView === "cards" || rawView === "explorer"
+      ? rawView
+      : "explorer";
 
-  const renderedHtml = detail?.contenu
-    ? transformEmbeds(detail.contenu)
-    : "";
+  const take = 20;
+  const skip = (page - 1) * take;
+
+  const where: Record<string, unknown> = {
+    etat: getStatusWhereClause("publie"),
+  };
+
+  const textSearchWhere = buildArticleTextSearchWhere(q);
+
+  const dateFilter: Record<string, Date> = {};
+  const fromDate = fromParam ? new Date(fromParam) : null;
+  const sinceDate = sinceParam ? new Date(sinceParam) : null;
+  const toDate = toParam ? new Date(toParam) : null;
+  if (fromDate && !Number.isNaN(fromDate.getTime())) {
+    dateFilter.gte = fromDate;
+  } else if (sinceDate && !Number.isNaN(sinceDate.getTime())) {
+    dateFilter.gte = sinceDate;
+  }
+  if (toDate && !Number.isNaN(toDate.getTime())) {
+    dateFilter.lte = toDate;
+  }
+  const dateOrClause: Record<string, unknown>[] = [];
+  if (Object.keys(dateFilter).length > 0) {
+    dateOrClause.push(
+      {
+        AND: [
+          { datePublication: { not: null } },
+          { datePublication: dateFilter },
+        ],
+      },
+      {
+        AND: [{ datePublication: null }, { createdAt: dateFilter }],
+      }
+    );
+  }
+
+  const mutuelleIds = mutuelleParam
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  if (mutuelleIds.length === 1) {
+    where.mutuelleId = mutuelleIds[0];
+  } else if (mutuelleIds.length > 1) {
+    where.mutuelleId = { in: mutuelleIds };
+  }
+
+  const rubriqueIds = rubriqueParam
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  if (rubriqueIds.length === 1) {
+    where.rubriqueId = rubriqueIds[0];
+  } else if (rubriqueIds.length > 1) {
+    where.rubriqueId = { in: rubriqueIds };
+  }
+
+  const formatIds = formatParam
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  if (formatIds.length === 1) {
+    where.formatId = formatIds[0];
+  } else if (formatIds.length > 1) {
+    where.formatId = { in: formatIds };
+  }
+
+  const auteurIds = auteurParam
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  if (auteurIds.length === 1) {
+    where.auteurId = auteurIds[0];
+  } else if (auteurIds.length > 1) {
+    where.auteurId = { in: auteurIds };
+  }
+
+  const finalWhere = mergeArticleWhereClauses(
+    where,
+    textSearchWhere,
+    dateOrClause.length ? dateOrClause : undefined
+  );
+
+  const [articles, total] = await Promise.all([
+    prisma.article.findMany({
+      where: finalWhere,
+      select: {
+        id: true,
+        titre: true,
+        chapo: true,
+        lienPhoto: true,
+        legendePhoto: true,
+        creditPhoto: true,
+        dateDepot: true,
+        datePublication: true,
+        createdAt: true,
+        updatedAt: true,
+        auteurId: true,
+        mutuelleId: true,
+        rubriqueId: true,
+        formatId: true,
+        etatId: true,
+        auteur: { select: { id: true, prenom: true, nom: true } },
+        mutuelle: { select: { id: true, nom: true } },
+        rubrique: { select: { id: true, libelle: true } },
+        format: { select: { id: true, libelle: true } },
+        etat: { select: { id: true, libelle: true, slug: true } },
+      },
+      orderBy: [{ dateDepot: "desc" }, { createdAt: "desc" }],
+      skip,
+      take,
+    }),
+    prisma.article.count({ where: finalWhere }),
+  ]);
+
+  const articleSummaries = articles.map((article) => ({
+    ...article,
+    dateDepot: article.dateDepot ? article.dateDepot.toISOString() : null,
+    datePublication: article.datePublication
+      ? article.datePublication.toISOString()
+      : null,
+    createdAt: article.createdAt.toISOString(),
+  }));
 
   return (
-    <div className="space-y-6">
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      {loadingList && (
-        <p className="text-sm text-rer-muted">Chargement des exemples…</p>
-      )}
-
-      {!loadingList && articles.length === 0 && (
-        <p className="rounded-xl border border-rer-border bg-white p-6 text-sm text-rer-muted">
-          Aucun contenu exemple n&apos;est disponible pour le moment.
+    <div className="space-y-4 pb-8">
+      <header>
+        <h2 className="text-xl font-extrabold text-rer-text">
+          Parcourir les contenus publiés
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm text-rer-muted">
+          Recherchez, filtrez par mutuelle, rubrique ou format, puis lisez et
+          exportez un contenu comme sur la banque complète du réseau.
         </p>
-      )}
+      </header>
 
-      {articles.length > 0 && (
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          <ul className="space-y-2">
-            {articles.map((article) => {
-              const active = article.id === selectedId;
-              return (
-                <li key={article.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(article.id)}
-                    className={`flex w-full gap-3 rounded-xl border p-2 text-left transition ${
-                      active
-                        ? "border-rer-blue bg-rer-blue/5"
-                        : "border-rer-border bg-white hover:bg-rer-app"
-                    }`}
-                  >
-                    <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-rer-app">
-                      {article.lienPhoto ? (
-                        <Image
-                          src={article.lienPhoto}
-                          alt=""
-                          fill
-                          sizes="80px"
-                          className="object-cover object-top"
-                        />
-                      ) : (
-                        <span className="flex h-full items-center justify-center text-[10px] text-rer-muted">
-                          —
-                        </span>
-                      )}
-                    </div>
-                    <span className="min-w-0 flex-1">
-                      <span className="line-clamp-2 text-sm font-medium text-rer-text">
-                        {article.titre}
-                      </span>
-                      {article.mutuelle?.nom && (
-                        <span className="mt-0.5 block text-[11px] text-rer-muted">
-                          {article.mutuelle.nom}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+      <Suspense
+        fallback={
+          <div className="h-24 animate-pulse rounded-xl bg-white ring-1 ring-rer-border" />
+        }
+      >
+        <ArticlesFiltersBar
+          total={total}
+          lastCreatedAt={
+            lastArticle
+              ? (lastArticle.dateDepot ?? lastArticle.createdAt)?.toISOString() ??
+                null
+              : null
+          }
+        />
+      </Suspense>
 
-          <article className="rounded-xl border border-rer-border bg-white p-4 shadow-sm">
-            {loadingDetail && (
-              <p className="text-sm text-rer-muted">Chargement…</p>
-            )}
-            {!loadingDetail && detail && (
-              <div className="space-y-4">
-                {detail.lienPhoto && (
-                  <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg bg-rer-app">
-                    <Image
-                      src={detail.lienPhoto}
-                      alt={detail.legendePhoto || detail.titre}
-                      fill
-                      priority
-                      sizes="(max-width: 1024px) 100vw, 720px"
-                      className="object-contain"
-                    />
-                  </div>
-                )}
-                <h2 className="text-xl font-bold text-rer-text">{detail.titre}</h2>
-                <div className="flex flex-wrap gap-2 text-[11px] text-rer-muted">
-                  {detail.format?.libelle && <span>{detail.format.libelle}</span>}
-                  {detail.rubrique?.libelle && (
-                    <span>· {detail.rubrique.libelle}</span>
-                  )}
-                </div>
-                {detail.chapo && (
-                  <p className="text-sm font-medium text-rer-text">{detail.chapo}</p>
-                )}
-                <div
-                  className="prose prose-sm max-w-none text-rer-text"
-                  dangerouslySetInnerHTML={{ __html: renderedHtml }}
-                />
-                {detail.creditPhoto && (
-                  <p className="text-[11px] text-rer-muted">{detail.creditPhoto}</p>
-                )}
-              </div>
-            )}
-          </article>
-        </div>
-      )}
+      <section aria-label="Contenus publiés" className="mt-4 space-y-3">
+        {view === "table" ? (
+          <ArticlesTableView
+            initialArticles={articleSummaries}
+            total={total}
+            initialPage={page}
+            pageSize={take}
+            q={q}
+            etatSlug="publie"
+            mutuelleId={mutuelleParam}
+            rubriqueId={rubriqueParam}
+            formatId={formatParam}
+            since={sinceParam}
+            from={fromParam}
+            to={toParam}
+            publicMode
+          />
+        ) : view === "explorer" ? (
+          <ArticlesExplorerView
+            articles={articleSummaries}
+            total={total}
+            initialPage={page}
+            pageSize={take}
+            q={q}
+            etatSlug="publie"
+            mutuelleId={mutuelleParam}
+            rubriqueId={rubriqueParam}
+            formatId={formatParam}
+            since={sinceParam}
+            from={fromParam}
+            to={toParam}
+            showEtat={false}
+            initialSelectedId={selectedArticleId || undefined}
+            publicMode
+          />
+        ) : (
+          <ArticlesCardsView
+            initialArticles={articleSummaries}
+            total={total}
+            initialPage={page}
+            pageSize={take}
+            q={q}
+            etatSlug="publie"
+            mutuelleId={mutuelleParam}
+            rubriqueId={rubriqueParam}
+            formatId={formatParam}
+            since={sinceParam}
+            from={fromParam}
+            to={toParam}
+            publicMode
+          />
+        )}
+      </section>
 
-      <p className="text-center text-xs text-rer-muted">
+      <p className="pt-4 text-center text-xs text-rer-muted">
         Vous êtes membre du réseau ?{" "}
         <Link href="/login" className="text-rer-blue underline">
           Connectez-vous
         </Link>{" "}
-        pour accéder à l&apos;ensemble des contenus.
+        pour déposer vos contenus et accéder à l&apos;espace complet.
       </p>
     </div>
   );
