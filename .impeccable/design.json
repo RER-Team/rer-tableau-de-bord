@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-02T08:45:00.000Z",
+  "title": "Design System: RER — Banque de contenus",
+  "extensions": {
+    "colorMeta": {
+      "rer-blue": {
+        "role": "primary",
+        "displayName": "Bleu RER",
+        "canonical": "#243B8F",
+        "tonalRamp": ["#0e1838", "#152150", "#1c2d6b", "#243b8f", "#4a5cab", "#7886c4", "#a9b2dd", "#dfe3f3"]
+      },
+      "rer-orange": {
+        "role": "secondary",
+        "displayName": "Orange action",
+        "canonical": "#F1663C",
+        "tonalRamp": ["#5c2310", "#83311a", "#aa4123", "#cf512c", "#f1663c", "#f58a64", "#f9b39a", "#fddccf"]
+      },
+      "editorial-paper": {
+        "role": "tertiary",
+        "displayName": "Papier éditorial",
+        "canonical": "#F7F3E2",
+        "tonalRamp": ["#5a5439", "#7c744f", "#9e9569", "#c2b98c", "#ddd5b3", "#ece6cf", "#f7f3e2", "#fdfbf3"]
+      },
+      "app-bg": {
+        "role": "neutral",
+        "displayName": "Fond app (gris-bleu froid)",
+        "canonical": "#F5F7FA",
+        "tonalRamp": ["#1f2937", "#374151", "#6b7280", "#9ca3af", "#cbd5e1", "#e2e8f0", "#f5f7fa", "#ffffff"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Encre",
+        "canonical": "#111827",
+        "tonalRamp": ["#030712", "#111827", "#1f2937", "#374151", "#4b5563", "#6b7280", "#9ca3af", "#e5e7eb"]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Bordure",
+        "canonical": "#E5E7EB",
+        "tonalRamp": ["#6b7280", "#9ca3af", "#cbd5e1", "#d1d5db", "#e5e7eb", "#eef0f3", "#f5f7fa", "#ffffff"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Titre d'article en page de lecture (h1)." },
+      "headline": { "displayName": "Headline", "purpose": "Titres de panneaux et de sections." },
+      "body": { "displayName": "Body", "purpose": "Corps, chapô, descriptions. 65–75ch en lecture." },
+      "label": { "displayName": "Label", "purpose": "Étiquettes courtes en MAJUSCULES atténuées." }
+    },
+    "shadows": [
+      { "name": "rest", "value": "0 1px 2px rgba(0,0,0,0.05)", "purpose": "Cartes et panneaux au repos, à peine détachés du fond." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Transitions d'état par défaut (~150ms)." },
+      { "name": "card-hover-lift", "value": "translateY(-1px)", "purpose": "Élévation tactile discrète au survol des contenus cliquables." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "CTA principal",
+      "kind": "button",
+      "refersTo": "button-cta",
+      "description": "Action principale (ex. « Nouveau contenu »). Orange réservé aux actions.",
+      "html": "<button class=\"ds-btn-cta\">Nouveau contenu</button>",
+      "css": ".ds-btn-cta { display: inline-flex; align-items: center; gap: 8px; background: #f1663c; color: #fff; font-size: 0.875rem; font-weight: 600; padding: 8px 16px; border: none; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; transition: background 0.15s cubic-bezier(0.4,0,0.2,1); } .ds-btn-cta:hover { background: #e25730; } .ds-btn-cta:focus-visible { outline: none; box-shadow: 0 0 0 2px #f5f7fa, 0 0 0 4px #f1663c; }"
+    },
+    {
+      "name": "Bouton action (secondaire)",
+      "kind": "button",
+      "refersTo": "button-action",
+      "description": "Action secondaire dans les tables et panneaux : sobre, bleu RER sur blanc.",
+      "html": "<button class=\"ds-btn-action\">Corriger</button>",
+      "css": ".ds-btn-action { display: inline-flex; align-items: center; background: #fff; color: #243b8f; font-size: 0.6875rem; font-weight: 500; padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: background 0.15s cubic-bezier(0.4,0,0.2,1); } .ds-btn-action:hover { background: #f5f7fa; } .ds-btn-action:focus-visible { outline: none; border-color: #243b8f; box-shadow: 0 0 0 1px #243b8f; }"
+    },
+    {
+      "name": "Chip de filtre",
+      "kind": "chip",
+      "refersTo": "chip-filter",
+      "description": "Filtre Mutuelles / Rubriques / Formats / Auteurs / Dates. Bleu RER quand actif.",
+      "html": "<span class=\"ds-chip\">Format : Brève</span>\n<span class=\"ds-chip ds-chip--active\">Constance PERIN \u00d7</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; background: #fff; color: #111827; font-size: 0.75rem; font-weight: 500; padding: 2px 8px; border: 1px solid #e5e7eb; border-radius: 8px; transition: background 0.15s cubic-bezier(0.4,0,0.2,1); } .ds-chip:hover { background: #f5f7fa; } .ds-chip--active { background: #243b8f; color: #fff; border-color: transparent; }"
+    },
+    {
+      "name": "Champ de recherche",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Champ texte : bordure neutre au repos, focus bleu RER.",
+      "html": "<input class=\"ds-input\" type=\"search\" placeholder=\"Titre, chap\u00f4, contenu, auteur\u2026\" />",
+      "css": ".ds-input { width: 100%; background: #fff; color: #111827; font-size: 0.875rem; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; } .ds-input::placeholder { color: #9ca3af; } .ds-input:focus { outline: none; border-color: #243b8f; box-shadow: 0 0 0 1px #243b8f; }"
+    },
+    {
+      "name": "Carte de contenu",
+      "kind": "card",
+      "refersTo": "card-content",
+      "description": "Élément de liste cliquable de l'explorateur : plat au repos, légère élévation au survol.",
+      "html": "<article class=\"ds-card\"><h3 class=\"ds-card__title\">Une aide \u00e0 la sortie de l\u2019hospitalisation</h3><p class=\"ds-card__meta\">Tatiana VIOLLE \u00b7 MBA Mutuelle</p></article>",
+      "css": ".ds-card { background: #fff; border: 1px solid transparent; box-shadow: 0 0 0 1px #e5e7eb; border-radius: 16px; padding: 16px; cursor: pointer; transition: transform 0.15s cubic-bezier(0.4,0,0.2,1), box-shadow 0.15s cubic-bezier(0.4,0,0.2,1); } .ds-card:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(36,59,143,0.5), 0 1px 2px rgba(0,0,0,0.05); } .ds-card__title { font-size: 1rem; font-weight: 600; color: #111827; margin: 0; } .ds-card__meta { font-size: 0.75rem; color: #4b5563; margin: 4px 0 0; }"
+    },
+    {
+      "name": "Badge d'état",
+      "kind": "custom",
+      "refersTo": "badge-etat",
+      "description": "Badge sémantique d'état éditorial (jamais orange). Exemple : Publié.",
+      "html": "<span class=\"ds-badge ds-badge--publie\">Publi\u00e9</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; font-size: 0.6875rem; font-weight: 600; padding: 2px 8px; border-radius: 8px; } .ds-badge--publie { background: #dcfce7; color: #166534; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "L'atelier éditorial",
+    "overview": "Un atelier de rédaction calme et lisible, pas un tableau de bord qui se montre. L'interface est un plan de travail pour déposer, relire, corriger et exporter des contenus de revues ; tout doit se lire d'un coup d'œil. Personnalité moderne, chaleureuse, accessible : sérieuse pour un contexte éditorial et mutualiste, jamais corporate-froide. Le fond de travail est un gris-bleu très clair et froid (#F5F7FA) qui fait ressortir des surfaces blanches nettes ; la chaleur passe par une teinte éditoriale réservée (#F7F3E2), la typographie et la rédaction. La couleur est rare et porteuse de sens : orange pour les actions, bleu RER pour la sélection.",
+    "keyCharacteristics": [
+      "Fond froid clair + surfaces blanches, profondeur par bordure fine plutôt que par ombre.",
+      "Couleur strictement fonctionnelle : orange = action, bleu RER = actif/sélection.",
+      "Une seule famille typographique (Inter), hiérarchie par graisse et taille.",
+      "Lisibilité et état visibles d'abord ; densité au service du travail."
+    ],
+    "rules": [
+      { "name": "The Orange-for-Action Rule", "body": "L'orange (#F1663C) est interdit partout sauf sur une action. Pas de label, badge ou accent décoratif orange. Sa rareté le rend lisible comme « cliquable ».", "section": "colors" },
+      { "name": "The Blue-Means-Active Rule", "body": "Le bleu RER (#243B8F) signifie « actif / sélectionné / ici ». Si rien n'est sélectionné, il n'apparaît pas en aplat.", "section": "colors" },
+      { "name": "The Label-Whisper Rule", "body": "MAJUSCULES + interlettrage réservés aux labels courts (≤ 4 mots) en #4B5563. Jamais de phrase ni de corps de texte en capitales.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces plates au repos : un trait, pas une ombre marquée. Toute élévation visible répond à une interaction (hover, focus, sélection).", "section": "elevation" }
+    ],
+    "dos": [
+      "Do réserver l'orange #F1663C aux actions, et le bleu RER #243B8F à la sélection / l'état actif.",
+      "Do réutiliser les composants documentés (.chip-filter, .btn-action, .btn-cta, badges sémantiques) au lieu d'en réinventer.",
+      "Do garder les surfaces plates au repos : bordure 1px #E5E7EB + shadow-sm, élévation seulement au survol/focus.",
+      "Do rendre l'état visible d'un coup d'œil (statut, auteur, mutuelle, date).",
+      "Do maintenir le contraste du corps de texte ≥ 4,5:1 (préférer #4B5563 pour les métadonnées).",
+      "Do fournir une alternative prefers-reduced-motion pour toute animation."
+    ],
+    "donts": [
+      "Don't livrer un SaaS « template » générique : grilles de cartes identiques, dégradés décoratifs, vocabulaire marketing.",
+      "Don't retomber dans le back-office austère/daté : tableaux gris denses et illisibles.",
+      "Don't surcharger : trop de couleurs, d'effets ou de bruit visuel.",
+      "Don't utiliser de texte en dégradé ni de bordure-accent latérale (border-left/right > 1px coloré).",
+      "Don't mettre du texte en MAJUSCULES au-delà d'un label court (≤ 4 mots).",
+      "Don't abuser des animations « grand public » ni des émojis décoratifs."
+    ]
+  }
+}

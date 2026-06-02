@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ArticleReadSidePanel } from "@/app/articles/ArticleReadSidePanel";
+import { ArticlesEmptyState } from "@/app/articles/ArticlesEmptyState";
+import { ArticleMetaLine } from "@/app/articles/ArticleMetaLine";
+import { useArticleShortcuts } from "@/app/articles/useArticleShortcuts";
 
 type ArticleSummary = {
   id: string;
@@ -53,6 +56,7 @@ export function ArticlesCardsView({
   const [articles, setArticles] = useState<ArticleSummary[]>(initialArticles);
   const [hasMore, setHasMore] = useState(initialArticles.length < total);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -66,6 +70,24 @@ export function ArticlesCardsView({
     setPanelOpen(false);
     setSelectedArticleId(null);
   };
+
+  const handleExportWord = (id: string) => {
+    window.open(`/api/articles/${id}/export?format=word`, "_blank");
+  };
+
+  useArticleShortcuts({
+    articles,
+    selectedId: selectedArticleId,
+    onSelect: (id) => {
+      setSelectedArticleId(id);
+      setPanelOpen(false);
+    },
+    onOpenFull: (id) => {
+      setSelectedArticleId(id);
+      openArticlePanel(id);
+    },
+    onExportWord: handleExportWord,
+  });
 
   // Quand les filtres ou la recherche changent (et que le serveur renvoie un nouveau jeu initial),
   // on réinitialise la liste et la pagination client.
@@ -95,11 +117,12 @@ export function ArticlesCardsView({
   const loadMore = async () => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
+    setLoadError(false);
     const nextPage = currentPageRef.current + 1;
     try {
       const res = await fetch(buildUrl(nextPage));
       if (!res.ok) {
-        setHasMore(false);
+        setLoadError(true);
         return;
       }
       const data = await res.json();
@@ -121,7 +144,7 @@ export function ArticlesCardsView({
         setHasMore(false);
       }
     } catch {
-      setHasMore(false);
+      setLoadError(true);
     } finally {
       setLoadingMore(false);
     }
@@ -149,29 +172,36 @@ export function ArticlesCardsView({
   }, [hasMore, loadingMore]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!articles.length) {
-    return (
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <p className="col-span-full rounded-lg bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
-          Aucun article ne correspond à ces critères. Essayez d&apos;élargir
-          votre recherche ou de modifier les filtres.
-        </p>
-      </div>
-    );
+    return <ArticlesEmptyState className="col-span-full" />;
   }
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {articles.map((article) => (
+      <div
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+        aria-keyshortcuts="ArrowUp ArrowDown Enter"
+      >
+        {articles.map((article) => {
+          const isSelected = article.id === selectedArticleId;
+          const dateIso =
+            article.datePublication ??
+            article.dateDepot ??
+            article.createdAt;
+          return (
           <article
             key={article.id}
             role="button"
             tabIndex={0}
+            aria-pressed={isSelected}
             onClick={() => openArticlePanel(article.id)}
-            onKeyDown={(e) =>
-              e.key === "Enter" && openArticlePanel(article.id)
-            }
-            className="flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-rer-border transition hover:ring-rer-blue/50 sm:flex-row"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") openArticlePanel(article.id);
+            }}
+            className={`flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2 sm:flex-row ${
+              isSelected
+                ? "ring-rer-blue"
+                : "ring-rer-border hover:ring-rer-blue/50"
+            }`}
           >
             <div className="relative h-40 w-full bg-rer-app sm:h-auto sm:w-40 sm:flex-none">
               {article.lienPhoto ? (
@@ -197,28 +227,37 @@ export function ArticlesCardsView({
                   {article.chapo}
                 </p>
               )}
-              <p className="mt-auto text-xs text-rer-muted">
-                {article.auteur &&
-                  `${article.auteur.prenom} ${article.auteur.nom}`}
-                {article.mutuelle && ` · ${article.mutuelle.nom}`}
-                {(() => {
-                  const d =
-                    article.datePublication ??
-                    article.dateDepot ??
-                    article.createdAt;
-                  return d
-                    ? ` · Publié le ${new Date(
-                        d
-                      ).toLocaleDateString("fr-FR")}`
-                    : "";
-                })()}
-              </p>
+              <ArticleMetaLine
+                className="mt-auto"
+                auteurLabel={
+                  article.auteur
+                    ? `${article.auteur.prenom} ${article.auteur.nom}`
+                    : null
+                }
+                mutuelleLabel={article.mutuelle?.nom ?? null}
+                dateIso={dateIso}
+              />
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
 
       <div ref={sentinelRef} className="h-8">
+        {loadError && (
+          <div className="mt-3 text-center">
+            <p className="text-xs text-red-600">
+              Impossible de charger la suite de la liste.
+            </p>
+            <button
+              type="button"
+              onClick={() => void loadMore()}
+              className="btn-action mt-2 text-xs"
+            >
+              Réessayer
+            </button>
+          </div>
+        )}
         {loadingMore && (
           <p className="mt-3 text-center text-xs text-slate-400">
             Chargement…

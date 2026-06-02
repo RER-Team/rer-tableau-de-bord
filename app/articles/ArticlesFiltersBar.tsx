@@ -593,7 +593,7 @@ export function ArticlesFiltersBar({
               onChange={(event) => setInputValue(event.target.value)}
               onFocus={() => inputValue.trim().length >= 2 && setShowSuggestions(true)}
               placeholder="Titre, chapô, contenu, ou nom de mutuelle / rubrique / format / auteur..."
-              className="mt-1 w-full rounded-lg border border-rer-border bg-white px-3 py-1.5 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
+              className="mt-1 w-full rounded-lg border border-rer-border bg-white px-3 py-1.5 text-sm text-rer-text shadow-sm placeholder:text-[#6B7280] focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
               autoComplete="off"
               aria-controls="search-suggestions"
               aria-autocomplete="list"

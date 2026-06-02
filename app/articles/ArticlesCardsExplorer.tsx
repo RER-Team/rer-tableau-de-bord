@@ -12,6 +12,8 @@ import { transformEmbeds } from "@/lib/article-html";
 import { useInfiniteArticleList } from "@/hooks/useInfiniteArticleList";
 import { useArticleShortcuts } from "./useArticleShortcuts";
 import { trackArticleConsultation } from "@/lib/track-article-consultation";
+import { ArticlesEmptyState } from "./ArticlesEmptyState";
+import { ArticleMetaLine } from "./ArticleMetaLine";
 
 type ArticleSummary = {
   id: string;
@@ -627,12 +629,7 @@ export function ArticlesExplorerView({
   }, []);
 
   if (!visibleArticles.length) {
-    return (
-      <p className="rounded-lg bg-white px-3 py-6 text-center text-sm text-rer-muted shadow-sm ring-1 ring-rer-border">
-        Aucun article ne correspond à ces critères. Essayez d&apos;élargir
-        votre recherche ou de modifier les filtres.
-      </p>
-    );
+    return <ArticlesEmptyState className="col-span-full" />;
   }
 
   return (
@@ -647,7 +644,7 @@ export function ArticlesExplorerView({
                 type="button"
                 onClick={() => handleSelect(article.id)}
                 aria-pressed={isSelected}
-                className={`group flex w-full cursor-pointer rounded-2xl text-left transition-colors transition-shadow transition-transform duration-150 ease-out ${
+                className={`group flex w-full cursor-pointer rounded-2xl text-left transition-colors transition-shadow transition-transform duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rer-blue focus-visible:ring-offset-2 ${
                   isSelected
                     ? "border border-rer-blue bg-rer-blue/5 shadow-md"
                     : "border border-transparent bg-white hover:border-rer-border hover:bg-rer-app hover:shadow-sm hover:-translate-y-[1px]"
@@ -711,24 +708,20 @@ export function ArticlesExplorerView({
                         {article.chapo}
                       </p>
                     )}
-                    <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-rer-muted">
-                      <p className="truncate">
-                        {article.auteur &&
-                          `${article.auteur.prenom} ${article.auteur.nom}`}
-                        {article.mutuelle && ` · ${article.mutuelle.nom}`}
-                      </p>
-                      <p className="whitespace-nowrap">
-                        {(() => {
-                          const d =
-                            article.datePublication ??
-                            article.dateDepot ??
-                            article.createdAt;
-                          return d
-                            ? new Date(d).toLocaleDateString("fr-FR")
-                            : null;
-                        })()}
-                      </p>
-                    </div>
+                    <ArticleMetaLine
+                      className="mt-1"
+                      auteurLabel={
+                        article.auteur
+                          ? `${article.auteur.prenom} ${article.auteur.nom}`
+                          : null
+                      }
+                      mutuelleLabel={article.mutuelle?.nom ?? null}
+                      dateIso={
+                        article.datePublication ??
+                        article.dateDepot ??
+                        article.createdAt
+                      }
+                    />
                   </div>
                 </article>
               </button>

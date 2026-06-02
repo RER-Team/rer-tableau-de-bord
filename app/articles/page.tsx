@@ -194,7 +194,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
 
   return (
     <main>
-      <div className="mx-auto max-w-6xl px-4 py-8 space-y-4">
+      <div className="mx-auto max-w-6xl px-4 pt-8 pb-28 lg:pb-8 space-y-4">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-extrabold text-rer-text">
@@ -226,7 +226,10 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
           }
         />
 
-        <section aria-label="Liste des contenus" className="mt-4 space-y-3">
+        <section
+          aria-label="Liste des contenus"
+          className="mt-4 space-y-3 max-lg:pb-20"
+        >
           {view === "table" ? (
             <ArticlesTableView
               initialArticles={articleSummaries}
@@ -284,15 +287,15 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
           )}
         </section>
 
-        {/* Bouton flottant mobile pour déposer un contenu */}
+        {/* CTA mobile : icône seule pour éviter le chevauchement avec la liste */}
         <Link
           href="/articles/depot"
-          className="btn-cta fixed bottom-6 right-6 z-30 lg:hidden"
+          aria-label="Nouveau contenu"
+          className="btn-cta fixed bottom-6 right-6 z-30 flex h-14 w-14 items-center justify-center rounded-full p-0 shadow-lg lg:hidden"
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10 text-base leading-none">
+          <span className="text-2xl leading-none" aria-hidden="true">
             +
           </span>
-          <span>Nouveau contenu</span>
         </Link>
       </div>
     </main>

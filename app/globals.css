@@ -36,6 +36,15 @@ a:not([class]) {
   @apply text-rer-blue hover:text-rer-blue/80;
 }
 
+/* Preflight met les placeholders en gray-400 (#9CA3AF ≈ 2,6:1 sur blanc),
+   sous le seuil WCAG 4,5:1. On remonte à gray-500 (#6B7280 ≈ 4,8:1).
+   Sélecteur aligné sur celui du Preflight (input/textarea) pour la spécificité. */
+input::placeholder,
+textarea::placeholder {
+  @apply text-gray-500;
+  opacity: 1;
+}
+
 table {
   border-collapse: collapse;
 }
@@ -91,6 +100,11 @@ td {
   @apply mb-1 text-[11px] font-semibold uppercase tracking-wide text-rer-muted;
 }
 
+/* Composants interactifs dans @layer components : sans cela, leur `display`
+   (issu de `@apply inline-flex`) écrase les utilitaires Tailwind `hidden` /
+   `lg:hidden` / `lg:inline-flex` (ordre source égal), neutralisant tout gating
+   responsive posé sur un `.btn-cta`, `.btn-action`, `.chip-filter`, etc. */
+@layer components {
 /* Chips de filtre — sélection Mutuelles / Rubriques / Formats / Dates */
 .chip-filter {
   @apply inline-flex items-center rounded-lg border border-rer-border bg-white px-2 py-0.5 text-xs font-medium text-rer-text transition hover:bg-rer-app;
@@ -127,5 +141,6 @@ td {
   background-repeat: no-repeat;
   background-position: right 0.5rem center;
   background-size: 1rem;
+}
 }
 

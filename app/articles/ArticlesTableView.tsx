@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ArticleReadSidePanel } from "@/app/articles/ArticleReadSidePanel";
+import { ArticlesEmptyState } from "@/app/articles/ArticlesEmptyState";
+import { useArticleShortcuts } from "@/app/articles/useArticleShortcuts";
 import { getArticleStatusLabel } from "@/lib/article-status";
 import {
   getFormatBadgeClasses,
@@ -61,6 +63,7 @@ export function ArticlesTableView({
   const [articles, setArticles] = useState<ArticleSummary[]>(initialArticles);
   const [hasMore, setHasMore] = useState(initialArticles.length < total);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -74,6 +77,24 @@ export function ArticlesTableView({
     setPanelOpen(false);
     setSelectedArticleId(null);
   };
+
+  const handleExportWord = (id: string) => {
+    window.open(`/api/articles/${id}/export?format=word`, "_blank");
+  };
+
+  useArticleShortcuts({
+    articles,
+    selectedId: selectedArticleId,
+    onSelect: (id) => {
+      setSelectedArticleId(id);
+      setPanelOpen(false);
+    },
+    onOpenFull: (id) => {
+      setSelectedArticleId(id);
+      openArticlePanel(id);
+    },
+    onExportWord: handleExportWord,
+  });
 
   // Réinitialiser la liste et la pagination quand les filtres / la recherche changent
   useEffect(() => {
@@ -102,11 +123,12 @@ export function ArticlesTableView({
   const loadMore = async () => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
+    setLoadError(false);
     const nextPage = currentPageRef.current + 1;
     try {
       const res = await fetch(buildUrl(nextPage));
       if (!res.ok) {
-        setHasMore(false);
+        setLoadError(true);
         return;
       }
       const data = await res.json();
@@ -128,7 +150,7 @@ export function ArticlesTableView({
         setHasMore(false);
       }
     } catch {
-      setHasMore(false);
+      setLoadError(true);
     } finally {
       setLoadingMore(false);
     }
@@ -156,25 +178,12 @@ export function ArticlesTableView({
   }, [hasMore, loadingMore]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!articles.length) {
-    return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-rer-border bg-white shadow-sm ring-1 ring-rer-border">
-          <tbody>
-            <tr>
-              <td className="px-3 py-6 text-center text-sm text-rer-muted">
-                Aucun article ne correspond à ces critères. Essayez
-                d&apos;élargir votre recherche ou de modifier les filtres.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    );
+    return <ArticlesEmptyState />;
   }
 
   return (
     <>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" aria-keyshortcuts="ArrowUp ArrowDown Enter">
         <table className="min-w-full divide-y divide-rer-border bg-white shadow-sm ring-1 ring-rer-border">
           <thead className="bg-rer-blue text-white">
             <tr>
@@ -208,8 +217,19 @@ export function ArticlesTableView({
             </tr>
           </thead>
           <tbody className="divide-y divide-rer-border">
-            {articles.map((article) => (
-              <tr key={article.id} className="hover:bg-rer-app">
+            {articles.map((article) => {
+              const isSelected = article.id === selectedArticleId;
+              const dateIso =
+                article.datePublication ??
+                article.dateDepot ??
+                article.createdAt;
+              return (
+              <tr
+                key={article.id}
+                className={`hover:bg-rer-app ${
+                  isSelected ? "bg-rer-blue/5 ring-1 ring-inset ring-rer-blue/30" : ""
+                }`}
+              >
                 <td className="px-3 py-2 align-top">
                   {article.lienPhoto ? (
                     <div className="relative h-14 w-14 overflow-hidden rounded-lg border border-rer-border bg-rer-app">
@@ -271,18 +291,12 @@ export function ArticlesTableView({
                     "—"
                   )}
                 </td>
+                <td className="px-3 py-2 text-sm tabular-nums text-rer-subtle">
+                  {dateIso
+                    ? new Date(dateIso).toLocaleDateString("fr-FR")
+                    : "—"}
+                </td>
                 <td className="px-3 py-2 text-sm text-rer-muted">
-                {(() => {
-                  const d =
-                    article.datePublication ??
-                    article.dateDepot ??
-                    article.createdAt;
-                  return d
-                    ? new Date(d).toLocaleDateString("fr-FR")
-                    : "—";
-                })()}
-              </td>
-              <td className="px-3 py-2 text-sm text-rer-muted">
                   {article.etat
                     ? getArticleStatusLabel(
                         article.etat.slug,
@@ -300,12 +314,27 @@ export function ArticlesTableView({
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       <div ref={sentinelRef} className="h-8">
+        {loadError && (
+          <div className="mt-3 text-center">
+            <p className="text-xs text-red-600">
+              Impossible de charger la suite de la liste.
+            </p>
+            <button
+              type="button"
+              onClick={() => void loadMore()}
+              className="btn-action mt-2 text-xs"
+            >
+              Réessayer
+            </button>
+          </div>
+        )}
         {loadingMore && (
           <p className="mt-3 text-center text-xs text-slate-400">
             Chargement…
