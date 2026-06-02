@@ -7,21 +7,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 type SuggestionMutuelle = { id: string; nom: string };
 type SuggestionRubrique = { id: string; libelle: string };
 type SuggestionFormat = { id: string; libelle: string };
+type SuggestionAuteur = { id: string; prenom: string; nom: string };
 type SuggestionsResponse = {
   mutuelles: SuggestionMutuelle[];
   rubriques: SuggestionRubrique[];
   formats: SuggestionFormat[];
+  auteurs: SuggestionAuteur[];
 };
 
 type FacetMutuelle = { id: string; nom: string; count: number };
 type FacetRubrique = { id: string; libelle: string; count: number };
 type FacetFormat = { id: string; libelle: string; count: number };
+type FacetAuteur = { id: string; prenom: string; nom: string; count: number };
 
 type FacetsResponse = {
   total: number;
   mutuelles: FacetMutuelle[];
   rubriques: FacetRubrique[];
   formats: FacetFormat[];
+  auteurs: FacetAuteur[];
 };
 
 type ArticlesFiltersBarProps = {
@@ -62,6 +66,26 @@ function computeSinceForMonths(months: number): string {
   return `${year}-${month}-${day}`;
 }
 
+type DatePreset = "1m" | "3m" | "6m" | "custom" | null;
+
+/**
+ * Détermine le préréglage de date actif à partir des paramètres d'URL.
+ * Une période personnalisée prime ; sinon on tente de reconnaître un préréglage
+ * connu (1, 3 ou 6 mois) à partir de la valeur `since`.
+ */
+function detectDatePreset(since: string, from: string, to: string): DatePreset {
+  if (from || to) return "custom";
+  if (!since) return null;
+  if (since === computeSinceForMonths(1)) return "1m";
+  if (since === computeSinceForMonths(3)) return "3m";
+  if (since === computeSinceForMonths(6)) return "6m";
+  return null;
+}
+
+function sameIds(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
 export function ArticlesFiltersBar({
   total,
   lastCreatedAt,
@@ -77,10 +101,18 @@ export function ArticlesFiltersBar({
     searchParams.get("rubriqueId")?.split(",").filter(Boolean) ?? [];
   const initialFormatIds =
     searchParams.get("formatId")?.split(",").filter(Boolean) ?? [];
+  const initialAuteurIds =
+    searchParams.get("auteurId")?.split(",").filter(Boolean) ?? [];
 
   const initialSince = searchParams.get("since") ?? "";
   const initialFrom = searchParams.get("from") ?? "";
   const initialTo = searchParams.get("to") ?? "";
+
+  // Paramètres de date dérivés de l'URL : utilisés comme dépendances stables
+  // (évite de re-déclencher des effets sur des params non pertinents comme `article`).
+  const sinceParam = searchParams.get("since") ?? "";
+  const fromParam = searchParams.get("from") ?? "";
+  const toParam = searchParams.get("to") ?? "";
 
   const [inputValue, setInputValue] = useState(initialQ);
   const [debouncedQ, setDebouncedQ] = useState(initialQ);
@@ -90,12 +122,18 @@ export function ArticlesFiltersBar({
     useState<string[]>(initialRubriqueIds);
   const [activeFormatIds, setActiveFormatIds] =
     useState<string[]>(initialFormatIds);
+  const [activeAuteurIds, setActiveAuteurIds] =
+    useState<string[]>(initialAuteurIds);
 
-  const [datePreset, setDatePreset] = useState<"1m" | "3m" | "6m" | "custom" | null>(
-    initialFrom || initialTo ? "custom" : initialSince ? null : null
+  const [datePreset, setDatePreset] = useState<DatePreset>(() =>
+    detectDatePreset(initialSince, initialFrom, initialTo)
   );
   const [customFrom, setCustomFrom] = useState(initialFrom);
   const [customTo, setCustomTo] = useState(initialTo);
+
+  // Mémorise la dernière valeur `q` poussée dans l'URL afin de ne pas écraser
+  // une saisie en cours lors de la resynchronisation depuis searchParams.
+  const appliedQRef = useRef(initialQ);
 
   const [facets, setFacets] = useState<FacetsResponse | null>(null);
   const [loadingFacets, setLoadingFacets] = useState(false);
@@ -114,7 +152,33 @@ export function ArticlesFiltersBar({
       : "explorer";
 
   const isFacetLabel = (s: string) =>
-    /^(Mutuelle|Rubrique|Format)\s*:\s*\S+$/.test((s ?? "").trim());
+    /^(Mutuelle|Rubrique|Format|Auteur)\s*:\s*\S+$/.test((s ?? "").trim());
+
+  // Resynchronise l'UI avec l'URL (navigation arrière/avant). On préserve les
+  // références d'array inchangées et on n'écrase pas une saisie texte en cours.
+  useEffect(() => {
+    const q = searchParams.get("q") ?? "";
+    if (q !== appliedQRef.current) {
+      appliedQRef.current = q;
+      setInputValue(q);
+      setDebouncedQ(q);
+    }
+    const nextMutuelles =
+      searchParams.get("mutuelleId")?.split(",").filter(Boolean) ?? [];
+    const nextRubriques =
+      searchParams.get("rubriqueId")?.split(",").filter(Boolean) ?? [];
+    const nextFormats =
+      searchParams.get("formatId")?.split(",").filter(Boolean) ?? [];
+    const nextAuteurs =
+      searchParams.get("auteurId")?.split(",").filter(Boolean) ?? [];
+    setActiveMutuelleIds((prev) => (sameIds(prev, nextMutuelles) ? prev : nextMutuelles));
+    setActiveRubriqueIds((prev) => (sameIds(prev, nextRubriques) ? prev : nextRubriques));
+    setActiveFormatIds((prev) => (sameIds(prev, nextFormats) ? prev : nextFormats));
+    setActiveAuteurIds((prev) => (sameIds(prev, nextAuteurs) ? prev : nextAuteurs));
+    setCustomFrom(fromParam);
+    setCustomTo(toParam);
+    setDatePreset(detectDatePreset(sinceParam, fromParam, toParam));
+  }, [searchParams, sinceParam, fromParam, toParam]);
 
   // Charger les suggestions (facettes filtrées localement) quand on tape
   useEffect(() => {
@@ -146,6 +210,9 @@ export function ArticlesFiltersBar({
       ),
       formats: facets.formats.filter((f) =>
         f.libelle.toLowerCase().includes(lower)
+      ),
+      auteurs: facets.auteurs.filter((a) =>
+        `${a.prenom} ${a.nom}`.trim().toLowerCase().includes(lower)
       ),
     };
 
@@ -185,6 +252,9 @@ export function ArticlesFiltersBar({
     const currentQ = params.get("q") ?? "";
     const qToApply = debouncedQ && !isFacetLabel(debouncedQ) ? debouncedQ : "";
     if (qToApply === currentQ) return;
+    // Marque ce push comme le nôtre pour que l'effet de resynchronisation
+    // ne réécrive pas la saisie texte.
+    appliedQRef.current = qToApply;
     const next = buildSearchParams(params, {
       q: qToApply || null,
       display: null,
@@ -209,9 +279,9 @@ export function ArticlesFiltersBar({
         if (activeFormatIds.length) {
           params.set("formatId", activeFormatIds.join(","));
         }
-        const sinceParam = searchParams.get("since");
-        const fromParam = searchParams.get("from");
-        const toParam = searchParams.get("to");
+        if (activeAuteurIds.length) {
+          params.set("auteurId", activeAuteurIds.join(","));
+        }
         if (sinceParam) params.set("since", sinceParam);
         if (fromParam) params.set("from", fromParam);
         if (toParam) params.set("to", toParam);
@@ -224,7 +294,7 @@ export function ArticlesFiltersBar({
         }
         const data = (await res.json()) as FacetsResponse;
         setFacets(data);
-      } catch (e) {
+      } catch {
         if (controller.signal.aborted) return;
         setFacets(null);
       } finally {
@@ -235,7 +305,16 @@ export function ArticlesFiltersBar({
     };
     fetchFacets();
     return () => controller.abort();
-  }, [debouncedQ, activeMutuelleIds, activeRubriqueIds, activeFormatIds, searchParams]);
+  }, [
+    debouncedQ,
+    activeMutuelleIds,
+    activeRubriqueIds,
+    activeFormatIds,
+    activeAuteurIds,
+    sinceParam,
+    fromParam,
+    toParam,
+  ]);
 
   const derivedTotal = useMemo(() => {
     if (facets && debouncedQ.trim()) {
@@ -266,19 +345,32 @@ export function ArticlesFiltersBar({
       facets?.formats.filter((f) => activeFormatIds.includes(f.id)) ?? [],
     [facets, activeFormatIds]
   );
+  const activeAuteurFacets = useMemo(
+    () =>
+      facets?.auteurs.filter((a) => activeAuteurIds.includes(a.id)) ?? [],
+    [facets, activeAuteurIds]
+  );
 
-  const handleFacetToggle = (type: "mutuelle" | "rubrique" | "format", id: string) => {
+  const handleFacetToggle = (type: "mutuelle" | "rubrique" | "format" | "auteur", id: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("display");
     const key =
-      type === "mutuelle" ? "mutuelleId" : type === "rubrique" ? "rubriqueId" : "formatId";
+      type === "mutuelle"
+        ? "mutuelleId"
+        : type === "rubrique"
+        ? "rubriqueId"
+        : type === "format"
+        ? "formatId"
+        : "auteurId";
 
     const current =
       type === "mutuelle"
         ? activeMutuelleIds
         : type === "rubrique"
         ? activeRubriqueIds
-        : activeFormatIds;
+        : type === "format"
+        ? activeFormatIds
+        : activeAuteurIds;
 
     const exists = current.includes(id);
     const nextArray = exists ? current.filter((x) => x !== id) : [...current, id];
@@ -286,6 +378,7 @@ export function ArticlesFiltersBar({
     if (type === "mutuelle") setActiveMutuelleIds(nextArray);
     if (type === "rubrique") setActiveRubriqueIds(nextArray);
     if (type === "format") setActiveFormatIds(nextArray);
+    if (type === "auteur") setActiveAuteurIds(nextArray);
 
     const nextValue = nextArray.length ? nextArray.join(",") : null;
     const next = buildSearchParams(params, { [key]: nextValue });
@@ -293,7 +386,7 @@ export function ArticlesFiltersBar({
   };
 
   const hasActiveFacets =
-    activeMutuelleIds.length || activeRubriqueIds.length || activeFormatIds.length;
+    activeMutuelleIds.length || activeRubriqueIds.length || activeFormatIds.length || activeAuteurIds.length;
   const hasActiveSearch = Boolean(debouncedQ.trim());
   const hasActiveDate =
     Boolean(searchParams.get("since")) ||
@@ -343,6 +436,7 @@ export function ArticlesFiltersBar({
     setActiveMutuelleIds([]);
     setActiveRubriqueIds([]);
     setActiveFormatIds([]);
+    setActiveAuteurIds([]);
     setDatePreset(null);
     setCustomFrom("");
     setCustomTo("");
@@ -350,22 +444,31 @@ export function ArticlesFiltersBar({
   };
 
   const applyFacetSuggestion = (
-    type: "mutuelle" | "rubrique" | "format",
+    type: "mutuelle" | "rubrique" | "format" | "auteur",
     id: string,
     label: string
   ) => {
     const key =
-      type === "mutuelle" ? "mutuelleId" : type === "rubrique" ? "rubriqueId" : "formatId";
+      type === "mutuelle"
+        ? "mutuelleId"
+        : type === "rubrique"
+        ? "rubriqueId"
+        : type === "format"
+        ? "formatId"
+        : "auteurId";
     const current =
       type === "mutuelle"
         ? activeMutuelleIds
         : type === "rubrique"
         ? activeRubriqueIds
-        : activeFormatIds;
+        : type === "format"
+        ? activeFormatIds
+        : activeAuteurIds;
     const nextArray = current.includes(id) ? current : [...current, id];
     if (type === "mutuelle") setActiveMutuelleIds(nextArray);
     if (type === "rubrique") setActiveRubriqueIds(nextArray);
     if (type === "format") setActiveFormatIds(nextArray);
+    if (type === "auteur") setActiveAuteurIds(nextArray);
 
     const params = new URLSearchParams(searchParams.toString());
     params.delete("q");
@@ -414,7 +517,7 @@ export function ArticlesFiltersBar({
               value={inputValue}
               onChange={(event) => setInputValue(event.target.value)}
               onFocus={() => inputValue.trim().length >= 2 && setShowSuggestions(true)}
-              placeholder="Titre, chapô, contenu, ou nom de mutuelle / rubrique / format..."
+              placeholder="Titre, chapô, contenu, ou nom de mutuelle / rubrique / format / auteur..."
               className="mt-1 w-full rounded-lg border border-rer-border bg-white px-3 py-1.5 text-sm text-rer-text shadow-sm focus:border-rer-blue focus:outline-none focus:ring-1 focus:ring-rer-blue"
               autoComplete="off"
               aria-controls="search-suggestions"
@@ -477,9 +580,25 @@ export function ArticlesFiltersBar({
                       <span>{f.libelle}</span>
                     </button>
                   ))}
+                  {suggestions.auteurs.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      role="option"
+                      aria-selected={false}
+                      onClick={() => applyFacetSuggestion("auteur", a.id, `Auteur : ${a.prenom} ${a.nom}`)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rer-text hover:bg-rer-app"
+                    >
+                      <span className="text-[10px] font-semibold uppercase text-rer-muted">
+                        Auteur
+                      </span>
+                      <span>{a.prenom} {a.nom}</span>
+                    </button>
+                  ))}
                   {(suggestions.mutuelles.length > 0 ||
                     suggestions.rubriques.length > 0 ||
-                    suggestions.formats.length > 0) && (
+                    suggestions.formats.length > 0 ||
+                    suggestions.auteurs.length > 0) && (
                     <div className="border-t border-rer-border px-2 pt-1">
                       <button
                         type="button"
@@ -488,13 +607,14 @@ export function ArticlesFiltersBar({
                         onClick={applyTextSearch}
                         className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm font-medium text-rer-text hover:bg-rer-app"
                       >
-                        Rechercher « {inputValue.trim()} » dans le texte (titre, chapô, contenu)
+                        Rechercher « {inputValue.trim()} » dans le texte (titre, chapô, contenu, auteur)
                       </button>
                     </div>
                   )}
                   {suggestions.mutuelles.length === 0 &&
                     suggestions.rubriques.length === 0 &&
-                    suggestions.formats.length === 0 && (
+                    suggestions.formats.length === 0 &&
+                    suggestions.auteurs.length === 0 && (
                       <button
                         type="button"
                         role="option"
@@ -604,7 +724,8 @@ export function ArticlesFiltersBar({
 
       {(activeMutuelleFacets.length > 0 ||
         activeRubriqueFacets.length > 0 ||
-        activeFormatFacets.length > 0) && (
+        activeFormatFacets.length > 0 ||
+        activeAuteurFacets.length > 0) && (
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
           {activeMutuelleFacets.map((m) => (
             <button
@@ -637,6 +758,17 @@ export function ArticlesFiltersBar({
               className="chip-filter chip-filter--active inline-flex items-center gap-1"
             >
               <span>{f.libelle}</span>
+              <span className="text-[11px] leading-none">×</span>
+            </button>
+          ))}
+          {activeAuteurFacets.map((a) => (
+            <button
+              key={`active-auteur-${a.id}`}
+              type="button"
+              onClick={() => handleFacetToggle("auteur", a.id)}
+              className="chip-filter chip-filter--active inline-flex items-center gap-1"
+            >
+              <span>{a.prenom} {a.nom}</span>
               <span className="text-[11px] leading-none">×</span>
             </button>
           ))}
@@ -707,6 +839,26 @@ export function ArticlesFiltersBar({
               );
             })}
           </div>
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="font-semibold text-slate-700">Auteurs</span>
+            {facets.auteurs.length === 0 && (
+              <span className="text-slate-400">Aucune distinction particulière</span>
+            )}
+            {facets.auteurs.map((a) => {
+              const active = activeAuteurIds.includes(a.id);
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => handleFacetToggle("auteur", a.id)}
+                  className={`chip-filter ${active ? "chip-filter--active" : ""}`}
+                >
+                  <span className="truncate">{a.prenom} {a.nom}</span>
+                  <span className="ml-1 text-[10px] opacity-80">· {a.count}</span>
+                </button>
+              );
+            })}
+          </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-1">
             <span className="font-semibold text-rer-text">Dates</span>
@@ -735,6 +887,7 @@ export function ArticlesFiltersBar({
               <span>Période personnalisée :</span>
               <input
                 type="date"
+                aria-label="Date de début"
                 value={customFrom}
                 onChange={(e) => handleCustomDateChange("from", e.target.value)}
                 className="h-6 rounded border border-rer-border bg-white px-1 text-[11px]"
@@ -742,6 +895,7 @@ export function ArticlesFiltersBar({
               <span>au</span>
               <input
                 type="date"
+                aria-label="Date de fin"
                 value={customTo}
                 onChange={(e) => handleCustomDateChange("to", e.target.value)}
                 className="h-6 rounded border border-rer-border bg-white px-1 text-[11px]"

@@ -90,7 +90,8 @@ function LoginPageInner() {
 
   return (
     <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-sm ring-1 ring-rer-border">
+      <div className="w-full max-w-md space-y-3">
+        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-rer-border">
         <div className="mb-4 flex justify-center">
           <div className="relative h-16 w-36">
             <Image
@@ -112,18 +113,6 @@ function LoginPageInner() {
           Saisissez vos identifiants pour accéder aux articles et à l’espace
           d’administration.
         </p>
-        <div className="mt-3 rounded-lg border border-rer-border bg-rer-app/40 p-3">
-          <p className="text-xs text-rer-muted">
-            Pas encore membre ? Découvrez un aperçu de la plateforme.
-          </p>
-          <Link
-            href="/decouvrir"
-            className="mt-2 inline-flex items-center justify-center rounded-full border border-rer-blue bg-white px-3 py-1.5 text-xs font-semibold text-rer-blue hover:bg-rer-app"
-          >
-            Découvrir la plateforme
-          </Link>
-        </div>
-
         {(error || presetError) && (
           <p className="mt-3 text-sm text-red-600">
             {error || "Identifiants invalides ou session expirée."}
@@ -232,6 +221,18 @@ function LoginPageInner() {
             </div>
           )}
         </form>
+      </div>
+      <div className="rounded-lg border border-rer-border/70 bg-white p-3">
+        <p className="text-[11px] text-rer-subtle">
+          Pas encore membre ? Découvrez un aperçu de la plateforme.
+        </p>
+        <Link
+          href="/decouvrir"
+          className="mt-1.5 inline-flex items-center justify-center rounded-full border border-rer-border bg-rer-app px-2.5 py-1 text-[11px] font-medium text-rer-muted hover:bg-white hover:text-rer-text"
+        >
+          Découvrir la plateforme
+        </Link>
+      </div>
       </div>
     </div>
   );
