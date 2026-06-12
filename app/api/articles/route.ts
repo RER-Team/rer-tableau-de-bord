@@ -81,6 +81,12 @@ export async function GET(request: NextRequest) {
     where.etat = etatWhere;
   }
 
+  // En scope public, ne renvoyer que les articles cochés "vitrine"
+  // (visibles sur /decouvrir).
+  if (isPublicScope) {
+    where.isExemplePublic = true;
+  }
+
   const dateFilter: any = {};
   const fromDate = fromParam ? new Date(fromParam) : null;
   const sinceDate = sinceParam ? new Date(sinceParam) : null;

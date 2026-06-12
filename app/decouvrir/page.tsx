@@ -35,7 +35,7 @@ export default async function DecouvrirPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {};
 
   const lastArticle = await prisma.article.findFirst({
-    where: { etat: getStatusWhereClause("publie") },
+    where: { etat: getStatusWhereClause("publie"), isExemplePublic: true },
     orderBy: [{ dateDepot: "desc" }, { createdAt: "desc" }],
     select: { dateDepot: true, createdAt: true },
   });
@@ -61,6 +61,7 @@ export default async function DecouvrirPage({ searchParams }: PageProps) {
 
   const where: Record<string, unknown> = {
     etat: getStatusWhereClause("publie"),
+    isExemplePublic: true,
   };
 
   const textSearchWhere = buildArticleTextSearchWhere(q);
