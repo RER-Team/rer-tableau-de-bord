@@ -37,6 +37,7 @@ describe("GET /api/articles - scope public", () => {
               in: ["publie", "valide"],
             },
           },
+          isExemplePublic: true,
         }),
       })
     );
@@ -48,6 +49,7 @@ describe("GET /api/articles - scope public", () => {
               in: ["publie", "valide"],
             },
           },
+          isExemplePublic: true,
         },
       })
     );
