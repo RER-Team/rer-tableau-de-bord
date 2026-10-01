@@ -90,9 +90,22 @@ Voir `docs/deploiement.md` pour la liste complète. Variables critiques :
   - vues Explorer/Cartes/Tableau
   - lecture article
   - exports
-- Le déploiement CI/CD sur `develop` se déclenche uniquement sur nouveau commit poussé.
+- Le déploiement Vercel se fait depuis `main` (branche connectée, voir `docs/deploiement.md`) et se déclenche uniquement sur nouveau commit poussé. `develop` n'est pas déployée.
 
-## 10) Dette doc / maintenance
+## 10) À faire à la main
+
+- Production : lancer `npx prisma migrate deploy` avec le `DATABASE_URL` de prod après chaque merge contenant une migration. Vercel ne le fait pas.
+- Appliquer la migration `20261001120000_enable_rls_all_tables` (RLS sur toutes les tables, dont `ArticleConsultation`), puis vérifier : `select relname, relrowsecurity from pg_class where relname='ArticleConsultation';`.
+- Workflow `supabase-keepalive` : renseigner les secrets GitHub `SUPABASE_ANON_KEY` et `SUPABASE_REST_URL` (Settings > Secrets and variables > Actions), sinon le ping échoue et le projet Supabase peut se mettre en pause.
+
+## 11) Pièges
+
+- RLS et changements de base : uniquement par migration Prisma versionnée, jamais par script ou SQL manuel (une liste écrite à la main oublie les tables suivantes).
+- Une migration mergée n'est pas appliquée : tant que `prisma migrate deploy` n'a pas tourné en prod, la base n'a pas changé.
+- Notifications push : une notification qui en remplace une autre (même `tag`) est muette sans `renotify: true` (`public/notifications-sw.js`).
+- E-mails de reset : SPF, DKIM et DMARC sur le domaine de `MAIL_FROM`, et `NEXTAUTH_URL` sur le domaine final, sinon les liens de reset partent en spam ou pointent au mauvais endroit.
+
+## 12) Dette doc / maintenance
 
 À mettre à jour après évolutions majeures :
 
