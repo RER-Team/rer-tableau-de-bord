@@ -97,3 +97,19 @@ describe("GET /api/articles - scope app (liste connectée)", () => {
     expect(lastWhere().etat).not.toEqual(PUBLISHED);
   });
 });
+
+describe("GET /api/articles - mine=1", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.articleFindMany.mockResolvedValue([]);
+    mocks.articleCount.mockResolvedValue(0);
+  });
+
+  it("ignore un auteurId d'URL qui viserait un autre auteur", async () => {
+    mocks.getSessionUser.mockResolvedValue({ id: "u1", role: "auteur", auteurId: "moi" });
+    await GET({
+      url: "http://localhost/api/articles?mine=1&auteurId=autre&etat=brouillon",
+    } as any);
+    expect(lastWhere().auteurId).toBe("moi");
+  });
+});

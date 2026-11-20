@@ -164,10 +164,14 @@ export async function GET(request: NextRequest) {
     .split(",")
     .map((v) => v.trim())
     .filter(Boolean);
-  if (auteurIds.length === 1) {
-    where.auteurId = auteurIds[0];
-  } else if (auteurIds.length > 1) {
-    where.auteurId = { in: auteurIds };
+  // En « Mes contenus », l'auteur est imposé par la session : le filtre auteur
+  // de l'URL ne doit jamais le remplacer (sinon accès aux brouillons d'autrui).
+  if (!(isMine)) {
+    if (auteurIds.length === 1) {
+      where.auteurId = auteurIds[0];
+    } else if (auteurIds.length > 1) {
+      where.auteurId = { in: auteurIds };
+    }
   }
   const finalWhere = mergeArticleWhereClauses(
     where,
