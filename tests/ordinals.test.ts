@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { applyOrdinalsToHtml, applyOrdinalsToText } from "@/lib/ordinals";
+import {
+  applyOrdinalsToHtml,
+  applyOrdinalsToText,
+  unwrapOrdinalSuperscripts,
+} from "@/lib/ordinals";
+import { sanitizeArticleHtml } from "@/lib/sanitizeArticleHtml";
 
 const t = applyOrdinalsToText;
 
@@ -35,6 +40,10 @@ describe("exposants des ordinaux : chiffres arabes", () => {
     "#3e3e3e",
     "12 euros",
     "2 e",
+    "un risque de 1e-5",
+    "site.fr/2e-edition",
+    "#2e",
+    "v1.2e",
   ])("ne touche pas %s", (input) => {
     expect(t(input)).toBe(input);
   });
@@ -89,5 +98,25 @@ describe("exposants des ordinaux dans du HTML", () => {
 
   it("gère une chaîne vide", () => {
     expect(applyOrdinalsToHtml("")).toBe("");
+  });
+});
+
+describe("stockage des ordinaux", () => {
+  it("le sanitizer remet les ordinaux en texte simple (recherche)", () => {
+    expect(sanitizeArticleHtml("<p>Au XIX<sup>e</sup> siècle, le 1<sup>er</sup></p>")).toBe(
+      "<p>Au XIXe siècle, le 1er</p>"
+    );
+  });
+
+  it("conserve les autres exposants (appels de note)", () => {
+    expect(unwrapOrdinalSuperscripts("note<sup>1</sup> et m<sup>2</sup>")).toBe(
+      "note<sup>1</sup> et m<sup>2</sup>"
+    );
+  });
+
+  it("ne coupe pas une balise sur un « > » dans un attribut", () => {
+    expect(applyOrdinalsToHtml('<img alt="Avant > 2e édition"> 2e')).toBe(
+      '<img alt="Avant > 2e édition"> 2<sup>e</sup>'
+    );
   });
 });

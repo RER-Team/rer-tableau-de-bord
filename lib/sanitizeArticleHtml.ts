@@ -1,4 +1,5 @@
 import sanitizeHtml from "sanitize-html";
+import { unwrapOrdinalSuperscripts } from "@/lib/ordinals";
 
 const ALLOWED_TAGS = [
   "p",
@@ -38,7 +39,9 @@ const ALLOWED_IFRAME_HOSTNAMES = [
 const SAFE_DATA_IMAGE_RE = /^data:image\/(?:png|jpeg|jpg|gif|webp);base64,/i;
 
 export function sanitizeArticleHtml(input: string): string {
-  return sanitizeHtml(input, {
+  // Les ordinaux en exposant (« 2<sup>e</sup> ») sont stockés en texte simple
+  // pour rester cherchables ; ils sont remis en exposant à l'affichage.
+  return unwrapOrdinalSuperscripts(sanitizeHtml(input, {
     allowedTags: ALLOWED_TAGS,
     allowedAttributes: {
       a: ["href", "name", "target", "rel", "title"],
@@ -114,5 +117,5 @@ export function sanitizeArticleHtml(input: string): string {
         return { tagName, attribs: out };
       },
     },
-  });
+  }));
 }

@@ -10,6 +10,8 @@
  * - chiffres romains (I, V, X uniquement) seulement devant « siècle(s) » ou
  *   « arrondissement(s) », y compris en énumération (« XIXe et XXe siècles »).
  *   Les lettres L, C, D, M sont exclues pour ne pas toucher « Le », « Ce », « De ».
+ *   Limite connue : « siècle » doit suivre dans le même nœud texte
+ *   (« XIXe <em>siècle</em> » n'est pas transformé).
  */
 
 export type OrdinalMatch = {
@@ -38,8 +40,10 @@ const SUFFIX_MAP: Record<string, string> = {
 };
 
 // Les alternatives longues d'abord pour que « ers » l'emporte sur « er ».
+// Exclusions : précédé d'un caractère d'URL ou d'identifiant (« /2e-edition »,
+// « #2e », « v1.2e »), ou suivi de « -chiffre » (notation scientifique « 1e-5 »).
 const ARABIC_RE =
-  /(?<![\p{L}\p{N}])(\d+)(èmes|ères|ème|ère|ers|res|er|re|es|è|e)(?![\p{L}\p{N}])/gu;
+  /(?<![\p{L}\p{N}\/#_=@.\\])(\d+)(èmes|ères|ème|ère|ers|res|er|re|es|è|e)(?![\p{L}\p{N}])(?!-\d)/gu;
 
 const SPACE = "(?:\\s|&nbsp;|&#160;)";
 const ROMAN_SUFFIX = "(?:èmes|ème|er|es|e)";
@@ -103,7 +107,8 @@ const SKIP_TAGS = new Set([
  */
 export function applyOrdinalsToHtml(html: string): string {
   if (!html) return html;
-  const parts = html.split(/(<[^>]*>)/g);
+  // Les guillemets sont respectés : un « > » dans un attribut ne coupe pas la balise.
+  const parts = html.split(/(<(?:[^>"']|"[^"]*"|'[^']*')*>)/g);
   let skipDepth = 0;
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
@@ -121,4 +126,17 @@ export function applyOrdinalsToHtml(html: string): string {
     if (skipDepth === 0) parts[i] = applyOrdinalsToText(part);
   }
   return parts.join("");
+}
+
+/**
+ * Retire les exposants d'ordinaux déjà présents (« 2<sup>e</sup> » -> « 2e »),
+ * par exemple dans un import Word, pour que le texte stocké reste cherchable.
+ * Les autres exposants (appels de note…) sont conservés.
+ */
+export function unwrapOrdinalSuperscripts(html: string): string {
+  if (!html) return html;
+  return html.replace(
+    /(\d+|[IVX]+)<sup>(er|re|ers|res|e|es|ème|èmes|ère|ères|è)<\/sup>/g,
+    "$1$2"
+  );
 }
