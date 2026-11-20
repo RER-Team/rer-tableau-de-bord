@@ -8,6 +8,7 @@ import Link from "@tiptap/extension-link";
 import Paragraph from "@tiptap/extension-paragraph";
 import Image from "@tiptap/extension-image";
 import Superscript from "@tiptap/extension-superscript";
+import { OrdinalDecorations } from "./ordinalDecorations";
 
 type RichArticleEditorProps = {
   /**
@@ -98,9 +99,9 @@ export function RichArticleEditor({
         linkOnPaste: true,
       }),
       // Conserve les exposants existants (collés depuis Word, appels de note).
-      // Les ordinaux (« 2e ») restent en texte simple : ils sont mis en
-      // exposant à l'affichage et à l'export (lib/ordinals.ts).
       Superscript,
+      // Ordinaux (« 2e ») affichés en exposant, sans modifier le texte enregistré.
+      OrdinalDecorations,
       Image.extend({
         addAttributes() {
           return {
