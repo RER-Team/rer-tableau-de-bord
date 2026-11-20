@@ -36,7 +36,7 @@ const articlePreviewSelect = {
   rubriqueId: true,
   formatId: true,
   lienGoogleDoc: true,
-  auteur: { select: { prenom: true, nom: true } },
+  auteur: { select: { prenom: true, nom: true, mutuelle: { select: { nom: true } } } },
   mutuelle: { select: { nom: true } },
   rubrique: { select: { libelle: true } },
   format: { select: { libelle: true } },

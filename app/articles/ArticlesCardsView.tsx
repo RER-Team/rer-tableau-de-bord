@@ -13,7 +13,7 @@ type ArticleSummary = {
   chapo: string | null;
   lienPhoto: string | null;
   legendePhoto: string | null;
-  auteur: { prenom: string; nom: string } | null;
+  auteur: { prenom: string; nom: string; mutuelle?: { nom: string } | null } | null;
   mutuelle: { nom: string } | null;
   dateDepot: string | null;
   datePublication: string | null;
@@ -30,6 +30,7 @@ type ArticlesCardsViewProps = {
   mutuelleId: string;
   rubriqueId?: string;
   formatId?: string;
+  auteurId?: string;
   since?: string;
   from?: string;
   to?: string;
@@ -48,6 +49,7 @@ export function ArticlesCardsView({
   mutuelleId,
   rubriqueId = "",
   formatId = "",
+  auteurId = "",
   since = "",
   from = "",
   to = "",
@@ -103,12 +105,16 @@ export function ArticlesCardsView({
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(pageSize));
-    if (publicMode || mine !== "1") params.set("scope", "public");
+    // Vitrine (/decouvrir) : scope public. Application connectée : scope app,
+    // sinon l'API ne renverrait que les articles « vitrine » au-delà de la page 1.
+    if (publicMode) params.set("scope", "public");
+    else if (mine !== "1") params.set("scope", "app");
     if (q) params.set("q", q);
     if (etatSlug) params.set("etat", etatSlug);
     if (mutuelleId) params.set("mutuelleId", mutuelleId);
     if (rubriqueId) params.set("rubriqueId", rubriqueId);
     if (formatId) params.set("formatId", formatId);
+    if (auteurId) params.set("auteurId", auteurId);
     if (since) params.set("since", since);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
@@ -236,7 +242,7 @@ export function ArticlesCardsView({
                     ? `${article.auteur.prenom} ${article.auteur.nom}`
                     : null
                 }
-                mutuelleLabel={article.mutuelle?.nom ?? null}
+                mutuelleLabel={article.mutuelle?.nom ?? article.auteur?.mutuelle?.nom ?? null}
                 dateIso={dateIso}
               />
             </div>
@@ -271,6 +277,25 @@ export function ArticlesCardsView({
           </p>
         )}
       </div>
+
+      {total > 0 && (
+        <div className="mt-2 flex flex-col items-center gap-2 text-xs text-rer-muted">
+          <p>
+            {Math.min(articles.length, total)} sur {total} contenu
+            {total > 1 ? "s" : ""}
+          </p>
+          {hasMore && !loadError && (
+            <button
+              type="button"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+              className="btn-action text-xs disabled:opacity-50"
+            >
+              {loadingMore ? "Chargement…" : "Afficher plus"}
+            </button>
+          )}
+        </div>
+      )}
 
       <ArticleReadSidePanel
         articleId={selectedArticleId}

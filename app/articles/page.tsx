@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/auth";
+import { canEditArticles, getSessionUser } from "@/lib/auth";
 import { getStatusWhereClause } from "@/lib/article-status";
 import { ArticlesExplorerView } from "./ArticlesCardsExplorer";
 import { ArticlesCardsView } from "./ArticlesCardsView";
@@ -39,7 +39,14 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   const currentUser = await getSessionUser();
   const isAdmin = currentUser?.role === "admin";
   const mineParam = params.mine === "1" ? "1" : "";
-  const effectiveEtatSlug = mineParam === "1" ? params.etat || "" : params.etat || "publie";
+  // Hors « Mes contenus », seuls les éditeurs peuvent lister d'autres états
+  // que « publié » (sinon un auteur verrait les brouillons de tout le monde).
+  const effectiveEtatSlug =
+    mineParam === "1"
+      ? params.etat || ""
+      : canEditArticles(currentUser?.role)
+      ? params.etat || "publie"
+      : "publie";
   const lastArticle = await prisma.article.findFirst({
     where: mineParam === "1" ? undefined : { etat: getStatusWhereClause("publie") },
     orderBy: [
@@ -139,10 +146,14 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
     .split(",")
     .map((v) => v.trim())
     .filter(Boolean);
-  if (auteurIds.length === 1) {
-    where.auteurId = auteurIds[0];
-  } else if (auteurIds.length > 1) {
-    where.auteurId = { in: auteurIds };
+  // En « Mes contenus », l'auteur est imposé par la session : le filtre auteur
+  // de l'URL ne doit jamais le remplacer (sinon accès aux brouillons d'autrui).
+  if (!(mineParam === "1")) {
+    if (auteurIds.length === 1) {
+      where.auteurId = auteurIds[0];
+    } else if (auteurIds.length > 1) {
+      where.auteurId = { in: auteurIds };
+    }
   }
   const finalWhere = mergeArticleWhereClauses(where, textSearchWhere);
 
@@ -165,7 +176,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
         rubriqueId: true,
         formatId: true,
         etatId: true,
-        auteur: { select: { id: true, prenom: true, nom: true } },
+        auteur: { select: { id: true, prenom: true, nom: true, mutuelle: { select: { nom: true } } } },
         mutuelle: { select: { id: true, nom: true } },
         rubrique: { select: { id: true, libelle: true } },
         format: { select: { id: true, libelle: true } },
@@ -241,7 +252,8 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               mutuelleId={mutuelleParam}
               rubriqueId={rubriqueParam}
               formatId={formatParam}
-          mine={mineParam}
+              auteurId={auteurParam}
+              mine={mineParam}
               since={sinceParam}
               from={fromParam}
               to={toParam}
@@ -258,6 +270,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               mutuelleId={mutuelleParam}
               rubriqueId={rubriqueParam}
               formatId={formatParam}
+              auteurId={auteurParam}
               mine={mineParam}
               back={backParam}
               since={sinceParam}
@@ -278,6 +291,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               mutuelleId={mutuelleParam}
               rubriqueId={rubriqueParam}
               formatId={formatParam}
+              auteurId={auteurParam}
               mine={mineParam}
               since={sinceParam}
               from={fromParam}

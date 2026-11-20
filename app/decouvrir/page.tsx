@@ -158,7 +158,7 @@ export default async function DecouvrirPage({ searchParams }: PageProps) {
         rubriqueId: true,
         formatId: true,
         etatId: true,
-        auteur: { select: { id: true, prenom: true, nom: true } },
+        auteur: { select: { id: true, prenom: true, nom: true, mutuelle: { select: { nom: true } } } },
         mutuelle: { select: { id: true, nom: true } },
         rubrique: { select: { id: true, libelle: true } },
         format: { select: { id: true, libelle: true } },
@@ -220,6 +220,7 @@ export default async function DecouvrirPage({ searchParams }: PageProps) {
             mutuelleId={mutuelleParam}
             rubriqueId={rubriqueParam}
             formatId={formatParam}
+            auteurId={auteurParam}
             since={sinceParam}
             from={fromParam}
             to={toParam}
@@ -236,6 +237,7 @@ export default async function DecouvrirPage({ searchParams }: PageProps) {
             mutuelleId={mutuelleParam}
             rubriqueId={rubriqueParam}
             formatId={formatParam}
+            auteurId={auteurParam}
             since={sinceParam}
             from={fromParam}
             to={toParam}
@@ -254,6 +256,7 @@ export default async function DecouvrirPage({ searchParams }: PageProps) {
             mutuelleId={mutuelleParam}
             rubriqueId={rubriqueParam}
             formatId={formatParam}
+            auteurId={auteurParam}
             since={sinceParam}
             from={fromParam}
             to={toParam}

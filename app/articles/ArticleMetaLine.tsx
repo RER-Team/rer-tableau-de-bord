@@ -27,7 +27,9 @@ export function ArticleMetaLine({
       className={`flex items-center justify-between gap-2 text-[11px] ${className}`}
     >
       {identity ? (
-        <p className="min-w-0 truncate font-medium text-rer-muted">{identity}</p>
+        <p className="min-w-0 truncate font-medium text-rer-muted" title={identity}>
+          {identity}
+        </p>
       ) : (
         <span />
       )}

@@ -19,6 +19,7 @@ import {
   extractChapoAndBody,
   transformEmbeds,
 } from "@/lib/article-html";
+import { dispatchNotificationsUpdated } from "@/lib/notifications/client-sync";
 
 type ArticleDetail = {
   id: string;
@@ -68,7 +69,16 @@ export function MesArticleSidePanel({
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const panelCloseButtonRef = useRef<HTMLButtonElement | null>(null);
+  // Dernière sauvegarde en cours, attendue avant un dépôt pour ne rien perdre.
+  // Résout à false si une sauvegarde a échoué.
+  const pendingSaveRef = useRef<Promise<boolean> | null>(null);
+  const articleRef = useRef<ArticleDetail | null>(null);
+  useEffect(() => {
+    articleRef.current = article;
+  }, [article]);
 
   useEffect(() => {
     if (!article) return;
@@ -83,6 +93,7 @@ export function MesArticleSidePanel({
     const controller = new AbortController();
     setLoading(true);
     setError(null);
+    setSubmitError(null);
     fetch(`/api/articles/${articleId}?scope=preview`, {
       signal: controller.signal,
     })
@@ -208,25 +219,97 @@ export function MesArticleSidePanel({
       }
       if (Object.keys(payload).length === 0) return;
       setSavingContent(true);
-      try {
-        const res = await fetch(`/api/articles/${article.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (res.ok) {
-          const updated = await res.json();
-          setArticle((prev) => (prev ? { ...prev, ...updated } : null));
-          setLastSavedAt(new Date());
+      const save = (async (): Promise<boolean> => {
+        try {
+          const res = await fetch(`/api/articles/${article.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (res.ok) {
+            const updated = await res.json();
+            setArticle((prev) => (prev ? { ...prev, ...updated } : null));
+            articleRef.current = articleRef.current
+              ? { ...articleRef.current, ...updated }
+              : null;
+            setLastSavedAt(new Date());
+            return true;
+          }
+          return false;
+        } catch (e) {
+          console.error("Sauvegarde contenu", e);
+          return false;
+        } finally {
+          setSavingContent(false);
         }
-      } catch (e) {
-        console.error("Sauvegarde contenu", e);
-      } finally {
-        setSavingContent(false);
-      }
+      })();
+      // On chaîne avec les sauvegardes encore en vol pour toutes les attendre.
+      const previous = pendingSaveRef.current;
+      pendingSaveRef.current = previous
+        ? Promise.all([previous, save]).then(([a, b]) => a && b)
+        : save;
+      await save;
     },
     [article, initialHtml, ref]
   );
+
+  const isDraft = article?.etat?.slug === "brouillon";
+
+  // Dépôt d'un brouillon : passage à l'état « Soumis à relecture ».
+  const handleDeposit = useCallback(async () => {
+    if (!articleRef.current) return;
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      // L'éditeur temporise ses sauvegardes (500 ms) : on laisse partir la
+      // dernière modification puis on attend la fin de son enregistrement.
+      await new Promise((resolve) => window.setTimeout(resolve, 650));
+      if (pendingSaveRef.current) {
+        const allSaved = await pendingSaveRef.current;
+        pendingSaveRef.current = null;
+        if (!allSaved) {
+          setSubmitError(
+            "Une modification n'a pas pu être enregistrée. Réessayez avant de déposer."
+          );
+          return;
+        }
+      }
+
+      const current = articleRef.current;
+      if (!current) return;
+      const missing: string[] = [];
+      if (!current.formatId) missing.push("un format");
+      if (!current.rubriqueId) missing.push("une rubrique");
+      const hasContent =
+        Boolean(current.contenu && current.contenu.replace(/<[^>]*>/g, "").trim()) ||
+        // Un contenu peut n'être qu'une vidéo intégrée ou une image.
+        /<(img|iframe|video|embed)\b/i.test(current.contenu ?? "") ||
+        Boolean(current.chapo && current.chapo.trim());
+      if (!hasContent) missing.push("le contenu");
+      if (missing.length) {
+        setSubmitError(`Avant de déposer, renseignez ${missing.join(", ")}.`);
+        return;
+      }
+
+      const res = await fetch(`/api/articles/${current.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ etatSlug: "a_relire" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setSubmitError(err.error || "Erreur lors du dépôt.");
+        return;
+      }
+      dispatchNotificationsUpdated();
+      router.refresh();
+      onClose();
+    } catch {
+      setSubmitError("Erreur réseau.");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [onClose, router]);
 
   const contenuHtml = useMemo(
     () => (article?.contenu ? transformEmbeds(article.contenu) : ""),
@@ -278,6 +361,16 @@ export function MesArticleSidePanel({
             </button>
           </div>
           <div className="flex items-center gap-3">
+            {isDraft && (
+              <button
+                type="button"
+                onClick={() => void handleDeposit()}
+                disabled={submitting}
+                className="btn-cta px-3 py-1.5 text-xs disabled:opacity-50"
+              >
+                {submitting ? "Envoi…" : "Déposer le contenu"}
+              </button>
+            )}
             {mode === "edit" && lastSavedAt && (
               <span className="text-[11px] text-rer-muted">
                 Enregistré à{" "}
@@ -298,6 +391,14 @@ export function MesArticleSidePanel({
           </div>
         </div>
 
+        {submitError && (
+          <div
+            role="alert"
+            className="shrink-0 border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700"
+          >
+            {submitError}
+          </div>
+        )}
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {loading && (
             <p className="text-sm text-rer-muted">Chargement…</p>

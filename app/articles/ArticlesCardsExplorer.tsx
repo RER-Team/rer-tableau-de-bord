@@ -22,7 +22,7 @@ type ArticleSummary = {
   lienPhoto: string | null;
   legendePhoto: string | null;
   creditPhoto: string | null;
-  auteur: { prenom: string; nom: string } | null;
+  auteur: { prenom: string; nom: string; mutuelle?: { nom: string } | null } | null;
   mutuelle: { nom: string } | null;
   rubrique: { libelle: string } | null;
   format: { libelle: string } | null;
@@ -44,7 +44,7 @@ type ArticleDetail = {
   dateDepot: string | null;
   datePublication: string | null;
   createdAt: string;
-  auteur: { prenom: string; nom: string } | null;
+  auteur: { prenom: string; nom: string; mutuelle?: { nom: string } | null } | null;
   mutuelle: { nom: string } | null;
   rubrique: { libelle: string } | null;
   format: { libelle: string } | null;
@@ -61,6 +61,7 @@ type ArticlesExplorerViewProps = {
   mutuelleId: string;
   rubriqueId?: string;
   formatId?: string;
+  auteurId?: string;
   initialSelectedId?: string;
   since?: string;
   from?: string;
@@ -352,7 +353,7 @@ function ArticleDetailContent({
           <p className="text-xs text-rer-muted">
             {detail.auteur &&
               `${detail.auteur.prenom} ${detail.auteur.nom}`}
-            {detail.mutuelle && ` · ${detail.mutuelle.nom}`}
+            {(detail.mutuelle?.nom ?? detail.auteur?.mutuelle?.nom) && ` · ${detail.mutuelle?.nom ?? detail.auteur?.mutuelle?.nom}`}
             {(() => {
               const d =
                 detail.datePublication ??
@@ -459,6 +460,7 @@ export function ArticlesExplorerView({
   mutuelleId,
   rubriqueId = "",
   formatId = "",
+  auteurId = "",
   initialSelectedId,
   since = "",
   from = "",
@@ -482,12 +484,16 @@ export function ArticlesExplorerView({
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(pageSize));
-    if (publicMode || mine !== "1") params.set("scope", "public");
+    // Vitrine (/decouvrir) : scope public. Application connectée : scope app,
+    // sinon l'API ne renverrait que les articles « vitrine » au-delà de la page 1.
+    if (publicMode) params.set("scope", "public");
+    else if (mine !== "1") params.set("scope", "app");
     if (q) params.set("q", q);
     if (etatSlug) params.set("etat", etatSlug);
     if (mutuelleId) params.set("mutuelleId", mutuelleId);
     if (rubriqueId) params.set("rubriqueId", rubriqueId);
     if (formatId) params.set("formatId", formatId);
+    if (auteurId) params.set("auteurId", auteurId);
     if (since) params.set("since", since);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
@@ -495,7 +501,8 @@ export function ArticlesExplorerView({
     return `/api/articles?${params.toString()}`;
   };
 
-  const { visibleArticles, sentinelRef } = useInfiniteArticleList<ArticleSummary>({
+  const { visibleArticles, sentinelRef, hasMore, loadingMore, loadMore } =
+    useInfiniteArticleList<ArticleSummary>({
     initialArticles: articles,
     total,
     initialPage,
@@ -729,7 +736,7 @@ export function ArticlesExplorerView({
                           ? `${article.auteur.prenom} ${article.auteur.nom}`
                           : null
                       }
-                      mutuelleLabel={article.mutuelle?.nom ?? null}
+                      mutuelleLabel={article.mutuelle?.nom ?? article.auteur?.mutuelle?.nom ?? null}
                       dateIso={
                         article.datePublication ??
                         article.dateDepot ??
@@ -742,6 +749,24 @@ export function ArticlesExplorerView({
             );
           })}
           <div ref={sentinelRef} className="h-6 lg:h-8" />
+          {total > 0 && (
+            <div className="flex flex-col items-center gap-2 pb-2 text-xs text-rer-muted">
+              <p>
+                {Math.min(visibleArticles.length, total)} sur {total} contenu
+                {total > 1 ? "s" : ""}
+              </p>
+              {hasMore && (
+                <button
+                  type="button"
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
+                  className="btn-action text-xs disabled:opacity-50"
+                >
+                  {loadingMore ? "Chargement…" : "Afficher plus"}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="hidden min-h-[260px] flex-col rounded-xl bg-white p-4 shadow-sm ring-1 ring-rer-border lg:flex">

@@ -66,7 +66,7 @@ En haut de la page `/articles`, une **barre de filtres** commune aux trois vues 
 - **Recherche texte** (titre, chapô, contenu) avec déclenchement progressif (debounce).  
 - **Suggestions dynamiques** : quand on tape, les mutuelles, rubriques et formats correspondants sont proposés sous forme de suggestions ; un clic sur une suggestion active le filtre correspondant.  
 - **Facettes multi-sélection** :  
-  - Mutuelles, Rubriques, Formats avec compteurs, présentées sous forme de pastilles cliquables.  
+  - Mutuelles, Rubriques, Formats avec compteurs, présentées sous forme de pastilles cliquables. Tous les formats sont affichés ; mutuelles et rubriques sont limitées aux 8 plus fréquentes.  
   - Possibilité de sélectionner plusieurs valeurs dans chaque catégorie.  
   - Les facettes actives apparaissent aussi dans une ligne dédiée avec une croix pour les retirer rapidement.
 - **Filtres de dates** :  
@@ -74,6 +74,8 @@ En haut de la page `/articles`, une **barre de filtres** commune aux trois vues 
   - Période personnalisée (date de début / date de fin).  
   - Le filtrage utilise `datePublication` si elle est renseignée, sinon `createdAt`.
 - **Réinitialisation** : un lien **« Réinitialiser tous les filtres »** permet de revenir à un état neutre.
+- **Liste au-delà de 20 contenus** : la suite se charge au défilement, ou avec le bouton **« Afficher plus »** en bas de liste (avec le compteur « X sur Y contenus »), dans les trois vues.
+- **Mutuelle affichée** : celle de l'article, ou à défaut celle de l'auteur.
 
 ### 2.3. Date affichée dans les listes
 
@@ -93,7 +95,7 @@ Dans toutes les vues de liste (Explorer, Cartes, Tableau) et sur la fiche conten
 - **Comportement actuel** : redirige vers `/articles?mine=1`.  
 - **Objectif** : afficher uniquement les contenus dont l’utilisateur connecté est l’auteur (liste filtrée), avec la même ergonomie que la page Contenus (vues Explorer / Cartes / Tableau, filtres, etc.).
   Le filtrage précis `mine=1` sera pleinement opérationnel une fois la gestion des comptes et des permissions finalisée.
-- **Voir le contenu** et **Modifier** : ouvrent un **panneau latéral** (sidebar) **sur la même page** (/mes-articles), sans redirection. Le panneau propose deux onglets **Lecture** et **Édition** (type Notion) : clic sur le titre ou « Voir le contenu » ouvre en lecture ; « Modifier » ou « Continuer le brouillon » ouvre en édition. La fiche contenu pleine page reste accessible via **« Ouvrir en pleine page »** dans le panneau (partage, impression, exports).
+- **Voir le contenu** et **Modifier** : ouvrent un **panneau latéral** (sidebar) **sur la même page** (/mes-articles), sans redirection. Le panneau propose deux onglets **Lecture** et **Édition** (type Notion) : clic sur le titre ou « Voir le contenu » ouvre en lecture ; « Modifier » ou « Continuer le brouillon » ouvre en édition. Pour un brouillon, le bouton **« Déposer le contenu »** du panneau l'envoie en relecture (format, rubrique et contenu requis). La fiche contenu pleine page reste accessible via **« Ouvrir en pleine page »** dans le panneau (partage, impression, exports).
 
 ---
 

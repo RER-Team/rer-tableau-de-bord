@@ -269,8 +269,9 @@ export async function GET(request: NextRequest) {
         count: g._count._all,
       };
     })
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 8);
+    // Pas de plafond sur les formats : ils sont peu nombreux, et un format
+    // récent (ex. « Vidéos ») disparaissait des filtres faute de volume.
+    .sort((a, b) => b.count - a.count);
   const auteurFacets = auteurGroups
     .filter((g) => g.auteurId)
     .map((g) => {
