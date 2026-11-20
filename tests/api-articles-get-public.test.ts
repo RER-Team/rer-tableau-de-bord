@@ -22,6 +22,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 import { GET } from "@/app/api/articles/route";
+import { getStatusWhereClause } from "@/lib/article-status";
 
 const PUBLISHED = { slug: { in: ["publie", "valide"] } };
 
@@ -92,6 +93,7 @@ describe("GET /api/articles - scope app (liste connectée)", () => {
     await GET({
       url: "http://localhost/api/articles?scope=app&etat=a_relire",
     } as any);
+    expect(lastWhere().etat).toEqual(getStatusWhereClause("a_relire"));
     expect(lastWhere().etat).not.toEqual(PUBLISHED);
   });
 });

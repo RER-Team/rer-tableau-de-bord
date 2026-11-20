@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/auth";
+import { canEditArticles, getSessionUser } from "@/lib/auth";
 import { getStatusWhereClause } from "@/lib/article-status";
 import { ArticlesExplorerView } from "./ArticlesCardsExplorer";
 import { ArticlesCardsView } from "./ArticlesCardsView";
@@ -39,7 +39,14 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   const currentUser = await getSessionUser();
   const isAdmin = currentUser?.role === "admin";
   const mineParam = params.mine === "1" ? "1" : "";
-  const effectiveEtatSlug = mineParam === "1" ? params.etat || "" : params.etat || "publie";
+  // Hors « Mes contenus », seuls les éditeurs peuvent lister d'autres états
+  // que « publié » (sinon un auteur verrait les brouillons de tout le monde).
+  const effectiveEtatSlug =
+    mineParam === "1"
+      ? params.etat || ""
+      : canEditArticles(currentUser?.role)
+      ? params.etat || "publie"
+      : "publie";
   const lastArticle = await prisma.article.findFirst({
     where: mineParam === "1" ? undefined : { etat: getStatusWhereClause("publie") },
     orderBy: [

@@ -73,7 +73,8 @@ export function MesArticleSidePanel({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const panelCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   // Dernière sauvegarde en cours, attendue avant un dépôt pour ne rien perdre.
-  const pendingSaveRef = useRef<Promise<unknown> | null>(null);
+  // Résout à false si une sauvegarde a échoué.
+  const pendingSaveRef = useRef<Promise<boolean> | null>(null);
   const articleRef = useRef<ArticleDetail | null>(null);
   useEffect(() => {
     articleRef.current = article;
@@ -218,7 +219,7 @@ export function MesArticleSidePanel({
       }
       if (Object.keys(payload).length === 0) return;
       setSavingContent(true);
-      const save = (async () => {
+      const save = (async (): Promise<boolean> => {
         try {
           const res = await fetch(`/api/articles/${article.id}`, {
             method: "PATCH",
@@ -232,14 +233,21 @@ export function MesArticleSidePanel({
               ? { ...articleRef.current, ...updated }
               : null;
             setLastSavedAt(new Date());
+            return true;
           }
+          return false;
         } catch (e) {
           console.error("Sauvegarde contenu", e);
+          return false;
         } finally {
           setSavingContent(false);
         }
       })();
-      pendingSaveRef.current = save;
+      // On chaîne avec les sauvegardes encore en vol pour toutes les attendre.
+      const previous = pendingSaveRef.current;
+      pendingSaveRef.current = previous
+        ? Promise.all([previous, save]).then(([a, b]) => a && b)
+        : save;
       await save;
     },
     [article, initialHtml, ref]
@@ -256,7 +264,16 @@ export function MesArticleSidePanel({
       // L'éditeur temporise ses sauvegardes (500 ms) : on laisse partir la
       // dernière modification puis on attend la fin de son enregistrement.
       await new Promise((resolve) => window.setTimeout(resolve, 650));
-      if (pendingSaveRef.current) await pendingSaveRef.current;
+      if (pendingSaveRef.current) {
+        const allSaved = await pendingSaveRef.current;
+        pendingSaveRef.current = null;
+        if (!allSaved) {
+          setSubmitError(
+            "Une modification n'a pas pu être enregistrée. Réessayez avant de déposer."
+          );
+          return;
+        }
+      }
 
       const current = articleRef.current;
       if (!current) return;
@@ -265,6 +282,8 @@ export function MesArticleSidePanel({
       if (!current.rubriqueId) missing.push("une rubrique");
       const hasContent =
         Boolean(current.contenu && current.contenu.replace(/<[^>]*>/g, "").trim()) ||
+        // Un contenu peut n'être qu'une vidéo intégrée ou une image.
+        /<(img|iframe|video|embed)\b/i.test(current.contenu ?? "") ||
         Boolean(current.chapo && current.chapo.trim());
       if (!hasContent) missing.push("le contenu");
       if (missing.length) {
