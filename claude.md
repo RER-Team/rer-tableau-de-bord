@@ -69,7 +69,8 @@ Voir `docs/deploiement.md` pour la liste complète. Variables critiques :
 - Tests : `npm run test`
 - Prisma client : `npm run db:generate`
 - Migrations : `npm run db:migrate` (dev) / `prisma migrate deploy` (prod)
-  - Attention : en prod, l'historique `_prisma_migrations` n'est pas aligné sur le dossier `prisma/migrations` (une partie a été appliquée hors Prisma). Vérifier cette table avant tout `prisma migrate deploy`, et le cas échéant marquer les migrations déjà présentes avec `prisma migrate resolve --applied <nom>`.
+  - Historique `_prisma_migrations` de prod réaligné le 20/11/2026 (toutes les migrations du dossier y figurent). Une migration appliquée à la main (SQL Editor) doit ensuite être marquée avec `prisma migrate resolve --applied <nom>`, sinon `migrate deploy` tentera de la rejouer.
+  - L'empreinte enregistrée pour `20240221000000_init` ne correspond pas au fichier actuel (fichier modifié après son application, avant l'historique Git). Ne pas modifier ce fichier ; `migrate dev` sur une base vierge reste fiable, mais `migrate status` peut le signaler.
 - Seed : `npm run db:seed`
 
 ## 8) Règles de travail recommandées
