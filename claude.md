@@ -68,6 +68,7 @@ Voir `docs/deploiement.md` pour la liste complète. Variables critiques :
 - Tests : `npm run test`
 - Prisma client : `npm run db:generate`
 - Migrations : `npm run db:migrate` (dev) / `prisma migrate deploy` (prod)
+  - Attention : en prod, l'historique `_prisma_migrations` n'est pas aligné sur le dossier `prisma/migrations` (une partie a été appliquée hors Prisma). Vérifier cette table avant tout `prisma migrate deploy`, et le cas échéant marquer les migrations déjà présentes avec `prisma migrate resolve --applied <nom>`.
 - Seed : `npm run db:seed`
 
 ## 8) Règles de travail recommandées
