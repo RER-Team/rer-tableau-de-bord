@@ -41,6 +41,10 @@ export async function GET(request: NextRequest) {
   const scopeParam = searchParams.get("scope") ?? "";
 
   const isPublicScope = scopeParam === "public";
+  // scope=app : liste de l'application pour un utilisateur connecté (vue
+  // /articles). Contrairement au scope public, pas de restriction « vitrine ».
+  const isAppScope = scopeParam === "app";
+  let appScopeForcePublished = false;
   const isMine = mineParam === "1";
 
   const where: any = {};
@@ -60,6 +64,13 @@ export async function GET(request: NextRequest) {
       );
     }
     where.auteurId = sessionUser.auteurId;
+  } else if (isAppScope) {
+    const sessionUser = await getSessionUser(request);
+    if (!sessionUser) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+    // Les non-éditeurs ne voient que le publié, quel que soit l'état demandé.
+    appScopeForcePublished = !canEditArticles(sessionUser.role);
   } else if (!isPublicScope) {
     const sessionUser = await getSessionUser(request);
     if (!sessionUser) {
@@ -75,7 +86,8 @@ export async function GET(request: NextRequest) {
 
   // En scope public, on force toujours l'état « publié » quelles que soient
   // les valeurs d'état demandées par le client.
-  const effectiveEtatSlug = isPublicScope ? "publie" : etatSlug;
+  const effectiveEtatSlug =
+    isPublicScope || appScopeForcePublished ? "publie" : etatSlug;
   const etatWhere = getStatusWhereClause(effectiveEtatSlug);
   if (etatWhere) {
     where.etat = etatWhere;
@@ -190,7 +202,7 @@ export async function GET(request: NextRequest) {
         rubriqueId: true,
         formatId: true,
         etatId: true,
-        auteur: { select: { id: true, prenom: true, nom: true } },
+        auteur: { select: { id: true, prenom: true, nom: true, mutuelle: { select: { nom: true } } } },
         mutuelle: { select: { id: true, nom: true } },
         rubrique: { select: { id: true, libelle: true } },
         format: { select: { id: true, libelle: true } },

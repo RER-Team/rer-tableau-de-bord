@@ -43,7 +43,9 @@ Ce fichier compile l'essentiel utile pour travailler vite sur le projet, sans re
 - Téléchargement image : `GET /api/articles/[id]/download-image`
 
 Notes d'accès :
-- Le mode public passe par `scope=public` et ne doit exposer que du publié.
+- Le mode public passe par `scope=public` et ne doit exposer que du publié coché « vitrine » (`isExemplePublic`), utilisé par `/decouvrir`.
+- La liste connectée (`/articles`) charge ses pages suivantes avec `scope=app` : utilisateur connecté requis, pas de restriction vitrine, état forcé à « publié » pour les non-éditeurs. Ne pas y renvoyer `scope=public`, sinon la pagination s'arrête à la première page.
+- Les URL de pagination des vues (`ArticlesCardsExplorer`, `ArticlesCardsView`, `ArticlesTableView`) doivent reprendre tous les filtres de la page, y compris `auteurId`.
 - Les routes privées restent protégées par authentification/rôles.
 
 ## 6) Environnement et secrets (minimum)
