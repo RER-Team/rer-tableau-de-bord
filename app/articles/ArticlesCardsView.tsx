@@ -6,6 +6,7 @@ import { ArticleReadSidePanel } from "@/app/articles/ArticleReadSidePanel";
 import { ArticlesEmptyState } from "@/app/articles/ArticlesEmptyState";
 import { ArticleMetaLine } from "@/app/articles/ArticleMetaLine";
 import { useArticleShortcuts } from "@/app/articles/useArticleShortcuts";
+import { OrdinalText } from "@/app/components/OrdinalText";
 
 type ArticleSummary = {
   id: string;
@@ -228,11 +229,11 @@ export function ArticlesCardsView({
             </div>
             <div className="min-w-0 flex flex-1 flex-col gap-2 p-4">
               <p className="line-clamp-2 text-base font-semibold text-rer-text [overflow-wrap:anywhere] sm:text-lg">
-                {article.titre}
+                <OrdinalText text={article.titre} />
               </p>
               {article.chapo && (
                 <p className="line-clamp-2 text-sm text-rer-muted">
-                  {article.chapo}
+                  <OrdinalText text={article.chapo} />
                 </p>
               )}
               <ArticleMetaLine

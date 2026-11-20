@@ -723,11 +723,11 @@ export function ArticlesExplorerView({
                       )}
                     </div>
                     <p className="line-clamp-2 text-sm font-semibold text-rer-text [overflow-wrap:anywhere]">
-                      {article.titre}
+                      <OrdinalText text={article.titre} />
                     </p>
                     {article.chapo && (
                       <p className="line-clamp-2 text-xs text-rer-muted">
-                        {article.chapo}
+                        <OrdinalText text={article.chapo} />
                       </p>
                     )}
                     <ArticleMetaLine
