@@ -28,6 +28,14 @@ body {
   outline: none;
 }
 
+/* Ordinaux en exposant dans l'éditeur : décoration visuelle seulement
+   (le texte enregistré reste « 2e », voir app/components/ordinalDecorations.ts). */
+.ProseMirror .ordinal-sup {
+  vertical-align: super;
+  font-size: 0.75em;
+  line-height: 0;
+}
+
 .ProseMirror-selectednode {
   outline: none;
 }
