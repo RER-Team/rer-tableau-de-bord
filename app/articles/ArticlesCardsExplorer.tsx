@@ -8,7 +8,8 @@ import {
   getArticleStatusLabel,
   normalizeArticleStatusSlug,
 } from "@/lib/article-status";
-import { transformEmbeds } from "@/lib/article-html";
+import { renderArticleHtml } from "@/lib/article-html";
+import { OrdinalText } from "@/app/components/OrdinalText";
 import { useInfiniteArticleList } from "@/hooks/useInfiniteArticleList";
 import { useArticleShortcuts } from "./useArticleShortcuts";
 import { trackArticleConsultation } from "@/lib/track-article-consultation";
@@ -211,7 +212,7 @@ function ArticleDetailContent({
   const canCopy = !!detail && !loading && !error;
 
   const contenuHtml = useMemo(
-    () => (detail?.contenu ? transformEmbeds(detail.contenu) : ""),
+    () => (detail?.contenu ? renderArticleHtml(detail.contenu) : ""),
     [detail?.contenu]
   );
 
@@ -289,7 +290,7 @@ function ArticleDetailContent({
           </p>
           {selectedArticle && (
             <h2 className="mt-1 text-lg font-semibold text-slate-900">
-              {selectedArticle.titre}
+              <OrdinalText text={selectedArticle.titre} />
             </h2>
           )}
         </div>
@@ -423,7 +424,7 @@ function ArticleDetailContent({
 
           {detail.chapo && (
           <p className="whitespace-pre-wrap text-sm font-semibold text-rer-text">
-              {detail.chapo}
+              <OrdinalText text={detail.chapo} />
             </p>
           )}
 

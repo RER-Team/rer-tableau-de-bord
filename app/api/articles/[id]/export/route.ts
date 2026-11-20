@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { applyOrdinalsToHtml, applyOrdinalsToText } from "@/lib/ordinals";
 import { prisma } from "@/lib/prisma";
 import sanitizeHtml from "sanitize-html";
 import { canEditArticles, getSessionUser } from "@/lib/auth";
@@ -69,9 +70,9 @@ function buildHtmlFragment(article: any): string {
 
   const meta = metaParts.length ? `<p>${escapeHtml(metaParts.join(" · "))}</p>` : "";
   const chapo = article.chapo
-    ? `<h2>Chapô</h2><p>${sanitizeArticleHtml(article.chapo)}</p>`
+    ? `<h2>Chapô</h2><p>${applyOrdinalsToHtml(sanitizeArticleHtml(article.chapo))}</p>`
     : "";
-  const contenu = sanitizeArticleHtml(article.contenu ?? "");
+  const contenu = applyOrdinalsToHtml(sanitizeArticleHtml(article.contenu ?? ""));
   const photoLegend = article.legendePhoto
     ? `<p><strong>Légende photo :</strong> ${sanitizeArticleHtml(article.legendePhoto)}</p>`
     : "";
@@ -82,7 +83,7 @@ function buildHtmlFragment(article: any): string {
     ? `<h3>Post réseaux sociaux</h3><p>${sanitizeArticleHtml(article.postRs)}</p>`
     : "";
 
-  return `<h1>${escapeHtml(article.titre)}</h1>
+  return `<h1>${applyOrdinalsToText(escapeHtml(article.titre))}</h1>
 ${meta}
 ${chapo}
 ${contenu}
@@ -143,6 +144,7 @@ function sanitizeArticleHtml(value: string): string {
       "ol",
       "li",
       "blockquote",
+      "sup",
     ],
     allowedAttributes: {
       a: ["href", "target", "rel"],

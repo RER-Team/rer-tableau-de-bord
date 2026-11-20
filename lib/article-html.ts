@@ -6,6 +6,16 @@
  * `window` est indisponible.
  */
 
+import { applyOrdinalsToHtml } from "@/lib/ordinals";
+
+/**
+ * Prépare le HTML d'un article pour la lecture : intégrations (vidéos,
+ * graphiques) puis ordinaux en exposant (« 2e » -> 2<sup>e</sup>).
+ */
+export function renderArticleHtml(html: string): string {
+  return applyOrdinalsToHtml(transformEmbeds(html));
+}
+
 /**
  * Remplace les blocs `figure.embed-block` contenant une URL (YouTube,
  * Datawrapper) par une iframe responsive prête à l'affichage.

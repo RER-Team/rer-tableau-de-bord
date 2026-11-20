@@ -10,7 +10,8 @@ import {
   getRubriqueBadgeClasses,
 } from "@/app/articles/ArticlesCardsExplorer";
 import { trackArticleConsultation } from "@/lib/track-article-consultation";
-import { transformEmbeds } from "@/lib/article-html";
+import { renderArticleHtml } from "@/lib/article-html";
+import { OrdinalText } from "@/app/components/OrdinalText";
 
 type ArticleDetail = {
   id: string;
@@ -107,7 +108,7 @@ export function ArticleReadSidePanel({
   }, [open, onClose]);
 
   const contenuHtml = useMemo(
-    () => (article?.contenu ? transformEmbeds(article.contenu) : ""),
+    () => (article?.contenu ? renderArticleHtml(article.contenu) : ""),
     [article?.contenu]
   );
 
@@ -174,7 +175,7 @@ export function ArticleReadSidePanel({
                       )}
                   </div>
                   <h2 className="text-xl font-semibold text-rer-text">
-                    {article.titre}
+                    <OrdinalText text={article.titre} />
                   </h2>
                   <p className="text-xs text-rer-muted">
                     {article.etat && (
@@ -246,7 +247,7 @@ export function ArticleReadSidePanel({
 
               {article.chapo && (
                 <p className="whitespace-pre-wrap font-semibold text-rer-text">
-                  {article.chapo}
+                  <OrdinalText text={article.chapo} />
                 </p>
               )}
 

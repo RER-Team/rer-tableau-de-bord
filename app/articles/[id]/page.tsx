@@ -11,7 +11,8 @@ import {
   getRubriqueBadgeClasses,
 } from "../ArticlesCardsExplorer";
 import { trackArticleConsultation } from "@/lib/track-article-consultation";
-import { transformEmbeds } from "@/lib/article-html";
+import { renderArticleHtml } from "@/lib/article-html";
+import { OrdinalText } from "@/app/components/OrdinalText";
 
 type Article = {
   id: string;
@@ -71,7 +72,7 @@ export default function ArticleDetailPage() {
     session?.user?.role === "admin" || session?.user?.role === "relecteur";
 
   const contenuHtml = useMemo(
-    () => (article?.contenu ? transformEmbeds(article.contenu) : ""),
+    () => (article?.contenu ? renderArticleHtml(article.contenu) : ""),
     [article?.contenu]
   );
 
@@ -161,7 +162,7 @@ export default function ArticleDetailPage() {
               {metaRubriqueFormat ?? "Contenu"}
             </p>
             <h1 className="text-2xl font-extrabold text-rer-text">
-              {article.titre}
+              <OrdinalText text={article.titre} />
             </h1>
             <p className="text-xs text-rer-muted">
               {article.etat && (
@@ -239,7 +240,7 @@ export default function ArticleDetailPage() {
 
           {article.chapo && (
             <p className="whitespace-pre-wrap text-sm font-semibold text-rer-text">
-              {article.chapo}
+              <OrdinalText text={article.chapo} />
             </p>
           )}
 
