@@ -10,6 +10,7 @@ import {
   getFormatBadgeClasses,
   getRubriqueBadgeClasses,
 } from "@/app/articles/ArticlesCardsExplorer";
+import { OrdinalText } from "@/app/components/OrdinalText";
 
 type ArticleSummary = {
   id: string;
@@ -259,11 +260,11 @@ export function ArticlesTableView({
                     onClick={() => openArticlePanel(article.id)}
                     className="font-semibold text-left text-rer-blue hover:underline"
                   >
-                    {article.titre}
+                    <OrdinalText text={article.titre} />
                   </button>
                   {article.chapo && (
                     <p className="mt-0.5 line-clamp-2 text-xs text-rer-muted">
-                      {article.chapo}
+                      <OrdinalText text={article.chapo} />
                     </p>
                   )}
                 </td>

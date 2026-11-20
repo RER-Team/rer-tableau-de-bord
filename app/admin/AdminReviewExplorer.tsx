@@ -15,6 +15,7 @@ import ArticleEditorCard, {
   ArticleEditorReferentiels,
   ArticleEditorValue,
 } from "../components/ArticleEditorCard";
+import { OrdinalText } from "@/app/components/OrdinalText";
 
 type ArticleSummary = {
   id: string;
@@ -1208,7 +1209,7 @@ export function AdminReviewExplorer({
                             </span>
                           )}
                           <p className="line-clamp-2 text-sm font-semibold text-rer-text">
-                            {article.titre}
+                            <OrdinalText text={article.titre} />
                           </p>
                         </div>
                         <span className="shrink-0 text-[10px] text-rer-subtle">
@@ -1217,7 +1218,7 @@ export function AdminReviewExplorer({
                       </div>
                       {article.chapo && (
                         <p className="mt-0.5 line-clamp-1 text-[11px] text-rer-muted">
-                          {article.chapo}
+                          <OrdinalText text={article.chapo} />
                         </p>
                       )}
                       <p className="mt-1 flex items-center gap-1 text-[10px] text-rer-subtle">

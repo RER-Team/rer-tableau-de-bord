@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getEtatBadgeClasses } from "../articles/ArticlesCardsExplorer";
 import { getArticleStatusLabel } from "@/lib/article-status";
+import { OrdinalText } from "@/app/components/OrdinalText";
 
 type ArticleHistoriqueItem = {
   id: string;
@@ -116,7 +117,7 @@ export function ArticleHistoryDrawer({
               Modifications &amp; suggestions
             </h2>
             {article && (
-              <p className="text-xs text-rer-muted">{article.titre}</p>
+              <p className="text-xs text-rer-muted"><OrdinalText text={article.titre} /></p>
             )}
           </div>
           <button
@@ -175,7 +176,7 @@ export function ArticleHistoryDrawer({
                   )}
                   {article.chapo && (
                     <p className="mt-1 text-xs text-rer-text">
-                      {article.chapo}
+                      <OrdinalText text={article.chapo} />
                     </p>
                   )}
                   {firstParagraph && (

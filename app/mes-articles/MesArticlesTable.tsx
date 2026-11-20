@@ -10,6 +10,7 @@ import {
 } from "../articles/ArticlesCardsExplorer";
 import { ArticleHistoryDrawer } from "./ArticleHistoryDrawer";
 import { MesArticleSidePanel } from "./MesArticleSidePanel";
+import { OrdinalText } from "@/app/components/OrdinalText";
 
 type MesArticleRow = {
   id: string;
@@ -290,11 +291,11 @@ export function MesArticlesTable({
                       }}
                       className="font-semibold text-rer-blue hover:underline text-left"
                     >
-                      {article.titre}
+                      <OrdinalText text={article.titre} />
                     </button>
                     {article.chapo && (
                       <p className="mt-0.5 line-clamp-2 text-xs text-rer-muted">
-                        {article.chapo}
+                        <OrdinalText text={article.chapo} />
                       </p>
                     )}
                   </td>
