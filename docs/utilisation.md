@@ -76,6 +76,7 @@ En haut de la page `/articles`, une **barre de filtres** commune aux trois vues 
 - **Réinitialisation** : un lien **« Réinitialiser tous les filtres »** permet de revenir à un état neutre.
 - **Liste au-delà de 20 contenus** : la suite se charge au défilement, ou avec le bouton **« Afficher plus »** en bas de liste (avec le compteur « X sur Y contenus »), dans les trois vues.
 - **Mutuelle affichée** : celle de l'article, ou à défaut celle de l'auteur.
+- **Exposants automatiques** : à la lecture et dans les exports HTML/Word, les ordinaux passent en exposant (1er, 1re, 2e, 3es ; « 2ème » ou « 2è » deviennent « 2e », « 1ère » devient « 1re »). Les chiffres romains ne sont traités que devant « siècle » ou « arrondissement » (XIXe siècle). Le texte enregistré n'est pas modifié : l'éditeur affiche « 2e » en texte simple, et la recherche fonctionne normalement. L'export TXT reste en texte simple.
 
 ### 2.3. Date affichée dans les listes
 

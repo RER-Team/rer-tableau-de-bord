@@ -17,8 +17,9 @@ import { getArticleStatusLabel } from "@/lib/article-status";
 import {
   buildInitialHtml,
   extractChapoAndBody,
-  transformEmbeds,
+  renderArticleHtml,
 } from "@/lib/article-html";
+import { OrdinalText } from "@/app/components/OrdinalText";
 import { dispatchNotificationsUpdated } from "@/lib/notifications/client-sync";
 
 type ArticleDetail = {
@@ -312,7 +313,7 @@ export function MesArticleSidePanel({
   }, [onClose, router]);
 
   const contenuHtml = useMemo(
-    () => (article?.contenu ? transformEmbeds(article.contenu) : ""),
+    () => (article?.contenu ? renderArticleHtml(article.contenu) : ""),
     [article?.contenu]
   );
 
@@ -436,7 +437,7 @@ export function MesArticleSidePanel({
                       )}
                   </div>
                   <h2 className="text-xl font-semibold text-rer-text">
-                    {article.titre}
+                    <OrdinalText text={article.titre} />
                   </h2>
                   <p className="text-xs text-rer-muted">
                     {article.etat && (
@@ -477,7 +478,7 @@ export function MesArticleSidePanel({
 
               {article.chapo && (
                 <p className="whitespace-pre-wrap font-semibold text-rer-text">
-                  {article.chapo}
+                  <OrdinalText text={article.chapo} />
                 </p>
               )}
 

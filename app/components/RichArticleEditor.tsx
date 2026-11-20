@@ -7,6 +7,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Paragraph from "@tiptap/extension-paragraph";
 import Image from "@tiptap/extension-image";
+import Superscript from "@tiptap/extension-superscript";
 
 type RichArticleEditorProps = {
   /**
@@ -96,6 +97,10 @@ export function RichArticleEditor({
         openOnClick: false,
         linkOnPaste: true,
       }),
+      // Conserve les exposants existants (collés depuis Word, appels de note).
+      // Les ordinaux (« 2e ») restent en texte simple : ils sont mis en
+      // exposant à l'affichage et à l'export (lib/ordinals.ts).
+      Superscript,
       Image.extend({
         addAttributes() {
           return {
